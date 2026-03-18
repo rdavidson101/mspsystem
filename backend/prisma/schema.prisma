@@ -17,6 +17,7 @@ enum UserRole {
 }
 
 enum TicketStatus {
+  AWAITING_TRIAGE
   OPEN
   IN_PROGRESS
   WAITING_CLIENT
@@ -235,7 +236,7 @@ model Ticket {
   number          Int             @unique @default(autoincrement())
   title           String
   description     String?
-  status          TicketStatus    @default(OPEN)
+  status          TicketStatus    @default(AWAITING_TRIAGE)
   priority        TicketPriority  @default(MEDIUM)
   categoryId      String?
   category        TicketCategory? @relation(fields: [categoryId], references: [id])

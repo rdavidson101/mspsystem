@@ -7,6 +7,22 @@ import {
 import clsx from 'clsx'
 import { useState } from 'react'
 import { useAuthStore } from '@/store/authStore'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+
+function TriageBadge() {
+  const { data: tickets = [] } = useQuery({
+    queryKey: ['tickets', 'AWAITING_TRIAGE'],
+    queryFn: () => api.get('/tickets', { params: { status: 'AWAITING_TRIAGE' } }).then((r: any) => r.data),
+    refetchInterval: 30000,
+  })
+  if (!tickets.length) return null
+  return (
+    <span className="ml-auto bg-violet-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+      {tickets.length}
+    </span>
+  )
+}
 
 const mainNav = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -23,6 +39,7 @@ const mainNav = [
   { label: 'Tasks', href: '/tasks', icon: CheckSquare },
   {
     label: 'Tickets', icon: Ticket, children: [
+      { label: 'Triage Queue', href: '/triage' },
       { label: 'All Tickets', href: '/tickets' },
       { label: 'My Tickets', href: '/my-tickets' },
       { label: 'Macros', href: '/macros' },
@@ -72,11 +89,12 @@ function NavItem({ item }: NavItemProps) {
                 key={child.href}
                 to={child.href}
                 className={({ isActive }) => clsx(
-                  'block px-3 py-2 rounded-lg text-sm transition-colors',
+                  'flex items-center px-3 py-2 rounded-lg text-sm transition-colors',
                   isActive ? 'text-white bg-sidebar-active' : 'text-slate-400 hover:text-white hover:bg-sidebar-hover'
                 )}
               >
-                {child.label}
+                <span className="flex-1">{child.label}</span>
+                {child.href === '/triage' && <TriageBadge />}
               </NavLink>
             ))}
           </div>

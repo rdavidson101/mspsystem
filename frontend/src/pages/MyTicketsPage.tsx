@@ -14,6 +14,7 @@ const priorityColors: Record<string, string> = {
   CRITICAL: 'bg-red-100 text-red-700',
 }
 const statusColors: Record<string, string> = {
+  AWAITING_TRIAGE: 'bg-violet-100 text-violet-700',
   OPEN: 'bg-blue-100 text-blue-700',
   IN_PROGRESS: 'bg-orange-100 text-orange-700',
   WAITING_CLIENT: 'bg-yellow-100 text-yellow-700',

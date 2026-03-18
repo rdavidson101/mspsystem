@@ -88,7 +88,7 @@ export async function createTicket(req: AuthRequest, res: Response, next: NextFu
       include: TICKET_INCLUDE,
     })
     await recordHistory(ticket.id, req.user!.id, [
-      { field: 'status', oldValue: null, newValue: 'OPEN' },
+      { field: 'status', oldValue: null, newValue: 'AWAITING_TRIAGE' },
       { field: 'priority', oldValue: null, newValue: ticket.priority },
     ])
     io.emit('ticket:created', ticket)

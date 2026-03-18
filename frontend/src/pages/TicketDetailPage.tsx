@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { format } from 'date-fns'
-import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Building2, AlertCircle, History, MessageSquare } from 'lucide-react'
+import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Building2, AlertCircle, History, MessageSquare, AlertTriangle } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuthStore } from '@/store/authStore'
 
@@ -48,6 +48,7 @@ function getSlaInfo(ticket: any): { status: 'ok' | 'warning' | 'breached' | 'non
   }
 }
 const statusColors: Record<string, string> = {
+  AWAITING_TRIAGE: 'bg-violet-100 text-violet-700',
   OPEN: 'bg-blue-100 text-blue-700',
   IN_PROGRESS: 'bg-orange-100 text-orange-700',
   WAITING_CLIENT: 'bg-yellow-100 text-yellow-700',
@@ -142,6 +143,11 @@ export default function TicketDetailPage() {
   const [activeTab, setActiveTab] = useState<'activity' | 'history'>('activity')
   const [showMacroPicker, setShowMacroPicker] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [triageForm, setTriageForm] = useState<{ priority: string; categoryId: string; assignedToId: string }>({
+    priority: '',
+    categoryId: '',
+    assignedToId: '',
+  })
 
   const { data: ticket, refetch } = useQuery({
     queryKey: ['ticket', id],
@@ -206,6 +212,73 @@ export default function TicketDetailPage() {
           </p>
         </div>
       </div>
+
+      {ticket.status === 'AWAITING_TRIAGE' && (
+        <div className="rounded-xl border-2 border-violet-300 bg-violet-50 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 rounded-full bg-violet-600 flex items-center justify-center">
+              <AlertTriangle size={14} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-violet-900">Awaiting Triage</h3>
+              <p className="text-xs text-violet-600">Set the details below then complete triage to open the ticket.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="text-xs font-semibold text-violet-700 mb-1.5 block">Priority</label>
+              <select
+                className="input text-sm bg-white"
+                value={triageForm.priority || ticket.priority}
+                onChange={e => setTriageForm(f => ({ ...f, priority: e.target.value }))}
+              >
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="CRITICAL">Critical</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-violet-700 mb-1.5 block">Category</label>
+              <select
+                className="input text-sm bg-white"
+                value={triageForm.categoryId || ticket.categoryId || ''}
+                onChange={e => setTriageForm(f => ({ ...f, categoryId: e.target.value }))}
+              >
+                <option value="">Select category</option>
+                {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-violet-700 mb-1.5 block">Assign To</label>
+              <select
+                className="input text-sm bg-white"
+                value={triageForm.assignedToId || ticket.assignedToId || ''}
+                onChange={e => setTriageForm(f => ({ ...f, assignedToId: e.target.value }))}
+              >
+                <option value="">Unassigned</option>
+                {users.map((u: any) => <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>)}
+              </select>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              updateMutation.mutate({
+                status: 'OPEN',
+                priority: triageForm.priority || ticket.priority,
+                categoryId: triageForm.categoryId || ticket.categoryId || undefined,
+                assignedToId: triageForm.assignedToId || ticket.assignedToId || undefined,
+              }, {
+                onSuccess: () => setTriageForm({ priority: '', categoryId: '', assignedToId: '' })
+              })
+            }}
+            disabled={updateMutation.isPending}
+            className="flex items-center gap-2 px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+          >
+            Complete Triage → Open Ticket
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-6">
         {/* Main content */}
@@ -406,7 +479,7 @@ export default function TicketDetailPage() {
                 onChange={e => updateMutation.mutate({ status: e.target.value })}
                 className="input text-sm"
               >
-                {['OPEN', 'IN_PROGRESS', 'WAITING_CLIENT', 'RESOLVED', 'CLOSED'].map(s => (
+                {['AWAITING_TRIAGE', 'OPEN', 'IN_PROGRESS', 'WAITING_CLIENT', 'RESOLVED', 'CLOSED'].map(s => (
                   <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
                 ))}
               </select>

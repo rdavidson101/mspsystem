@@ -18,6 +18,7 @@ import TimeTrackingPage from '@/pages/TimeTrackingPage'
 import SettingsPage from '@/pages/SettingsPage'
 import MacrosPage from '@/pages/MacrosPage'
 import MyTicketsPage from '@/pages/MyTicketsPage'
+import TriagePage from '@/pages/TriagePage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="expenses" element={<ExpensesPage />} />
           <Route path="time-tracking" element={<TimeTrackingPage />} />
           <Route path="my-tickets" element={<MyTicketsPage />} />
+          <Route path="triage" element={<TriagePage />} />
           <Route path="macros" element={<MacrosPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

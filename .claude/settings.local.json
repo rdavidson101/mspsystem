@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sshpass -p 'Ubercheese99!' ssh -o StrictHostKeyChecking=no ryan@10.1.0.31 \"docker --version && docker compose version\")",
+      "Bash(plink --version)",
+      "Bash(pscp --version)",
+      "Read(//c/Program Files/PuTTY//**)",
+      "Bash(plink -pw 'Ubercheese99!' ryan@10.1.0.31 \"mkdir -p ~/mspsystem\")",
+      "Bash(plink -pw 'Ubercheese99!' ryan@10.1.0.31 \"mkdir -p ~/mspsystem && echo done\")",
+      "Bash(plink -pw 'Ubercheese99!' ryan@10.1.0.31 \":*)",
+      "Bash(plink -pw 'Ubercheese99!' ryan@10.1.0.31 \"cd ~/mspsystem && docker compose up -d --build 2>&1\")",
+      "Bash(plink -pw 'Ubercheese99!' ryan@10.1.0.31 \"sleep 8 && docker logs msp_backend 2>&1 | tail -10\")",
+      "Bash(plink -pw 'Ubercheese99!' ryan@10.1.0.31 \"sleep 12 && docker logs msp_backend 2>&1 | tail -15\")",
+      "Bash(plink -pw 'Ubercheese99!' ryan@10.1.0.31 \"sleep 25 && docker logs msp_backend 2>&1 | tail -20\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d --build 2>&1 | tail -20\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git stash && git pull && git stash pop && docker compose down && docker compose up -d --build 2>&1 | tail -30\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker logs msp_backend --tail 20 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d --build 2>&1 | tail -25\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker logs msp_backend --tail 15 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose up -d --build frontend 2>&1 | tail -15\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose up -d --build frontend backend 2>&1 | tail -12\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose up -d --build frontend 2>&1 | tail -10\")"
+    ]
+  }
+}

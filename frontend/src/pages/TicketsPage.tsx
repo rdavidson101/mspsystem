@@ -15,6 +15,7 @@ const priorityColors: Record<string, string> = {
   CRITICAL: 'bg-red-100 text-red-700',
 }
 const statusColors: Record<string, string> = {
+  AWAITING_TRIAGE: 'bg-violet-100 text-violet-700',
   OPEN: 'bg-blue-100 text-blue-700',
   IN_PROGRESS: 'bg-orange-100 text-orange-700',
   WAITING_CLIENT: 'bg-yellow-100 text-yellow-700',
@@ -107,6 +108,7 @@ export default function TicketsPage() {
       <div className="flex gap-2 flex-wrap">
         {[
           { key: '', label: 'All', count: tickets.length },
+          { key: 'AWAITING_TRIAGE', label: 'Triage', count: statusCounts['AWAITING_TRIAGE'] || 0 },
           { key: 'OPEN', label: 'Open', count: statusCounts['OPEN'] || 0 },
           { key: 'IN_PROGRESS', label: 'In Progress', count: statusCounts['IN_PROGRESS'] || 0 },
           { key: 'WAITING_CLIENT', label: 'Waiting Client', count: statusCounts['WAITING_CLIENT'] || 0 },
