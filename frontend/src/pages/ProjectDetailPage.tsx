@@ -76,7 +76,7 @@ function detectMention(value: string, cursor: number): { start: number; search: 
 function renderMentions(raw: string) {
   const normalized = raw.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1')
   const parts: React.ReactNode[] = []
-  const re = /@([A-Za-z]+(?:\s[A-Za-z]+)*)/g
+  const re = /@([A-Za-z]+(?:\s[A-Za-z]+)?)/g
   let last = 0; let m: RegExpExecArray | null
   while ((m = re.exec(normalized)) !== null) {
     if (m.index > last) parts.push(<span key={last}>{normalized.slice(last, m.index)}</span>)
