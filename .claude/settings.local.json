@@ -45,7 +45,18 @@
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d --build 2>&1 | tail -12\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker logs msp_backend --tail 8 2>&1\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker logs msp_backend --tail 6 2>&1\")",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d --build 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose up -d 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose up -d msp_postgres 2>&1 && sleep 10 && docker compose logs msp_postgres --tail=20 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose up -d postgres 2>&1 && sleep 10 && docker compose logs postgres --tail=20 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"df -h / && docker system df 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker system prune -af --volumes 2>&1 | tail -5\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose up -d --build 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose down --remove-orphans && docker network prune -f && docker compose up -d 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose exec backend npx prisma db push --accept-data-loss 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose up -d --build frontend 2>&1\")"
     ]
   }
 }

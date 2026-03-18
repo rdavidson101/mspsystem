@@ -124,14 +124,25 @@ export async function approveInternal(req: AuthRequest, res: Response, next: Nex
 export async function rejectInternal(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { notes } = req.body
-    const change = await prisma.change.findUnique({ where: { id: req.params.id } })
+    const change = await prisma.change.findUnique({ where: { id: req.params.id }, include })
     if (!change) throw new AppError(404, 'Not found')
     if (change.internalApproverId !== req.user!.id) throw new AppError(403, 'You are not the internal approver')
+    if (change.status !== 'SUBMITTED') throw new AppError(400, 'Change is not pending internal approval')
     const updated = await prisma.change.update({
       where: { id: req.params.id },
-      data: { status: 'REJECTED', internalRejectedAt: new Date(), internalNotes: notes },
+      data: { status: 'DRAFT', internalRejectedAt: new Date(), internalNotes: notes },
       include,
     })
+    // Notify the requester
+    if (updated.createdById) {
+      await createNotification(
+        updated.createdById,
+        'CHANGE_REJECTED',
+        `RFC rejected and returned to draft`,
+        `RFC-${String(updated.number).padStart(5, '0')} – ${updated.title} was rejected by internal review${notes ? `: "${notes}"` : ''}`,
+        `/changes/${updated.id}`
+      )
+    }
     res.json({ ...updated, ref: changeRef(updated.number) })
   } catch (e) { next(e) }
 }
@@ -157,6 +168,63 @@ export async function rejectCustomer(req: AuthRequest, res: Response, next: Next
     const updated = await prisma.change.update({
       where: { id: req.params.id },
       data: { status: 'REJECTED', customerRejectedAt: new Date(), customerNotes: notes },
+      include,
+    })
+    res.json({ ...updated, ref: changeRef(updated.number) })
+  } catch (e) { next(e) }
+}
+
+export async function completeChange(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const change = await prisma.change.findUnique({ where: { id: req.params.id } })
+    if (!change) throw new AppError(404, 'Not found')
+    if (!['APPROVED', 'IN_PROGRESS'].includes(change.status)) throw new AppError(400, 'Change must be approved or in progress to complete')
+    const updated = await prisma.change.update({
+      where: { id: req.params.id },
+      data: { status: 'COMPLETED' },
+      include,
+    })
+    res.json({ ...updated, ref: changeRef(updated.number) })
+  } catch (e) { next(e) }
+}
+
+export async function failChange(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const change = await prisma.change.findUnique({ where: { id: req.params.id } })
+    if (!change) throw new AppError(404, 'Not found')
+    if (!['APPROVED', 'IN_PROGRESS'].includes(change.status)) throw new AppError(400, 'Change must be approved or in progress to mark as failed')
+    const updated = await prisma.change.update({
+      where: { id: req.params.id },
+      data: { status: 'FAILED' },
+      include,
+    })
+    res.json({ ...updated, ref: changeRef(updated.number) })
+  } catch (e) { next(e) }
+}
+
+export async function cancelChange(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const change = await prisma.change.findUnique({ where: { id: req.params.id } })
+    if (!change) throw new AppError(404, 'Not found')
+    if (!['APPROVED', 'IN_PROGRESS'].includes(change.status)) throw new AppError(400, 'Change must be approved or in progress to cancel')
+    const updated = await prisma.change.update({
+      where: { id: req.params.id },
+      data: { status: 'CANCELLED' },
+      include,
+    })
+    res.json({ ...updated, ref: changeRef(updated.number) })
+  } catch (e) { next(e) }
+}
+
+export async function abandonChange(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const change = await prisma.change.findUnique({ where: { id: req.params.id } })
+    if (!change) throw new AppError(404, 'Not found')
+    if (change.createdById !== req.user!.id) throw new AppError(403, 'Only the requester can abandon this change')
+    if (change.status !== 'DRAFT') throw new AppError(400, 'Only draft changes can be abandoned')
+    const updated = await prisma.change.update({
+      where: { id: req.params.id },
+      data: { status: 'CANCELLED' },
       include,
     })
     res.json({ ...updated, ref: changeRef(updated.number) })

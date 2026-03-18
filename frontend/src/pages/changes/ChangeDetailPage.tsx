@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { ArrowLeft, Pencil, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Pencil, CheckCircle, XCircle, Clock, AlertTriangle, Ban, CheckCircle2, XOctagon } from 'lucide-react'
 import { format } from 'date-fns'
 import clsx from 'clsx'
 import { useAuthStore } from '@/store/authStore'
@@ -17,6 +17,8 @@ const statusColors: Record<string, string> = {
   IN_PROGRESS: 'bg-cyan-100 text-cyan-700',
   COMPLETED: 'bg-emerald-100 text-emerald-700',
   CANCELLED: 'bg-slate-100 text-slate-400',
+  FAILED: 'bg-red-100 text-red-800',
+  ABANDONED: 'bg-slate-100 text-slate-400',
 }
 
 const riskColors: Record<string, string> = {
@@ -43,6 +45,7 @@ export default function ChangeDetailPage() {
   const { user } = useAuthStore()
   const [approvalNotes, setApprovalNotes] = useState('')
   const [showApprovalInput, setShowApprovalInput] = useState<'approve' | 'reject' | null>(null)
+  const [showAbandon, setShowAbandon] = useState(false)
 
   const { data: change, isLoading } = useQuery({ queryKey: ['change', id], queryFn: () => api.get(`/changes/${id}`).then(r => r.data) })
 
@@ -57,7 +60,10 @@ export default function ChangeDetailPage() {
   const isInternalApprover = change.internalApproverId === user?.id
   const canApproveInternal = isInternalApprover && change.status === 'SUBMITTED'
   const canApproveCustomer = change.status === 'CUSTOMER_REVIEW' // any internal user can record customer approval
-  const canEdit = ['DRAFT', 'REJECTED'].includes(change.status)
+  const canEdit = change.status === 'DRAFT'
+  const isRequester = change.createdById === user?.id
+  const canPostApprovalAction = ['APPROVED', 'IN_PROGRESS'].includes(change.status) && (user?.role === 'ADMIN' || user?.role === 'MANAGER' || isRequester)
+  const canAbandon = change.status === 'DRAFT' && isRequester
 
   const Field = ({ label, value }: { label: string; value?: string | null }) =>
     value ? (
@@ -174,10 +180,66 @@ export default function ChangeDetailPage() {
         </div>
       )}
 
+      {/* Post-approval outcome */}
+      {canPostApprovalAction && (
+        <div className="card p-4 border-2 border-green-200 bg-green-50">
+          <p className="text-sm font-semibold mb-3 text-slate-800">Mark change outcome:</p>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => actionMutation.mutate({ endpoint: 'complete', notes: '' })}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg"
+            >
+              <CheckCircle size={14} /> Completed
+            </button>
+            <button
+              onClick={() => actionMutation.mutate({ endpoint: 'fail', notes: '' })}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg"
+            >
+              <XCircle size={14} /> Failed
+            </button>
+            <button
+              onClick={() => actionMutation.mutate({ endpoint: 'cancel', notes: '' })}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white text-sm font-medium rounded-lg"
+            >
+              <XCircle size={14} /> Cancelled
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Abandon (draft only) */}
+      {canAbandon && (
+        <div className="card p-4 border-2 border-slate-200">
+          {showAbandon ? (
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-slate-600 flex-1">Are you sure you want to abandon this RFC? It will be cancelled.</p>
+              <button
+                onClick={() => { actionMutation.mutate({ endpoint: 'abandon', notes: '' }); setShowAbandon(false) }}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg"
+              >
+                Yes, Abandon
+              </button>
+              <button onClick={() => setShowAbandon(false)} className="btn-secondary text-sm">Keep</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAbandon(true)}
+              className="flex items-center gap-2 text-sm text-slate-500 hover:text-red-600 font-medium"
+            >
+              <XCircle size={14} /> Abandon this RFC
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Main details grid */}
       <div className="grid grid-cols-2 gap-5">
         <div className="card p-5 space-y-4">
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Overview</h3>
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Requester</p>
+            <p className="text-sm text-slate-700">{change.createdBy?.firstName} {change.createdBy?.lastName}</p>
+          </div>
           <Field label="Customer" value={change.companyRef?.name} />
           <Field label="Scope" value={change.scope} />
           {change.scheduledStart && (
