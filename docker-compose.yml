@@ -33,7 +33,7 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-supersecreterefreshjwtkey_change_in_production}
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 4000
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5000}
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -58,7 +58,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
     ports:
-      - "3000:3000"
+      - "5000:3000"
     depends_on:
       - backend
     networks:
