@@ -27,19 +27,25 @@ export async function updateSettings(req: AuthRequest, res: Response, next: Next
 
     // If mspName updated, upsert the internal (MSP) company
     if (updates.mspName) {
-      const existing = await prisma.company.findFirst({ where: { isInternal: true } })
-      if (existing) {
-        await prisma.company.update({ where: { id: existing.id }, data: { name: updates.mspName } })
+      let mspCompany = await prisma.company.findFirst({ where: { isInternal: true } })
+      if (mspCompany) {
+        await prisma.company.update({ where: { id: mspCompany.id }, data: { name: updates.mspName } })
       } else {
-        const company = await prisma.company.create({
+        mspCompany = await prisma.company.create({
           data: { name: updates.mspName, isInternal: true, isActive: true },
         })
         await prisma.systemSetting.upsert({
           where: { key: 'mspCompanyId' },
-          update: { value: company.id },
-          create: { key: 'mspCompanyId', value: company.id },
+          update: { value: mspCompany.id },
+          create: { key: 'mspCompanyId', value: mspCompany.id },
         })
       }
+
+      // Associate all INTERNAL users with the MSP company
+      await prisma.user.updateMany({
+        where: { userType: 'INTERNAL' },
+        data: { companyId: mspCompany.id },
+      })
     }
 
     const rows = await prisma.systemSetting.findMany()

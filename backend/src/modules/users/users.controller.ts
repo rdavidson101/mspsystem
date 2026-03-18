@@ -4,6 +4,13 @@ import { AuthRequest } from '../../middleware/auth'
 import { AppError } from '../../middleware/errorHandler'
 import bcrypt from 'bcryptjs'
 
+const userSelect = {
+  id: true, email: true, firstName: true, lastName: true,
+  role: true, userType: true, avatar: true, isActive: true,
+  canApproveChanges: true, phone: true, twoFactorEnabled: true,
+  createdAt: true, companyId: true,
+}
+
 export async function getUsers(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { type } = req.query
@@ -11,7 +18,7 @@ export async function getUsers(req: AuthRequest, res: Response, next: NextFuncti
     if (type) where.userType = type as string
     const users = await prisma.user.findMany({
       where,
-      select: { id: true, email: true, firstName: true, lastName: true, role: true, userType: true, avatar: true, isActive: true, canApproveChanges: true, phone: true, twoFactorEnabled: true, createdAt: true },
+      select: userSelect,
       orderBy: { firstName: 'asc' },
     })
     res.json(users)
@@ -22,7 +29,7 @@ export async function getUser(req: AuthRequest, res: Response, next: NextFunctio
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.params.id },
-      select: { id: true, email: true, firstName: true, lastName: true, role: true, userType: true, avatar: true, isActive: true, canApproveChanges: true, phone: true, twoFactorEnabled: true, createdAt: true },
+      select: userSelect,
     })
     if (!user) throw new AppError(404, 'User not found')
     res.json(user)
@@ -37,9 +44,16 @@ export async function createUser(req: AuthRequest, res: Response, next: NextFunc
       if (!password) throw new AppError(400, 'Password required for internal users')
       data.password = await bcrypt.hash(password, 10)
     }
+
+    // Auto-associate INTERNAL users with MSP company
+    if (data.userType === 'INTERNAL') {
+      const mspCompany = await prisma.company.findFirst({ where: { isInternal: true } })
+      if (mspCompany) data.companyId = mspCompany.id
+    }
+
     const user = await prisma.user.create({
       data,
-      select: { id: true, email: true, firstName: true, lastName: true, role: true, userType: true },
+      select: userSelect,
     })
     res.status(201).json(user)
   } catch (e) { next(e) }
@@ -54,14 +68,25 @@ export async function updateUser(req: AuthRequest, res: Response, next: NextFunc
     if (email !== undefined) updateData.email = email
     if (phone !== undefined) updateData.phone = phone
     if (role !== undefined) updateData.role = role
-    if (userType !== undefined) updateData.userType = userType
     if (isActive !== undefined) updateData.isActive = isActive
     if (canApproveChanges !== undefined) updateData.canApproveChanges = canApproveChanges
     if (password) updateData.password = await bcrypt.hash(password, 10)
+
+    // Handle userType change — update company association
+    if (userType !== undefined) {
+      updateData.userType = userType
+      if (userType === 'INTERNAL') {
+        const mspCompany = await prisma.company.findFirst({ where: { isInternal: true } })
+        updateData.companyId = mspCompany?.id || null
+      } else {
+        updateData.companyId = null
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data: updateData,
-      select: { id: true, email: true, firstName: true, lastName: true, role: true, userType: true, phone: true, isActive: true, canApproveChanges: true, twoFactorEnabled: true },
+      select: userSelect,
     })
     res.json(user)
   } catch (e) { next(e) }

@@ -8,7 +8,10 @@ export async function getCompanies(req: AuthRequest, res: Response, next: NextFu
     const { search } = req.query
     const companies = await prisma.company.findMany({
       where: search ? { name: { contains: String(search), mode: 'insensitive' } } : {},
-      include: { _count: { select: { contacts: true, tickets: true, projects: true } } },
+      include: {
+        users: { select: { id: true, firstName: true, lastName: true, avatar: true }, orderBy: { firstName: 'asc' }, take: 8 },
+        _count: { select: { contacts: true, tickets: true, projects: true, users: true } },
+      },
       orderBy: [{ isInternal: 'desc' }, { name: 'asc' }],
     })
     res.json(companies)
@@ -25,7 +28,7 @@ export async function getCompany(req: AuthRequest, res: Response, next: NextFunc
         projects: true,
         contracts: true,
         leads: true,
-        _count: { select: { contacts: true, tickets: true, projects: true } },
+        _count: { select: { contacts: true, tickets: true, projects: true, users: true } },
       },
     })
     if (!company) throw new AppError(404, 'Company not found')
@@ -38,7 +41,7 @@ export async function createCompany(req: AuthRequest, res: Response, next: NextF
     const { name, domain, industry, phone, email, address, city, state, zip, country, website, notes } = req.body
     const company = await prisma.company.create({
       data: { name, domain, industry, phone, email, address, city, state, zip, country, website, notes, isActive: true },
-      include: { _count: { select: { contacts: true, tickets: true, projects: true } } },
+      include: { _count: { select: { contacts: true, tickets: true, projects: true, users: true } } },
     })
     res.status(201).json(company)
   } catch (e) { next(e) }
@@ -63,7 +66,7 @@ export async function updateCompany(req: AuthRequest, res: Response, next: NextF
     const company = await prisma.company.update({
       where: { id: req.params.id },
       data,
-      include: { _count: { select: { contacts: true, tickets: true, projects: true } } },
+      include: { _count: { select: { contacts: true, tickets: true, projects: true, users: true } } },
     })
     res.json(company)
   } catch (e) { next(e) }

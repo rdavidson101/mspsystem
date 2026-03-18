@@ -147,6 +147,8 @@ model User {
   canApproveChanges Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  companyId         String?
+  company           Company? @relation(fields: [companyId], references: [id])
 
   assignedTickets    Ticket[]        @relation("AssignedTechnician")
   createdTickets     Ticket[]        @relation("TicketCreator")
@@ -246,6 +248,7 @@ model Company {
   invoices    Invoice[]
   assets      Asset[]
   changes     Change[]
+  users       User[]
 
   @@map("companies")
 }

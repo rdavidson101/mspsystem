@@ -228,12 +228,41 @@ export default function CustomersPage() {
                 </div>
               )}
 
+              {/* Avatar stack for MSP companies */}
+              {company.isInternal && company.users?.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="flex -space-x-2">
+                    {company.users.slice(0, 5).map((u: any) => (
+                      <div key={u.id} className="w-7 h-7 rounded-full border-2 border-white bg-primary-100 flex items-center justify-center text-[10px] font-bold text-primary-600 overflow-hidden flex-shrink-0" title={`${u.firstName} ${u.lastName}`}>
+                        {u.avatar
+                          ? <img src={u.avatar} alt="" className="w-full h-full object-cover" />
+                          : `${u.firstName[0]}${u.lastName[0]}`
+                        }
+                      </div>
+                    ))}
+                    {(company._count?.users ?? 0) > 5 && (
+                      <div className="w-7 h-7 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                        +{(company._count?.users ?? 0) - 5}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-xs text-slate-500">{company._count?.users ?? 0} team member{(company._count?.users ?? 0) !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+
               {/* Stats */}
               <div className="flex items-center gap-4 pt-1 border-t border-slate-100">
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <Users size={12} className="text-slate-400" />
-                  <span>{company._count?.contacts ?? 0} contacts</span>
-                </div>
+                {company.isInternal ? (
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <Users size={12} className="text-slate-400" />
+                    <span>{company._count?.users ?? 0} team members</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <Users size={12} className="text-slate-400" />
+                    <span>{company._count?.contacts ?? 0} contacts</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
                   <Ticket size={12} className="text-slate-400" />
                   <span>{company._count?.tickets ?? 0} tickets</span>
