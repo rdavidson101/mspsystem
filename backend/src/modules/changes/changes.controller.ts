@@ -11,6 +11,28 @@ const include = {
   companyRef: true,
 }
 
+function sanitizeChangeData(body: any) {
+  const d: any = {}
+  const str = (v: any) => (v !== undefined ? v || null : undefined)
+  const strReq = (v: any) => (v !== undefined ? v : undefined)
+  if (body.title !== undefined) d.title = body.title
+  if (body.risk !== undefined) d.risk = body.risk
+  if (body.status !== undefined) d.status = body.status
+  if (body.scheduledStart !== undefined) d.scheduledStart = body.scheduledStart ? new Date(body.scheduledStart) : null
+  if (body.durationMinutes !== undefined) d.durationMinutes = body.durationMinutes ? parseInt(body.durationMinutes, 10) : null
+  if (body.companyId !== undefined) d.companyId = body.companyId || null
+  if (body.scope !== undefined) d.scope = str(body.scope)
+  if (body.reason !== undefined) d.reason = str(body.reason)
+  if (body.risks !== undefined) d.risks = str(body.risks)
+  if (body.implementationPlan !== undefined) d.implementationPlan = str(body.implementationPlan)
+  if (body.validationSteps !== undefined) d.validationSteps = str(body.validationSteps)
+  if (body.rollbackSteps !== undefined) d.rollbackSteps = str(body.rollbackSteps)
+  if (body.internalApproverId !== undefined) d.internalApproverId = body.internalApproverId || null
+  if (body.customerApproverName !== undefined) d.customerApproverName = str(body.customerApproverName)
+  if (body.customerApproverEmail !== undefined) d.customerApproverEmail = str(body.customerApproverEmail)
+  return d
+}
+
 export async function getChanges(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { status } = req.query
@@ -32,7 +54,7 @@ export async function getChange(req: AuthRequest, res: Response, next: NextFunct
 export async function createChange(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const change = await prisma.change.create({
-      data: { ...req.body, createdById: req.user!.id },
+      data: { ...sanitizeChangeData(req.body), createdById: req.user!.id },
       include,
     })
     res.status(201).json({ ...change, ref: changeRef(change.number) })
@@ -43,7 +65,7 @@ export async function updateChange(req: AuthRequest, res: Response, next: NextFu
   try {
     const change = await prisma.change.update({
       where: { id: req.params.id },
-      data: req.body,
+      data: sanitizeChangeData(req.body),
       include,
     })
     res.json({ ...change, ref: changeRef(change.number) })
