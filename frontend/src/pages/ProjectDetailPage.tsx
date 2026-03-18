@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import {
   ArrowLeft, Plus, ChevronDown, ChevronRight, GripVertical,
   Play, Pause, LayoutList, Trash2, UserPlus, X, Check,
-  FolderKanban, Clock, Timer
+  FolderKanban, Clock, Timer, Search
 } from 'lucide-react'
 import clsx from 'clsx'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -169,6 +169,7 @@ function TaskRow({ task, depth = 0, projectMembers, onOpenComments, onRefresh }:
   const [titleVal, setTitleVal] = useState(task.title)
   const [showAssignee, setShowAssignee] = useState(false)
   const [showStatus, setShowStatus] = useState(false)
+  const [assigneeSearch, setAssigneeSearch] = useState('')
   const assigneeRef = useRef<HTMLButtonElement>(null)
   const statusRef = useRef<HTMLButtonElement>(null)
   const hasSubtasks = task.subTasks?.length > 0
@@ -204,6 +205,10 @@ function TaskRow({ task, depth = 0, projectMembers, onOpenComments, onRefresh }:
       : [...assigneeIds, uid]
     updateMut.mutate({ assigneeIds: newIds })
   }
+
+  const filteredMembers = projectMembers.filter((m: any) =>
+    `${m.user.firstName} ${m.user.lastName}`.toLowerCase().includes(assigneeSearch.toLowerCase())
+  )
 
   const showTimer = !hasSubtasks || depth > 0
 
@@ -284,9 +289,24 @@ function TaskRow({ task, depth = 0, projectMembers, onOpenComments, onRefresh }:
               <span className="text-xs text-slate-400 flex items-center gap-1"><UserPlus size={11} /> Assign</span>
             )}
           </button>
-          <Dropdown trigger={assigneeRef as React.RefObject<HTMLElement>} open={showAssignee} onClose={() => setShowAssignee(false)}>
-            <div className="px-2 py-1 text-xs text-slate-400 font-medium border-b border-slate-100">Assignees</div>
-            {projectMembers.map((m: any) => {
+          <Dropdown trigger={assigneeRef as React.RefObject<HTMLElement>} open={showAssignee} onClose={() => { setShowAssignee(false); setAssigneeSearch('') }}>
+            <div className="px-2 py-2 border-b border-slate-100">
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+                <Search size={11} className="text-slate-400 flex-shrink-0" />
+                <input
+                  autoFocus
+                  placeholder="Search users…"
+                  value={assigneeSearch}
+                  onChange={e => setAssigneeSearch(e.target.value)}
+                  onClick={e => e.stopPropagation()}
+                  className="flex-1 text-xs bg-transparent outline-none text-slate-700 placeholder-slate-400 min-w-0"
+                />
+              </div>
+            </div>
+            {filteredMembers.length === 0 && (
+              <div className="px-3 py-2 text-xs text-slate-400">No users found</div>
+            )}
+            {filteredMembers.map((m: any) => {
               const isAssigned = assigneeIds.has(m.user.id)
               return (
                 <button
@@ -571,6 +591,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   const [titleVal, setTitleVal] = useState(initialTask.title)
   const [showStatus, setShowStatus] = useState(false)
   const [showAssignees, setShowAssignees] = useState(false)
+  const [assigneeSearch, setAssigneeSearch] = useState('')
   const statusRef = useRef<HTMLButtonElement>(null)
   const assigneeRef = useRef<HTMLButtonElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -636,6 +657,10 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   const assignees: any[] = task.assignees || []
   const assigneeIds = new Set(assignees.map((a: any) => a.user.id))
   const totalTracked: number = timeByUser.reduce((sum: number, e: any) => sum + e.hours, 0)
+
+  const filteredMembers = projectMembers.filter((m: any) =>
+    `${m.user.firstName} ${m.user.lastName}`.toLowerCase().includes(assigneeSearch.toLowerCase())
+  )
 
   function toggleAssignee(uid: string) {
     const newIds = assigneeIds.has(uid)
@@ -746,9 +771,24 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                   </span>
                 )}
               </button>
-              <Dropdown trigger={assigneeRef as React.RefObject<HTMLElement>} open={showAssignees} onClose={() => setShowAssignees(false)}>
-                <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Select assignees</div>
-                {projectMembers.map((m: any) => {
+              <Dropdown trigger={assigneeRef as React.RefObject<HTMLElement>} open={showAssignees} onClose={() => { setShowAssignees(false); setAssigneeSearch('') }}>
+                <div className="px-2 py-2 border-b border-slate-100">
+                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5">
+                    <Search size={12} className="text-slate-400 flex-shrink-0" />
+                    <input
+                      autoFocus
+                      placeholder="Search users…"
+                      value={assigneeSearch}
+                      onChange={e => setAssigneeSearch(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      className="flex-1 text-sm bg-transparent outline-none text-slate-700 placeholder-slate-400 min-w-0"
+                    />
+                  </div>
+                </div>
+                {filteredMembers.length === 0 && (
+                  <div className="px-3 py-3 text-sm text-slate-400">No users found</div>
+                )}
+                {filteredMembers.map((m: any) => {
                   const isAssigned = assigneeIds.has(m.user.id)
                   return (
                     <button
@@ -975,6 +1015,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
 
 // ── Member panel ───────────────────────────────────────────────────────────────
 function MemberPanel({ project, onClose, onRefresh }: { project: any; onClose: () => void; onRefresh: () => void }) {
+  const [search, setSearch] = useState('')
   const { data: allUsers = [] } = useQuery({
     queryKey: ['users', 'internal'],
     queryFn: () => api.get('/users', { params: { type: 'INTERNAL' } }).then(r => r.data),
@@ -989,21 +1030,45 @@ function MemberPanel({ project, onClose, onRefresh }: { project: any; onClose: (
     onSuccess: () => onRefresh(),
   })
 
+  const filtered = allUsers.filter((u: any) =>
+    `${u.firstName} ${u.lastName} ${u.email || ''}`.toLowerCase().includes(search.toLowerCase())
+  )
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-80 max-h-[70vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-96 max-h-[70vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <h3 className="font-semibold text-slate-900">Manage Members</h3>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600"><X size={16} /></button>
         </div>
-        <div className="space-y-2">
-          {allUsers.map((u: any) => {
+        <div className="px-4 py-3 border-b border-slate-100">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100 transition-all">
+            <Search size={14} className="text-slate-400 flex-shrink-0" />
+            <input
+              autoFocus
+              placeholder="Search by name…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="flex-1 text-sm bg-transparent outline-none text-slate-700 placeholder-slate-400"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="text-slate-300 hover:text-slate-500">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-2">
+          {filtered.length === 0 && (
+            <div className="text-center py-8 text-slate-400 text-sm">No users match "{search}"</div>
+          )}
+          {filtered.map((u: any) => {
             const isMember = memberIds.has(u.id)
             return (
-              <div key={u.id} className="flex items-center justify-between py-1.5">
-                <div className="flex items-center gap-2">
-                  <Avatar name={`${u.firstName} ${u.lastName}`} avatar={u.avatar} size={7} />
+              <div key={u.id} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
+                <div className="flex items-center gap-3">
+                  <Avatar name={`${u.firstName} ${u.lastName}`} avatar={u.avatar} size={8} />
                   <div>
                     <p className="text-sm font-medium text-slate-800">{u.firstName} {u.lastName}</p>
                     <p className="text-xs text-slate-400">{u.role}</p>
@@ -1011,7 +1076,7 @@ function MemberPanel({ project, onClose, onRefresh }: { project: any; onClose: (
                 </div>
                 <button
                   onClick={() => isMember ? removeMut.mutate(u.id) : addMut.mutate(u.id)}
-                  className={clsx('text-xs px-2.5 py-1 rounded-lg font-medium transition-colors',
+                  className={clsx('text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
                     isMember ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-primary-50 text-primary-600 hover:bg-primary-100'
                   )}
                 >
