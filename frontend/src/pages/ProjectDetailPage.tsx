@@ -6,7 +6,8 @@ import { useAuthStore } from '@/store/authStore'
 import {
   ArrowLeft, Plus, ChevronDown, ChevronRight, GripVertical,
   Play, Pause, LayoutList, Trash2, UserPlus, X, Check,
-  FolderKanban, Clock, Timer, Search, AtSign
+  FolderKanban, Clock, Timer, Search, AtSign, Settings,
+  CheckCircle2, Calendar, DollarSign, AlertTriangle
 } from 'lucide-react'
 import clsx from 'clsx'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -28,6 +29,14 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 }
 const STATUSES = Object.keys(STATUS_CONFIG)
 const SECTION_COLORS = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6']
+
+const PROJECT_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; dot: string }> = {
+  PLANNING:    { label: 'Planning',    color: 'text-indigo-700', bg: 'bg-indigo-50',  border: 'border-indigo-200', dot: 'bg-indigo-500'  },
+  IN_PROGRESS: { label: 'In Progress', color: 'text-orange-700', bg: 'bg-orange-50',  border: 'border-orange-200', dot: 'bg-orange-500'  },
+  ON_HOLD:     { label: 'On Hold',     color: 'text-yellow-700', bg: 'bg-yellow-50',  border: 'border-yellow-200', dot: 'bg-yellow-500'  },
+  COMPLETED:   { label: 'Completed',   color: 'text-green-700',  bg: 'bg-green-50',   border: 'border-green-200',  dot: 'bg-green-500'   },
+  CANCELLED:   { label: 'Cancelled',   color: 'text-slate-600',  bg: 'bg-slate-100',  border: 'border-slate-200',  dot: 'bg-slate-400'   },
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatDuration(seconds: number) {
@@ -1124,6 +1133,207 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   )
 }
 
+// ── Project settings modal ─────────────────────────────────────────────────────
+function ProjectSettingsModal({ project, onClose, onRefresh, onDelete }: {
+  project: any; onClose: () => void; onRefresh: () => void; onDelete: () => void
+}) {
+  const [name, setName] = useState(project.name)
+  const [description, setDescription] = useState(project.description || '')
+  const [status, setStatus] = useState(project.status)
+  const [startDate, setStartDate] = useState(project.startDate ? format(new Date(project.startDate), 'yyyy-MM-dd') : '')
+  const [endDate, setEndDate] = useState(project.endDate ? format(new Date(project.endDate), 'yyyy-MM-dd') : '')
+  const [budget, setBudget] = useState(project.budget != null ? String(project.budget) : '')
+  const [saved, setSaved] = useState(false)
+
+  const updateMut = useMutation({
+    mutationFn: (data: any) => api.patch(`/projects/${project.id}`, data).then(r => r.data),
+    onSuccess: () => { onRefresh(); setSaved(true); setTimeout(() => setSaved(false), 2000) },
+  })
+  const deleteMut = useMutation({
+    mutationFn: () => api.delete(`/projects/${project.id}`).then(r => r.data),
+    onSuccess: () => onDelete(),
+  })
+
+  function save() {
+    if (!name.trim()) return
+    updateMut.mutate({
+      name: name.trim(),
+      description: description.trim() || null,
+      status,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      budget: budget ? Number(budget) : null,
+    })
+  }
+
+  const statusCfg = PROJECT_STATUS_CONFIG[status] || PROJECT_STATUS_CONFIG.PLANNING
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col overflow-hidden max-h-[90vh]">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <Settings size={18} className="text-slate-500" />
+            <h2 className="font-semibold text-slate-900 text-base">Project Settings</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+
+          {/* Name */}
+          <div>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5">Project Name</label>
+            <input
+              autoFocus
+              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 font-medium outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Project name"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5">Description</label>
+            <textarea
+              rows={3}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 resize-none"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="What is this project about?"
+            />
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-2">Status</label>
+            <div className="grid grid-cols-3 gap-2">
+              {Object.entries(PROJECT_STATUS_CONFIG).map(([key, cfg]) => (
+                <button
+                  key={key}
+                  onClick={() => setStatus(key)}
+                  className={clsx(
+                    'flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all',
+                    status === key
+                      ? `${cfg.bg} ${cfg.border} ${cfg.color} ring-2 ring-offset-1 ring-current/30`
+                      : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                  )}
+                >
+                  <div className={clsx('w-2 h-2 rounded-full flex-shrink-0', status === key ? cfg.dot : 'bg-slate-300')} />
+                  <span className="truncate">{cfg.label}</span>
+                  {status === key && <Check size={13} className="ml-auto flex-shrink-0" />}
+                </button>
+              ))}
+            </div>
+            {/* Quick complete banner */}
+            {status !== 'COMPLETED' && (
+              <button
+                onClick={() => setStatus('COMPLETED')}
+                className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-colors text-sm font-medium"
+              >
+                <CheckCircle2 size={15} /> Mark as Complete
+              </button>
+            )}
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
+                <Calendar size={10} /> Start Date
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
+                <Calendar size={10} /> End Date
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className={clsx(
+                  'w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary-100',
+                  endDate && new Date(endDate) < new Date() && status !== 'COMPLETED' && status !== 'CANCELLED'
+                    ? 'border-red-200 text-red-600 focus:border-red-300'
+                    : 'border-slate-200 text-slate-700 focus:border-primary-400'
+                )}
+              />
+              {endDate && new Date(endDate) < new Date() && status !== 'COMPLETED' && status !== 'CANCELLED' && (
+                <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={10} /> Overdue</p>
+              )}
+            </div>
+          </div>
+
+          {/* Budget */}
+          <div>
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
+              <DollarSign size={10} /> Budget
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">£</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={budget}
+                onChange={e => setBudget(e.target.value)}
+                placeholder="0.00"
+                className="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-sm text-slate-700 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+              />
+            </div>
+          </div>
+
+          {/* Danger zone */}
+          <div className="border border-red-100 rounded-xl p-4 bg-red-50/40">
+            <p className="text-xs font-semibold text-red-700 uppercase tracking-widest mb-1">Danger Zone</p>
+            <p className="text-xs text-slate-500 mb-3">Permanently delete this project and all its sections, tasks and time entries. This cannot be undone.</p>
+            <button
+              onClick={() => {
+                if (confirm('Delete this project? This will permanently remove all sections, tasks and time entries.')) {
+                  deleteMut.mutate()
+                }
+              }}
+              disabled={deleteMut.isPending}
+              className="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 bg-white hover:bg-red-50 border border-red-200 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <Trash2 size={14} /> Delete Project
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50/50 flex items-center justify-between">
+          <div>
+            {saved && <span className="text-sm text-green-600 font-medium flex items-center gap-1"><Check size={14} /> Saved</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="btn-secondary text-sm px-4 py-2">Cancel</button>
+            <button
+              onClick={save}
+              disabled={!name.trim() || updateMut.isPending}
+              className="btn-primary text-sm px-5 py-2 disabled:opacity-50"
+            >
+              {updateMut.isPending ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Member panel ───────────────────────────────────────────────────────────────
 function MemberPanel({ project, onClose, onRefresh }: { project: any; onClose: () => void; onRefresh: () => void }) {
   const [search, setSearch] = useState('')
@@ -1210,6 +1420,7 @@ export default function ProjectDetailPage() {
 
   const [commentTask, setCommentTask] = useState<any>(null)
   const [showMembers, setShowMembers] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [showNewSection, setShowNewSection] = useState(false)
   const [newSectionName, setNewSectionName] = useState('')
   const [newSectionColor, setNewSectionColor] = useState(SECTION_COLORS[0])
@@ -1259,8 +1470,19 @@ export default function ProjectDetailPage() {
             <ArrowLeft size={18} />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-slate-900 truncate">{project.name}</h1>
-            {project.description && <p className="text-sm text-slate-500 truncate">{project.description}</p>}
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl font-bold text-slate-900 truncate">{project.name}</h1>
+              {(() => {
+                const cfg = PROJECT_STATUS_CONFIG[project.status]
+                return cfg ? (
+                  <span className={clsx('inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border flex-shrink-0', cfg.bg, cfg.color, cfg.border)}>
+                    <div className={clsx('w-1.5 h-1.5 rounded-full', cfg.dot)} />
+                    {cfg.label}
+                  </span>
+                ) : null
+              })()}
+            </div>
+            {project.description && <p className="text-sm text-slate-500 truncate mt-0.5">{project.description}</p>}
           </div>
           <div className="flex -space-x-2 items-center">
             {project.members.slice(0, 5).map((m: any) => (
@@ -1271,9 +1493,27 @@ export default function ProjectDetailPage() {
           </div>
           <button
             onClick={() => setShowMembers(true)}
-            className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 font-medium bg-primary-50 hover:bg-primary-100 px-2.5 py-1 rounded-lg transition-colors"
+            className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 font-medium bg-primary-50 hover:bg-primary-100 px-2.5 py-1.5 rounded-lg transition-colors"
           >
             <UserPlus size={13} /> Members
+          </button>
+          {project.status !== 'COMPLETED' && project.status !== 'CANCELLED' && (
+            <button
+              onClick={() => {
+                if (confirm('Mark this project as complete?')) {
+                  api.patch(`/projects/${project.id}`, { status: 'COMPLETED' }).then(() => refetch())
+                }
+              }}
+              className="flex items-center gap-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <CheckCircle2 size={14} /> Complete
+            </button>
+          )}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg transition-colors"
+          >
+            <Settings size={14} /> Settings
           </button>
           <button
             onClick={() => setShowNewSection(true)}
@@ -1366,6 +1606,14 @@ export default function ProjectDetailPage() {
         />
       )}
       {showMembers && <MemberPanel project={project} onClose={() => setShowMembers(false)} onRefresh={refetch} />}
+      {showSettings && (
+        <ProjectSettingsModal
+          project={project}
+          onClose={() => setShowSettings(false)}
+          onRefresh={refetch}
+          onDelete={() => navigate('/projects')}
+        />
+      )}
     </div>
   )
 }
