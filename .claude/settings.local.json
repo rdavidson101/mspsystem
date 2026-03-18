@@ -41,7 +41,9 @@
       "Read(//mingw64/**)",
       "Bash(powershell.exe -Command \"Start-Process -FilePath ''cmd.exe'' -ArgumentList ''/c cd \"\"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\"\" && npm install otplib qrcode && npm install -D @types/qrcode'' -Wait -NoNewWindow\")",
       "Bash(powershell.exe -Command \"Get-PSDrive | Where-Object {$_Provider -like ''*FileSystem*''} | Select-Object Name,Root\")",
-      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker logs msp_backend --tail 12 2>&1\")"
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker logs msp_backend --tail 12 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d --build 2>&1 | tail -12\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker logs msp_backend --tail 8 2>&1\")"
     ]
   }
 }

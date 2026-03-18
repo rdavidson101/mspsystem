@@ -160,7 +160,6 @@ model User {
   macros             Macro[]
   notifications      Notification[]
   internalApprovalChanges Change[] @relation("InternalApprover")
-  customerApprovalChanges Change[] @relation("CustomerApprover")
   createdChanges          Change[] @relation("ChangeCreator")
   shipmentRequests        ShipmentRequest[]
 
