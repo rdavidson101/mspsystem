@@ -18,6 +18,17 @@ export async function getUsers(req: AuthRequest, res: Response, next: NextFuncti
   } catch (e) { next(e) }
 }
 
+export async function getUser(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true, userType: true, avatar: true, isActive: true, canApproveChanges: true, phone: true, twoFactorEnabled: true, createdAt: true },
+    })
+    if (!user) throw new AppError(404, 'User not found')
+    res.json(user)
+  } catch (e) { next(e) }
+}
+
 export async function createUser(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { email, password, firstName, lastName, role, phone, userType } = req.body

@@ -56,7 +56,9 @@
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose up -d --build 2>&1\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose down --remove-orphans && docker network prune -f && docker compose up -d 2>&1\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose exec backend npx prisma db push --accept-data-loss 2>&1\")",
-      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose up -d --build frontend 2>&1\")"
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose up -d --build frontend 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose up -d --build 2>&1 | tail -20\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose exec backend npx prisma db push --accept-data-loss 2>&1 | tail -5\")"
     ]
   }
 }
