@@ -49,9 +49,6 @@ function formatHours(hours: number) {
 }
 
 // ── Mention helpers ───────────────────────────────────────────────────────────
-// Format: @[Display Name](userId) stored inside JSON text field
-const MENTION_RE = /@\[([^\]]+)\]\(([^)]+)\)/g
-
 function detectMention(value: string, cursor: number): { start: number; search: string } | null {
   const before = value.slice(0, cursor)
   for (let i = cursor - 1; i >= 0; i--) {
@@ -66,14 +63,18 @@ function detectMention(value: string, cursor: number): { start: number; search: 
   return null
 }
 
+// Highlights @Name patterns (plain text, no tokens)
 function renderMentions(raw: string) {
-  const parts = raw.split(/@\[([^\]]+)\]\([^)]+\)/g)
-  // split gives alternating [text, name, text, name, ...]
-  return parts.map((part, i) =>
-    i % 2 === 1
-      ? <span key={i} className="text-primary-700 font-semibold bg-primary-50 px-0.5 rounded">@{part}</span>
-      : <span key={i}>{part}</span>
-  )
+  const parts: React.ReactNode[] = []
+  const re = /@([A-Za-z]+(?:\s[A-Za-z]+)*)/g
+  let last = 0; let m: RegExpExecArray | null
+  while ((m = re.exec(raw)) !== null) {
+    if (m.index > last) parts.push(<span key={last}>{raw.slice(last, m.index)}</span>)
+    parts.push(<span key={m.index} className="text-primary-700 font-semibold bg-primary-50 px-0.5 rounded">{m[0]}</span>)
+    last = m.index + m[0].length
+  }
+  if (last < raw.length) parts.push(<span key={`t${last}`}>{raw.slice(last)}</span>)
+  return parts
 }
 
 function Avatar({ name, avatar, size = 6 }: { name: string; avatar?: string; size?: number }) {
@@ -621,6 +622,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   const [showAssignees, setShowAssignees] = useState(false)
   const [assigneeSearch, setAssigneeSearch] = useState('')
   const [mention, setMention] = useState<{ start: number; search: string; top: number; left: number; width: number } | null>(null)
+  const [mentionedIds, setMentionedIds] = useState<Set<string>>(new Set())
   const statusRef = useRef<HTMLButtonElement>(null)
   const assigneeRef = useRef<HTMLButtonElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -651,7 +653,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   })
   const addCommentMut = useMutation({
     mutationFn: (content: string) => api.post(`/tasks/${initialTask.id}/comments`, { content }).then(r => r.data),
-    onSuccess: () => { refetchComments(); setText(''); setImages([]) },
+    onSuccess: () => { refetchComments(); setText(''); setImages([]); setMentionedIds(new Set()) },
   })
   const deleteCommentMut = useMutation({
     mutationFn: (id: string) => api.delete(`/tasks/${initialTask.id}/comments/${id}`).then(r => r.data),
@@ -688,7 +690,8 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
     const displayName = `${member.user.firstName} ${member.user.lastName}`
     const before = text.slice(0, mention.start)
     const after = text.slice(mention.start + 1 + mention.search.length)
-    setText(`${before}@[${displayName}](${member.user.id}) ${after}`)
+    setText(`${before}@${displayName} ${after}`)
+    setMentionedIds(ids => new Set([...ids, member.user.id]))
     setMention(null)
     setTimeout(() => textareaRef.current?.focus(), 0)
   }
@@ -713,7 +716,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   }
   function submit() {
     if (!text.trim() && images.length === 0) return
-    addCommentMut.mutate(JSON.stringify({ text: text.trim(), images }))
+    addCommentMut.mutate(JSON.stringify({ text: text.trim(), images, mentionedIds: [...mentionedIds] }))
   }
   function parseContent(raw: string) {
     try { return JSON.parse(raw) } catch { return { text: raw, images: [] } }

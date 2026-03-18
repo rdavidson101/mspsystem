@@ -160,17 +160,16 @@ export async function createTaskComment(req: AuthRequest, res: Response, next: N
       include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
     })
 
-    // Parse @[Name](userId) mentions and notify each mentioned user
-    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g
+    // Read mentionedIds array from the JSON payload
     const mentionedUserIds = new Set<string>()
-    let m: RegExpExecArray | null
-    // Content is stored as JSON string — extract the text portion to scan
-    let textToScan = content
-    try { textToScan = JSON.parse(content).text || content } catch {}
-    while ((m = mentionRegex.exec(textToScan)) !== null) {
-      const uid = m[2]
-      if (uid !== req.user!.id) mentionedUserIds.add(uid)
-    }
+    try {
+      const parsed = JSON.parse(content)
+      if (Array.isArray(parsed.mentionedIds)) {
+        parsed.mentionedIds.forEach((uid: string) => {
+          if (uid !== req.user!.id) mentionedUserIds.add(uid)
+        })
+      }
+    } catch {}
 
     if (mentionedUserIds.size > 0) {
       const task = await prisma.task.findUnique({
