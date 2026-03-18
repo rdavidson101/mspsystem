@@ -1,5 +1,7 @@
-import { Search, Bell, Share2, MessageSquare, ChevronDown } from 'lucide-react'
+import { Search, Share2, MessageSquare, ChevronDown } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
+import NotificationBell from '@/components/ui/NotificationBell'
 
 export default function Header() {
   const { user, logout } = useAuthStore()
@@ -27,15 +29,12 @@ export default function Header() {
         <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-500">
           <MessageSquare size={18} />
         </button>
-        <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 relative">
-          <Bell size={18} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
+        <NotificationBell />
       </div>
 
       {/* User menu */}
-      <button
-        onClick={logout}
+      <Link
+        to="/profile"
         className="flex items-center gap-2 hover:bg-slate-50 rounded-lg px-2 py-1.5 transition-colors"
       >
         <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
@@ -45,7 +44,7 @@ export default function Header() {
         </div>
         <span className="text-sm font-medium text-slate-700">{user?.firstName}</span>
         <ChevronDown size={14} className="text-slate-400" />
-      </button>
+      </Link>
     </header>
   )
 }

@@ -6,18 +6,24 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
+  // Create default internal company
+  const existingInternal = await prisma.company.findFirst({ where: { isInternal: true } })
+  if (!existingInternal) {
+    await prisma.company.create({ data: { name: 'My Company', isInternal: true, isActive: true } })
+  }
+
   const hashedPassword = await bcrypt.hash('admin123', 10)
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@msp.local' },
     update: {},
-    create: { email: 'admin@msp.local', password: hashedPassword, firstName: 'Admin', lastName: 'User', role: UserRole.ADMIN },
+    create: { email: 'admin@msp.local', password: hashedPassword, firstName: 'Admin', lastName: 'User', role: UserRole.ADMIN, userType: 'INTERNAL' },
   })
 
   const tech = await prisma.user.upsert({
     where: { email: 'tech@msp.local' },
     update: {},
-    create: { email: 'tech@msp.local', password: hashedPassword, firstName: 'John', lastName: 'Technician', role: UserRole.TECHNICIAN },
+    create: { email: 'tech@msp.local', password: hashedPassword, firstName: 'John', lastName: 'Technician', role: UserRole.TECHNICIAN, userType: 'INTERNAL' },
   })
 
   // Ticket categories

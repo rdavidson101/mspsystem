@@ -16,6 +16,11 @@ enum UserRole {
   CLIENT
 }
 
+enum UserType {
+  INTERNAL
+  CLIENT
+}
+
 enum TicketStatus {
   AWAITING_TRIAGE
   OPEN
@@ -90,17 +95,20 @@ enum ExpenseCategory {
 // =================== MODELS ===================
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  password     String
-  firstName    String
-  lastName     String
-  role         UserRole @default(TECHNICIAN)
-  avatar       String?
-  phone        String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                String   @id @default(uuid())
+  email             String   @unique
+  password          String?
+  firstName         String
+  lastName          String
+  role              UserRole @default(TECHNICIAN)
+  userType          UserType @default(INTERNAL)
+  twoFactorEnabled  Boolean  @default(false)
+  twoFactorSecret   String?
+  avatar            String?
+  phone             String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   assignedTickets    Ticket[]        @relation("AssignedTechnician")
   createdTickets     Ticket[]        @relation("TicketCreator")
@@ -113,6 +121,7 @@ model User {
   todos              Todo[]
   refreshTokens      RefreshToken[]
   macros             Macro[]
+  notifications      Notification[]
 
   @@map("users")
 }
@@ -180,6 +189,7 @@ model Company {
   website     String?
   notes       String?
   isActive    Boolean  @default(true)
+  isInternal  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -483,4 +493,18 @@ model Announcement {
   updatedAt DateTime @updatedAt
 
   @@map("announcements")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  ticketId  String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
 }

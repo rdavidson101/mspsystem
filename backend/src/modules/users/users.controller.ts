@@ -1,12 +1,17 @@
 import { Response, NextFunction } from 'express'
 import { prisma } from '../../lib/prisma'
 import { AuthRequest } from '../../middleware/auth'
+import { AppError } from '../../middleware/errorHandler'
 import bcrypt from 'bcryptjs'
 
 export async function getUsers(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { type } = req.query
+    const where: any = {}
+    if (type) where.userType = type as string
     const users = await prisma.user.findMany({
-      select: { id: true, email: true, firstName: true, lastName: true, role: true, avatar: true, isActive: true, createdAt: true },
+      where,
+      select: { id: true, email: true, firstName: true, lastName: true, role: true, userType: true, avatar: true, isActive: true, phone: true, twoFactorEnabled: true, createdAt: true },
       orderBy: { firstName: 'asc' },
     })
     res.json(users)
@@ -15,11 +20,15 @@ export async function getUsers(req: AuthRequest, res: Response, next: NextFuncti
 
 export async function createUser(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { email, password, firstName, lastName, role, phone } = req.body
-    const hashed = await bcrypt.hash(password, 10)
+    const { email, password, firstName, lastName, role, phone, userType } = req.body
+    const data: any = { email, firstName, lastName, role: role || 'TECHNICIAN', phone, userType: userType || 'INTERNAL' }
+    if (userType !== 'CLIENT') {
+      if (!password) throw new AppError(400, 'Password required for internal users')
+      data.password = await bcrypt.hash(password, 10)
+    }
     const user = await prisma.user.create({
-      data: { email, password: hashed, firstName, lastName, role, phone },
-      select: { id: true, email: true, firstName: true, lastName: true, role: true },
+      data,
+      select: { id: true, email: true, firstName: true, lastName: true, role: true, userType: true },
     })
     res.status(201).json(user)
   } catch (e) { next(e) }

@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Users, TrendingUp, Receipt, FileText,
   FolderKanban, CheckSquare, Ticket, Clock,
-  Settings, HelpCircle, ChevronDown, Building2
+  Settings, HelpCircle, ChevronDown, Building2, Shield
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
@@ -51,7 +51,15 @@ const mainNav = [
 
 const otherNav = [
   { label: 'Support', href: '#', icon: HelpCircle },
-  { label: 'Settings', href: '/settings', icon: Settings },
+  {
+    label: 'Administration', icon: Shield, children: [
+      { label: 'User Management', href: '/admin/users' },
+      { label: 'Ticket Settings', href: '/admin/tickets' },
+      { label: 'Project Settings', href: '/admin/projects' },
+      { label: 'CRM Settings', href: '/admin/crm' },
+      { label: 'System Settings', href: '/admin/system' },
+    ]
+  },
 ]
 
 interface NavItemProps {

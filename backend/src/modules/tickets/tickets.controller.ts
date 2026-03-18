@@ -3,6 +3,14 @@ import { prisma } from '../../lib/prisma'
 import { AuthRequest } from '../../middleware/auth'
 import { io } from '../../index'
 
+async function createNotification(userId: string, type: string, title: string, body: string, ticketId: string) {
+  try {
+    await prisma.notification.create({ data: { userId, type, title, body, ticketId } })
+  } catch (e) {
+    console.error('Failed to create notification:', e)
+  }
+}
+
 const TICKET_INCLUDE = {
   company: { select: { id: true, name: true } },
   contact: { select: { id: true, firstName: true, lastName: true } },
@@ -159,6 +167,15 @@ export async function updateTicket(req: AuthRequest, res: Response, next: NextFu
     })
 
     await recordHistory(ticket.id, req.user!.id, changes)
+    if (ticket.assignedToId && ticket.assignedToId !== req.user!.id && 'assignedToId' in req.body && req.body.assignedToId !== current.assignedToId) {
+      await createNotification(
+        ticket.assignedToId,
+        'TICKET_ASSIGNED',
+        `Ticket assigned to you`,
+        `${ticketRef(ticket.number)} – ${ticket.title} has been assigned to you`,
+        ticket.id
+      )
+    }
     io.emit('ticket:updated', ticket)
     res.json(ticket)
   } catch (e) { next(e) }
@@ -185,10 +202,20 @@ export async function getComments(req: AuthRequest, res: Response, next: NextFun
 
 export async function addComment(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id }, select: { id: true, number: true, title: true, assignedToId: true } })
     const comment = await prisma.ticketComment.create({
       data: { ...req.body, ticketId: req.params.id, userId: req.user!.id },
       include: { user: { select: { id: true, firstName: true, lastName: true } } },
     })
+    if (ticket && ticket.assignedToId && ticket.assignedToId !== req.user!.id) {
+      await createNotification(
+        ticket.assignedToId,
+        'TICKET_UPDATED',
+        `New reply on ${ticketRef(ticket.number)}`,
+        `${req.user!.email} replied to "${ticket.title}"`,
+        ticket.id
+      )
+    }
     io.emit('ticket:comment', comment)
     res.status(201).json(comment)
   } catch (e) { next(e) }

@@ -19,6 +19,13 @@ import SettingsPage from '@/pages/SettingsPage'
 import MacrosPage from '@/pages/MacrosPage'
 import MyTicketsPage from '@/pages/MyTicketsPage'
 import TriagePage from '@/pages/TriagePage'
+import ProfilePage from '@/pages/ProfilePage'
+import AdminLayout from '@/pages/admin/AdminLayout'
+import UserManagementPage from '@/pages/admin/UserManagementPage'
+import TicketSettingsPage from '@/pages/admin/TicketSettingsPage'
+import ProjectSettingsPage from '@/pages/admin/ProjectSettingsPage'
+import CrmSettingsPage from '@/pages/admin/CrmSettingsPage'
+import SystemSettingsPage from '@/pages/admin/SystemSettingsPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -56,6 +63,15 @@ export default function App() {
           <Route path="triage" element={<TriagePage />} />
           <Route path="macros" element={<MacrosPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="admin" element={<AdminLayout />}>
+            <Route index element={<Navigate to="/admin/users" replace />} />
+            <Route path="users" element={<UserManagementPage />} />
+            <Route path="tickets" element={<TicketSettingsPage />} />
+            <Route path="projects" element={<ProjectSettingsPage />} />
+            <Route path="crm" element={<CrmSettingsPage />} />
+            <Route path="system" element={<SystemSettingsPage />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>
