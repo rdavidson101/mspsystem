@@ -30,6 +30,21 @@ async function main() {
     prisma.ticketCategory.upsert({ where: { name: 'User Account' }, update: {}, create: { name: 'User Account', color: '#10b981' } }),
   ])
 
+  // Seed SLA policies
+  const slaPolicies = [
+    { priority: 'LOW' as any, responseTime: 480, resolutionTime: 2880 },
+    { priority: 'MEDIUM' as any, responseTime: 240, resolutionTime: 1440 },
+    { priority: 'HIGH' as any, responseTime: 60, resolutionTime: 480 },
+    { priority: 'CRITICAL' as any, responseTime: 15, resolutionTime: 120 },
+  ]
+  for (const policy of slaPolicies) {
+    await prisma.slaPolicy.upsert({
+      where: { priority: policy.priority },
+      update: {},
+      create: policy,
+    })
+  }
+
   // Sample macros
   await prisma.macro.upsert({
     where: { id: 'macro-1' },

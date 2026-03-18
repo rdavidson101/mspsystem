@@ -77,11 +77,16 @@ export async function getTicket(req: AuthRequest, res: Response, next: NextFunct
 
 export async function createTicket(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const priority = req.body.priority || 'MEDIUM'
+    const slaPolicy = await prisma.slaPolicy.findUnique({ where: { priority } })
+    const now = new Date()
+    const slaResolutionDue = slaPolicy ? new Date(now.getTime() + slaPolicy.resolutionTime * 60000) : undefined
+    const slaResponseDue = slaPolicy ? new Date(now.getTime() + slaPolicy.responseTime * 60000) : undefined
+
     const ticket = await prisma.ticket.create({
-      data: { ...req.body, createdById: req.user!.id },
+      data: { ...req.body, createdById: req.user!.id, slaResolutionDue, slaResponseDue },
       include: TICKET_INCLUDE,
     })
-    // Record creation in history
     await recordHistory(ticket.id, req.user!.id, [
       { field: 'status', oldValue: null, newValue: 'OPEN' },
       { field: 'priority', oldValue: null, newValue: ticket.priority },
@@ -137,6 +142,15 @@ export async function updateTicket(req: AuthRequest, res: Response, next: NextFu
     const data: any = { ...req.body }
     if (req.body.status === 'RESOLVED' && !current.resolvedAt) data.resolvedAt = new Date()
     else if (req.body.status && req.body.status !== 'RESOLVED') data.resolvedAt = null
+
+    if (req.body.priority && req.body.priority !== current.priority) {
+      const newSlaPolicy = await prisma.slaPolicy.findUnique({ where: { priority: req.body.priority } })
+      if (newSlaPolicy) {
+        const createdAt = new Date(current.createdAt)
+        data.slaResolutionDue = new Date(createdAt.getTime() + newSlaPolicy.resolutionTime * 60000)
+        data.slaResponseDue = new Date(createdAt.getTime() + newSlaPolicy.responseTime * 60000)
+      }
+    }
 
     const ticket = await prisma.ticket.update({
       where: { id: req.params.id },

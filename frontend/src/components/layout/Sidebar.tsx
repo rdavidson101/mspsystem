@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Users, TrendingUp, Receipt, FileText,
   FolderKanban, CheckSquare, Ticket, Clock,
-  Settings, HelpCircle, ChevronDown, Building2, Zap
+  Settings, HelpCircle, ChevronDown, Building2
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
@@ -21,8 +21,12 @@ const mainNav = [
   { label: 'Expenses', href: '/expenses', icon: Receipt },
   { label: 'Projects', href: '/projects', icon: FolderKanban },
   { label: 'Tasks', href: '/tasks', icon: CheckSquare },
-  { label: 'Tickets', href: '/tickets', icon: Ticket },
-  { label: 'Macros', href: '/macros', icon: Zap },
+  {
+    label: 'Tickets', icon: Ticket, children: [
+      { label: 'All Tickets', href: '/tickets' },
+      { label: 'Macros', href: '/macros' },
+    ]
+  },
   { label: 'Time Tracking', href: '/time-tracking', icon: Clock },
   { label: 'Contacts', href: '/contacts', icon: Users },
 ]
@@ -38,7 +42,12 @@ interface NavItemProps {
 
 function NavItem({ item }: NavItemProps) {
   const location = useLocation()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(() => {
+    if ('children' in item && item.children) {
+      return item.children.some(c => location.pathname.startsWith(c.href))
+    }
+    return false
+  })
 
   if ('children' in item && item.children) {
     const isActive = item.children.some(c => location.pathname.startsWith(c.href))

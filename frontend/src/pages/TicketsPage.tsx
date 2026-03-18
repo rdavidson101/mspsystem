@@ -26,6 +26,37 @@ function ticketRef(number: number) {
   return `INC-${String(number).padStart(5, '0')}`
 }
 
+function getSlaInfo(ticket: any): { status: 'ok' | 'warning' | 'breached' | 'none'; timeLeft: string } {
+  if (!ticket.slaResolutionDue || ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') {
+    return { status: 'none', timeLeft: '' }
+  }
+  const now = Date.now()
+  const due = new Date(ticket.slaResolutionDue).getTime()
+  const created = new Date(ticket.createdAt).getTime()
+  const totalMs = due - created
+  const remainingMs = due - now
+
+  if (remainingMs < 0) {
+    const overMs = -remainingMs
+    const h = Math.floor(overMs / 3600000)
+    const m = Math.floor((overMs % 3600000) / 60000)
+    return { status: 'breached', timeLeft: h > 0 ? `${h}h ${m}m over` : `${m}m over` }
+  }
+  const h = Math.floor(remainingMs / 3600000)
+  const m = Math.floor((remainingMs % 3600000) / 60000)
+  const timeLeft = h > 0 ? `${h}h ${m}m` : `${m}m`
+  return {
+    status: remainingMs / totalMs < 0.2 ? 'warning' : 'ok',
+    timeLeft,
+  }
+}
+
+const slaBadgeStyles: Record<string, string> = {
+  ok: 'bg-green-100 text-green-700',
+  warning: 'bg-yellow-100 text-yellow-700',
+  breached: 'bg-red-100 text-red-700',
+}
+
 export default function TicketsPage() {
   const qc = useQueryClient()
   const { user } = useAuthStore()
@@ -123,6 +154,7 @@ export default function TicketsPage() {
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Company</th>
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Category</th>
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Priority</th>
+              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">SLA</th>
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Status</th>
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Assigned To</th>
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Created</th>
@@ -156,6 +188,20 @@ export default function TicketsPage() {
                   <span className={clsx('badge text-xs', priorityColors[ticket.priority])}>{ticket.priority}</span>
                 </td>
                 <td className="py-3 px-4">
+                  {(() => {
+                    const sla = getSlaInfo(ticket)
+                    if (sla.status === 'none') return <span className="text-slate-400 text-xs">—</span>
+                    return (
+                      <div className="flex flex-col gap-0.5">
+                        <span className={clsx('badge text-xs font-medium', slaBadgeStyles[sla.status])}>
+                          {sla.status === 'breached' ? 'Breached' : sla.status === 'warning' ? 'At Risk' : 'In SLA'}
+                        </span>
+                        <span className="text-xs text-slate-400">{sla.timeLeft}</span>
+                      </div>
+                    )
+                  })()}
+                </td>
+                <td className="py-3 px-4">
                   <span className={clsx('badge text-xs', statusColors[ticket.status])}>{ticket.status.replace(/_/g, ' ')}</span>
                 </td>
                 <td className="py-3 px-4 text-sm text-slate-600 whitespace-nowrap">
@@ -165,7 +211,7 @@ export default function TicketsPage() {
               </tr>
             ))}
             {tickets.length === 0 && (
-              <tr><td colSpan={9} className="py-12 text-center text-slate-400">
+              <tr><td colSpan={10} className="py-12 text-center text-slate-400">
                 <Ticket size={32} className="mx-auto mb-2 opacity-30" />
                 No tickets found
               </td></tr>

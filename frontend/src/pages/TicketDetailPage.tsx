@@ -17,6 +17,36 @@ const priorityColors: Record<string, string> = {
   HIGH: 'bg-orange-100 text-orange-700',
   CRITICAL: 'bg-red-100 text-red-700',
 }
+const slaBadgeStyles: Record<string, string> = {
+  ok: 'bg-green-100 text-green-700',
+  warning: 'bg-yellow-100 text-yellow-700',
+  breached: 'bg-red-100 text-red-700',
+}
+
+function getSlaInfo(ticket: any): { status: 'ok' | 'warning' | 'breached' | 'none'; timeLeft: string } {
+  if (!ticket.slaResolutionDue || ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') {
+    return { status: 'none', timeLeft: '' }
+  }
+  const now = Date.now()
+  const due = new Date(ticket.slaResolutionDue).getTime()
+  const created = new Date(ticket.createdAt).getTime()
+  const totalMs = due - created
+  const remainingMs = due - now
+
+  if (remainingMs < 0) {
+    const overMs = -remainingMs
+    const h = Math.floor(overMs / 3600000)
+    const m = Math.floor((overMs % 3600000) / 60000)
+    return { status: 'breached', timeLeft: h > 0 ? `${h}h ${m}m over` : `${m}m over` }
+  }
+  const h = Math.floor(remainingMs / 3600000)
+  const m = Math.floor((remainingMs % 3600000) / 60000)
+  const timeLeft = h > 0 ? `${h}h ${m}m` : `${m}m`
+  return {
+    status: remainingMs / totalMs < 0.2 ? 'warning' : 'ok',
+    timeLeft,
+  }
+}
 const statusColors: Record<string, string> = {
   OPEN: 'bg-blue-100 text-blue-700',
   IN_PROGRESS: 'bg-orange-100 text-orange-700',
@@ -396,6 +426,23 @@ export default function TicketDetailPage() {
                 ))}
               </select>
             </div>
+
+            {/* SLA Status */}
+            {(() => {
+              const sla = getSlaInfo(ticket)
+              if (sla.status === 'none') return null
+              return (
+                <div>
+                  <p className="text-xs font-medium text-slate-500 mb-1">SLA</p>
+                  <span className={clsx('badge text-xs font-medium', slaBadgeStyles[sla.status])}>
+                    {sla.status === 'breached' ? 'Breached' : sla.status === 'warning' ? 'At Risk' : 'In SLA'}
+                  </span>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {sla.status === 'breached' ? `${sla.timeLeft}` : `${sla.timeLeft} remaining`}
+                  </p>
+                </div>
+              )
+            })()}
 
             {/* Category */}
             <div>

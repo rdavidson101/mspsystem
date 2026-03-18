@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { User, Users, Shield, Bell, Tag, Plus, Trash2, Pencil } from 'lucide-react'
+import { User, Users, Shield, Bell, Tag, Plus, Trash2, Pencil, Clock } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 
 const PRESET_COLORS = ['#3b82f6','#f97316','#8b5cf6','#06b6d4','#ef4444','#10b981','#f59e0b','#ec4899','#6366f1','#14b8a6']
@@ -20,6 +20,43 @@ export default function SettingsPage() {
 
   const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: () => api.get('/users').then(r => r.data) })
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => api.get('/categories').then(r => r.data) })
+
+  const defaultSla: Record<string, { responseTime: number; resolutionTime: number }> = {
+    LOW: { responseTime: 480, resolutionTime: 2880 },
+    MEDIUM: { responseTime: 240, resolutionTime: 1440 },
+    HIGH: { responseTime: 60, resolutionTime: 480 },
+    CRITICAL: { responseTime: 15, resolutionTime: 120 },
+  }
+  const [slaPolicies, setSlaPolicies] = useState<Record<string, { responseTime: number; resolutionTime: number }>>(defaultSla)
+  const [slaSaved, setSlaSaved] = useState<Record<string, boolean>>({})
+
+  useQuery({
+    queryKey: ['sla'],
+    queryFn: () => api.get('/sla').then(r => r.data),
+    enabled: activeTab === 'sla',
+    onSuccess: (data: any[]) => {
+      if (data && data.length > 0) {
+        const mapped: Record<string, { responseTime: number; resolutionTime: number }> = { ...defaultSla }
+        data.forEach((item: any) => {
+          mapped[item.priority] = { responseTime: item.responseTime, resolutionTime: item.resolutionTime }
+        })
+        setSlaPolicies(mapped)
+      }
+    },
+  } as any)
+
+  async function saveSlaRow(priority: string) {
+    await api.put('/sla', { priority, ...slaPolicies[priority] })
+    setSlaSaved(s => ({ ...s, [priority]: true }))
+    setTimeout(() => setSlaSaved(s => ({ ...s, [priority]: false })), 2000)
+  }
+
+  const priorityBadgeColors: Record<string, string> = {
+    LOW: 'bg-slate-100 text-slate-600',
+    MEDIUM: 'bg-blue-100 text-blue-700',
+    HIGH: 'bg-orange-100 text-orange-700',
+    CRITICAL: 'bg-red-100 text-red-700',
+  }
 
   const createUserMutation = useMutation({
     mutationFn: (data: any) => api.post('/users', data),
@@ -49,6 +86,7 @@ export default function SettingsPage() {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'team', label: 'Team', icon: Users },
     { id: 'categories', label: 'Categories', icon: Tag },
+    { id: 'sla', label: 'SLA Policies', icon: Clock },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
   ]
@@ -146,6 +184,61 @@ export default function SettingsPage() {
                 </div>
               ))}
               {categories.length === 0 && <p className="text-sm text-slate-400 text-center py-4">No categories yet.</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'sla' && (
+        <div className="space-y-4">
+          <div className="card p-6">
+            <h2 className="font-semibold text-slate-900 mb-1">SLA Policies</h2>
+            <p className="text-sm text-slate-500 mb-5">Define response and resolution time targets for each priority level.</p>
+            <div className="space-y-4">
+              {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(priority => (
+                <div key={priority} className="flex items-start gap-4 p-4 bg-slate-50 rounded-lg">
+                  <div className="w-24 flex-shrink-0 pt-1">
+                    <span className={`badge text-xs font-semibold ${priorityBadgeColors[priority]}`}>{priority}</span>
+                  </div>
+                  <div className="flex-1 grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="label">Response Time (min)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        className="input"
+                        value={slaPolicies[priority]?.responseTime ?? defaultSla[priority].responseTime}
+                        onChange={e => setSlaPolicies(s => ({ ...s, [priority]: { ...s[priority], responseTime: Number(e.target.value) } }))}
+                      />
+                      <p className="text-xs text-slate-400 mt-1">
+                        {slaPolicies[priority]?.responseTime ?? defaultSla[priority].responseTime} min = {((slaPolicies[priority]?.responseTime ?? defaultSla[priority].responseTime) / 60).toFixed(1)} hours
+                      </p>
+                    </div>
+                    <div>
+                      <label className="label">Resolution Time (min)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        className="input"
+                        value={slaPolicies[priority]?.resolutionTime ?? defaultSla[priority].resolutionTime}
+                        onChange={e => setSlaPolicies(s => ({ ...s, [priority]: { ...s[priority], resolutionTime: Number(e.target.value) } }))}
+                      />
+                      <p className="text-xs text-slate-400 mt-1">
+                        {slaPolicies[priority]?.resolutionTime ?? defaultSla[priority].resolutionTime} min = {((slaPolicies[priority]?.resolutionTime ?? defaultSla[priority].resolutionTime) / 60).toFixed(1)} hours
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 pt-6 flex items-center gap-2">
+                    <button
+                      onClick={() => saveSlaRow(priority)}
+                      className="btn-primary text-sm py-1.5 px-3"
+                    >
+                      Save
+                    </button>
+                    {slaSaved[priority] && <span className="text-xs text-green-600 font-medium">Saved!</span>}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

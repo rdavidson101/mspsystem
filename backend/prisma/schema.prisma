@@ -152,6 +152,18 @@ model Macro {
   @@map("macros")
 }
 
+model SlaPolicy {
+  id             String         @id @default(uuid())
+  priority       TicketPriority @unique
+  responseTime   Int
+  resolutionTime Int
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@map("sla_policies")
+}
+
 model Company {
   id          String   @id @default(uuid())
   name        String
@@ -230,6 +242,8 @@ model Ticket {
   tags            String[]
   dueDate         DateTime?
   resolvedAt      DateTime?
+  slaResolutionDue DateTime?
+  slaResponseDue   DateTime?
   companyId       String?
   company         Company?        @relation(fields: [companyId], references: [id])
   contactId       String?
