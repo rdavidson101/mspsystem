@@ -4,11 +4,19 @@ import { AuthRequest } from '../../middleware/auth'
 import { AppError } from '../../middleware/errorHandler'
 
 const taskInclude = {
-  assignedTo: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+  assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } } },
   createdBy: { select: { id: true, firstName: true, lastName: true } },
   section: { select: { id: true, name: true, color: true } },
   activeTimers: true,
   _count: { select: { comments: true } },
+}
+
+async function getTaskTotalTime(taskId: string): Promise<number> {
+  const result = await prisma.timeEntry.aggregate({
+    where: { taskId },
+    _sum: { hours: true },
+  })
+  return result._sum.hours || 0
 }
 
 export async function getTasks(req: AuthRequest, res: Response, next: NextFunction) {
@@ -18,7 +26,6 @@ export async function getTasks(req: AuthRequest, res: Response, next: NextFuncti
       where: {
         ...(status ? { status: status as any } : {}),
         ...(projectId ? { projectId: String(projectId) } : {}),
-        ...(assignedToId ? { assignedToId: String(assignedToId) } : {}),
         ...(sectionId ? { sectionId: String(sectionId) } : {}),
         parentTaskId: null,
       },
@@ -46,13 +53,14 @@ export async function getTask(req: AuthRequest, res: Response, next: NextFunctio
       },
     })
     if (!task) throw new AppError(404, 'Task not found')
-    res.json(task)
+    const totalHours = await getTaskTotalTime(task.id)
+    res.json({ ...task, totalHours })
   } catch (e) { next(e) }
 }
 
 export async function createTask(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { title, description, status, assignedToId, projectId, sectionId, parentTaskId, dueDate, order } = req.body
+    const { title, description, status, assigneeIds, projectId, sectionId, parentTaskId, dueDate, startDate, order } = req.body
     const lastTask = await prisma.task.findFirst({
       where: { sectionId: sectionId || null, parentTaskId: parentTaskId || null },
       orderBy: { order: 'desc' },
@@ -62,13 +70,16 @@ export async function createTask(req: AuthRequest, res: Response, next: NextFunc
         title,
         description: description || null,
         status: status || 'NOT_STARTED',
-        assignedToId: assignedToId || null,
         projectId: projectId || null,
         sectionId: sectionId || null,
         parentTaskId: parentTaskId || null,
         dueDate: dueDate ? new Date(dueDate) : null,
+        startDate: startDate ? new Date(startDate) : null,
         order: order ?? (lastTask?.order ?? -1) + 1,
         createdById: req.user!.id,
+        assignees: assigneeIds?.length ? {
+          create: assigneeIds.map((uid: string) => ({ userId: uid })),
+        } : undefined,
       },
       include: {
         ...taskInclude,
@@ -81,17 +92,26 @@ export async function createTask(req: AuthRequest, res: Response, next: NextFunc
 
 export async function updateTask(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { title, description, status, assignedToId, sectionId, dueDate, order, priority } = req.body
+    const { title, description, status, assigneeIds, sectionId, dueDate, startDate, order, priority } = req.body
     const data: any = {}
     if (title !== undefined) data.title = title
     if (description !== undefined) data.description = description || null
     if (status !== undefined) data.status = status
-    if (assignedToId !== undefined) data.assignedToId = assignedToId || null
     if (sectionId !== undefined) data.sectionId = sectionId || null
     if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null
+    if (startDate !== undefined) data.startDate = startDate ? new Date(startDate) : null
     if (order !== undefined) data.order = order
     if (priority !== undefined) data.priority = priority
     if (status === 'DONE') data.completedAt = new Date()
+
+    // Handle multiple assignees
+    if (assigneeIds !== undefined) {
+      data.assignees = {
+        deleteMany: {},
+        create: (assigneeIds as string[]).map((uid: string) => ({ userId: uid })),
+      }
+    }
+
     const task = await prisma.task.update({
       where: { id: req.params.id },
       data,
@@ -170,20 +190,29 @@ export async function stopTimer(req: AuthRequest, res: Response, next: NextFunct
       where: { taskId_userId: { taskId: req.params.id, userId: req.user!.id } },
     })
     if (!timer) throw new AppError(404, 'No active timer found')
+
     const durationSeconds = Math.floor((Date.now() - timer.startedAt.getTime()) / 1000)
-    const hours = durationSeconds / 3600
+    const hours = Math.max(durationSeconds / 3600, 1 / 3600) // minimum 1 second
+
+    // Get task to find projectId
+    const task = await prisma.task.findUnique({ where: { id: req.params.id }, select: { projectId: true } })
+
     await prisma.timeEntry.create({
       data: {
-        hours: Math.max(hours, 0.01),
+        hours,
         taskId: req.params.id,
+        projectId: task?.projectId || null,
         userId: req.user!.id,
-        description: 'Timer session',
+        description: `Timer session (${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s)`,
         date: new Date(),
         billable: true,
       },
     })
     await prisma.activeTimer.delete({ where: { taskId_userId: { taskId: req.params.id, userId: req.user!.id } } })
-    res.json({ success: true, durationSeconds })
+
+    // Return updated total time
+    const totalHours = await getTaskTotalTime(req.params.id)
+    res.json({ success: true, durationSeconds, totalHours })
   } catch (e) { next(e) }
 }
 
@@ -192,6 +221,7 @@ export async function getTimer(req: AuthRequest, res: Response, next: NextFuncti
     const timer = await prisma.activeTimer.findUnique({
       where: { taskId_userId: { taskId: req.params.id, userId: req.user!.id } },
     })
-    res.json(timer || null)
+    const totalHours = await getTaskTotalTime(req.params.id)
+    res.json({ timer: timer || null, totalHours })
   } catch (e) { next(e) }
 }

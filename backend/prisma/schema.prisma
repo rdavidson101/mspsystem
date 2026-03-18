@@ -165,6 +165,7 @@ model User {
   shipmentRequests        ShipmentRequest[]
   taskComments       TaskComment[]
   activeTimers       ActiveTimer[]
+  taskAssignees  TaskAssignee[]
 
   @@map("users")
 }
@@ -428,8 +429,19 @@ model Task {
   attachments    Attachment[]
   comments       TaskComment[]
   activeTimers   ActiveTimer[]
+  assignees      TaskAssignee[]
 
   @@map("tasks")
+}
+
+model TaskAssignee {
+  taskId String
+  userId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@id([taskId, userId])
+  @@map("task_assignees")
 }
 
 model TaskComment {

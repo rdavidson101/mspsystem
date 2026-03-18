@@ -13,11 +13,11 @@ const projectInclude = {
         where: { parentTaskId: null },
         orderBy: { order: 'asc' as const },
         include: {
-          assignedTo: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+          assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } } },
           subTasks: {
             orderBy: { order: 'asc' as const },
             include: {
-              assignedTo: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+              assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } } },
               activeTimers: true,
               _count: { select: { comments: true } },
             },
