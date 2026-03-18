@@ -51,7 +51,13 @@ const mainNav = [
       { label: 'Macros', href: '/macros' },
     ]
   },
-  { label: 'Changes', href: '/changes', icon: GitMerge },
+  {
+    label: 'Changes', icon: GitMerge, children: [
+      { label: 'All Changes', href: '/changes' },
+      { label: 'My Approvals', href: '/changes/my-approvals' },
+      { label: 'My Changes', href: '/changes/my-changes' },
+    ]
+  },
   { label: 'Time Tracking', href: '/time-tracking', icon: Clock },
   { label: 'Contacts', href: '/contacts', icon: Users },
 ]

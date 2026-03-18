@@ -143,9 +143,9 @@ export default function NotificationBell() {
                       <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.body}</p>
                       <div className="flex items-center gap-3 mt-1">
                         <p className="text-xs text-slate-400">{formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}</p>
-                        {n.ticketId && (
+                        {(n.ticketId || n.link) && (
                           <Link
-                            to={`/tickets/${n.ticketId}`}
+                            to={n.link || `/tickets/${n.ticketId}`}
                             onClick={() => { if (!n.read) markReadMutation.mutate(n.id); setOpen(false) }}
                             className="text-xs text-primary-600 hover:text-primary-700 font-medium"
                           >

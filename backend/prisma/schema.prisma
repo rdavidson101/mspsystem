@@ -545,6 +545,7 @@ model Notification {
   title     String
   body      String
   ticketId  String?
+  link      String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 

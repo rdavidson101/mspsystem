@@ -31,6 +31,8 @@ import SystemSettingsPage from '@/pages/admin/SystemSettingsPage'
 import ChangesPage from '@/pages/changes/ChangesPage'
 import ChangeFormPage from '@/pages/changes/ChangeFormPage'
 import ChangeDetailPage from '@/pages/changes/ChangeDetailPage'
+import MyApprovalsPage from '@/pages/changes/MyApprovalsPage'
+import MyChangesPage from '@/pages/changes/MyChangesPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -70,6 +72,8 @@ export default function App() {
           <Route path="inventory/shipments" element={<ShipmentsPage />} />
           <Route path="changes" element={<ChangesPage />} />
           <Route path="changes/new" element={<ChangeFormPage />} />
+          <Route path="changes/my-approvals" element={<MyApprovalsPage />} />
+          <Route path="changes/my-changes" element={<MyChangesPage />} />
           <Route path="changes/:id" element={<ChangeDetailPage />} />
           <Route path="changes/:id/edit" element={<ChangeFormPage />} />
           <Route path="macros" element={<MacrosPage />} />

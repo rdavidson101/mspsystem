@@ -33,11 +33,21 @@ function sanitizeChangeData(body: any) {
   return d
 }
 
+async function createNotification(userId: string, type: string, title: string, body: string, link: string) {
+  try {
+    await (prisma as any).notification.create({ data: { userId, type, title, body, link } })
+  } catch (e) {
+    console.error('Failed to create notification:', e)
+  }
+}
+
 export async function getChanges(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { status } = req.query
+    const { status, internalApproverId, createdById } = req.query
     const where: any = {}
     if (status) where.status = status
+    if (internalApproverId) where.internalApproverId = internalApproverId as string
+    if (createdById) where.createdById = createdById as string
     const changes = await prisma.change.findMany({ where, include, orderBy: { number: 'desc' } })
     res.json(changes.map(c => ({ ...c, ref: changeRef(c.number) })))
   } catch (e) { next(e) }
@@ -82,6 +92,15 @@ export async function submitChange(req: AuthRequest, res: Response, next: NextFu
       data: { status: 'SUBMITTED' },
       include,
     })
+    if (updated.internalApproverId) {
+      await createNotification(
+        updated.internalApproverId,
+        'CHANGE_APPROVAL',
+        `Change pending your approval`,
+        `RFC-${String(updated.number).padStart(5, '0')} – ${updated.title} requires your internal approval`,
+        `/changes/${updated.id}`
+      )
+    }
     res.json({ ...updated, ref: changeRef(updated.number) })
   } catch (e) { next(e) }
 }

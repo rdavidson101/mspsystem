@@ -132,6 +132,9 @@ export default function ChangeDetailPage() {
           </p>
           {showApprovalInput ? (
             <div className="space-y-3">
+              <p className="text-xs text-slate-600 font-medium">
+                {showApprovalInput === 'approve' ? 'Approving this change' : 'Rejecting this change'} — add an optional comment:
+              </p>
               <textarea
                 className="input resize-none text-sm"
                 rows={3}
@@ -141,10 +144,19 @@ export default function ChangeDetailPage() {
               />
               <div className="flex gap-2">
                 <button
-                  onClick={() => actionMutation.mutate({ endpoint: canApproveInternal ? 'approve-internal' : 'approve-customer', notes: approvalNotes })}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg"
+                  onClick={() => {
+                    const endpoint = showApprovalInput === 'approve'
+                      ? (canApproveInternal ? 'approve-internal' : 'approve-customer')
+                      : (canApproveInternal ? 'reject-internal' : 'reject-customer')
+                    actionMutation.mutate({ endpoint, notes: approvalNotes })
+                  }}
+                  className={clsx(
+                    "flex items-center gap-2 px-4 py-2 text-white text-sm font-medium rounded-lg",
+                    showApprovalInput === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                  )}
                 >
-                  <CheckCircle size={14} /> {showApprovalInput === 'approve' ? 'Confirm Approve' : 'Confirm Reject'}
+                  {showApprovalInput === 'approve' ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                  {showApprovalInput === 'approve' ? 'Confirm Approve' : 'Confirm Reject'}
                 </button>
                 <button onClick={() => { setShowApprovalInput(null); setApprovalNotes('') }} className="btn-secondary text-sm">Cancel</button>
               </div>
