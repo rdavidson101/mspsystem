@@ -166,6 +166,7 @@ model User {
   taskComments       TaskComment[]
   activeTimers       ActiveTimer[]
   taskAssignees  TaskAssignee[]
+  createdTemplates   ProjectTemplate[] @relation("TemplateCreator")
 
   @@map("users")
 }
@@ -714,4 +715,46 @@ model Change {
   updatedAt    DateTime @updatedAt
 
   @@map("changes")
+}
+
+model ProjectTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdById String
+  createdBy   User     @relation("TemplateCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sections    TemplateSection[]
+
+  @@map("project_templates")
+}
+
+model TemplateSection {
+  id         String          @id @default(uuid())
+  templateId String
+  template   ProjectTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  name       String
+  color      String          @default("#6366f1")
+  order      Int             @default(0)
+
+  tasks      TemplateTask[]
+
+  @@map("template_sections")
+}
+
+model TemplateTask {
+  id             String        @id @default(uuid())
+  sectionId      String
+  section        TemplateSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  estimatedHours Float?
+  order          Int           @default(0)
+  parentTaskId   String?
+  parentTask     TemplateTask? @relation("TemplateSubTasks", fields: [parentTaskId], references: [id])
+  subTasks       TemplateTask[] @relation("TemplateSubTasks")
+
+  @@map("template_tasks")
 }

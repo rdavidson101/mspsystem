@@ -441,6 +441,9 @@ function TaskRow({ task, depth = 0, projectMembers, onOpenComments, onRefresh }:
                   {isRunning && totalHours > 0 && (
                     <span className="text-xs text-slate-400 block">{formatHours(totalHours)} total</span>
                   )}
+                  {task.estimatedHours && (
+                    <span className="text-xs text-slate-400 block">/ {task.estimatedHours}h est</span>
+                  )}
                 </div>
               </div>
               {timerError && <span className="text-xs text-red-500 mt-0.5">{timerError}</span>}
@@ -636,6 +639,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   const statusRef = useRef<HTMLButtonElement>(null)
   const assigneeRef = useRef<HTMLButtonElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const attachFileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const mentionPickerRef = useRef<HTMLDivElement>(null)
 
@@ -669,6 +673,36 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
     mutationFn: (id: string) => api.delete(`/tasks/${initialTask.id}/comments/${id}`).then(r => r.data),
     onSuccess: () => refetchComments(),
   })
+
+  // Attachments
+  const { data: attachments = [], refetch: refetchAttachments } = useQuery({
+    queryKey: ['task-attachments', initialTask.id],
+    queryFn: () => api.get(`/tasks/${initialTask.id}/attachments`).then(r => r.data),
+  })
+  const uploadAttachmentMut = useMutation({
+    mutationFn: (data: any) => api.post(`/tasks/${initialTask.id}/attachments`, data).then(r => r.data),
+    onSuccess: () => refetchAttachments(),
+  })
+  const deleteAttachmentMut = useMutation({
+    mutationFn: (id: string) => api.delete(`/tasks/${initialTask.id}/attachments/${id}`).then(r => r.data),
+    onSuccess: () => refetchAttachments(),
+  })
+
+  function handleAttachFile(e: React.ChangeEvent<HTMLInputElement>) {
+    Array.from(e.target.files || []).forEach(file => {
+      const reader = new FileReader()
+      reader.onload = ev => {
+        uploadAttachmentMut.mutate({
+          name: file.name,
+          url: ev.target?.result as string,
+          size: file.size,
+          mimeType: file.type,
+        })
+      }
+      reader.readAsDataURL(file)
+    })
+    e.target.value = ''
+  }
 
   // Close mention picker on outside click
   useEffect(() => {
@@ -925,6 +959,23 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
               </div>
             </div>
 
+            {/* Estimated Hours */}
+            <div>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Estimated Hours</p>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={task.estimatedHours ?? ''}
+                  onChange={e => updateMut.mutate({ estimatedHours: e.target.value ? Number(e.target.value) : null })}
+                  placeholder="e.g. 8"
+                  className="w-full border border-slate-200 hover:border-slate-300 focus:border-primary-300 rounded-xl px-3 py-2 text-sm text-slate-700 outline-none bg-white pr-8"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">hrs</span>
+              </div>
+            </div>
+
             {/* Time tracked per user */}
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -1038,6 +1089,32 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
             })}
           </div>
 
+          {/* Attachments */}
+          {attachments.length > 0 && (
+            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50 flex-shrink-0">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Attachments</p>
+              <div className="space-y-1.5">
+                {attachments.map((att: any) => (
+                  <div key={att.id} className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 group/att">
+                    <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 text-slate-500 text-xs font-bold">
+                      {att.mimeType?.startsWith('image/') ? '🖼' : att.mimeType?.includes('pdf') ? '📄' : '📎'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <a href={att.url} download={att.name} className="text-xs font-medium text-slate-700 hover:text-primary-600 truncate block">{att.name}</a>
+                      <span className="text-[10px] text-slate-400">{att.size > 1024 * 1024 ? `${(att.size / 1024 / 1024).toFixed(1)} MB` : `${(att.size / 1024).toFixed(0)} KB`}</span>
+                    </div>
+                    <button
+                      onClick={() => deleteAttachmentMut.mutate(att.id)}
+                      className="opacity-0 group-hover/att:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Comment input */}
           <div className="px-6 py-4 border-t border-slate-200 bg-white flex-shrink-0 space-y-3">
             {images.length > 0 && (
@@ -1110,13 +1187,22 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                   }}
                 />
                 <div className="flex items-center justify-between px-3 pb-2.5">
-                  <button
-                    onClick={() => fileRef.current?.click()}
-                    className="text-xs text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1"
-                  >
-                    📎 Attach
-                  </button>
-                  <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => fileRef.current?.click()}
+                      className="text-xs text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1"
+                    >
+                      📎 Attach
+                    </button>
+                    <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+                    <button
+                      onClick={() => attachFileRef.current?.click()}
+                      className="text-xs text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1"
+                    >
+                      📎 Files
+                    </button>
+                    <input ref={attachFileRef} type="file" multiple className="hidden" onChange={handleAttachFile} />
+                  </div>
                   <button
                     onClick={submit}
                     disabled={!text.trim() && images.length === 0}
@@ -1145,6 +1231,13 @@ function ProjectSettingsModal({ project, onClose, onRefresh, onDelete }: {
   const [endDate, setEndDate] = useState(project.endDate ? format(new Date(project.endDate), 'yyyy-MM-dd') : '')
   const [budget, setBudget] = useState(project.budget != null ? String(project.budget) : '')
   const [saved, setSaved] = useState(false)
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState('')
+
+  const saveTemplateMut = useMutation({
+    mutationFn: (data: any) => api.post(`/templates/from-project/${project.id}`, data).then(r => r.data),
+    onSuccess: () => { setShowSaveTemplate(false); setTemplateName('') },
+  })
 
   const updateMut = useMutation({
     mutationFn: (data: any) => api.patch(`/projects/${project.id}`, data).then(r => r.data),
@@ -1294,6 +1387,40 @@ function ProjectSettingsModal({ project, onClose, onRefresh, onDelete }: {
                 className="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-sm text-slate-700 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
               />
             </div>
+          </div>
+
+          {/* Save as Template */}
+          <div className="border border-slate-200 rounded-xl p-4">
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-widest mb-1">Save as Template</p>
+            <p className="text-xs text-slate-500 mb-3">Save this project's structure (sections &amp; tasks) as a reusable template.</p>
+            {showSaveTemplate ? (
+              <div className="space-y-2">
+                <input
+                  autoFocus
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary-400"
+                  placeholder="Template name"
+                  value={templateName}
+                  onChange={e => setTemplateName(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <button onClick={() => setShowSaveTemplate(false)} className="btn-secondary text-xs px-3 py-1.5">Cancel</button>
+                  <button
+                    onClick={() => saveTemplateMut.mutate({ name: templateName || project.name + ' Template' })}
+                    disabled={saveTemplateMut.isPending}
+                    className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50"
+                  >
+                    {saveTemplateMut.isPending ? 'Saving…' : 'Save Template'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setTemplateName(project.name + ' Template'); setShowSaveTemplate(true) }}
+                className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-primary-600 bg-white hover:bg-primary-50 border border-slate-200 hover:border-primary-200 px-3 py-2 rounded-lg transition-colors"
+              >
+                Save as Template
+              </button>
+            )}
           </div>
 
           {/* Danger zone */}

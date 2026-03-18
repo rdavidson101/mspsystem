@@ -64,7 +64,7 @@ export async function getProject(req: AuthRequest, res: Response, next: NextFunc
 
 export async function createProject(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { name, description, status, startDate, endDate, budget, companyId, memberIds } = req.body
+    const { name, description, status, startDate, endDate, budget, companyId, templateId } = req.body
     const project = await prisma.project.create({
       data: {
         name,
@@ -74,20 +74,73 @@ export async function createProject(req: AuthRequest, res: Response, next: NextF
         endDate: endDate ? new Date(endDate) : null,
         budget: budget ? Number(budget) : null,
         companyId: companyId || null,
-        members: {
-          create: [
-            { userId: req.user!.id, role: 'OWNER' },
-            ...((memberIds || []).filter((id: string) => id !== req.user!.id).map((uid: string) => ({ userId: uid, role: 'MEMBER' }))),
-          ],
-        },
       },
-      include: {
-        company: { select: { id: true, name: true } },
-        members: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } } },
-        _count: { select: { tasks: true, sections: true } },
-      },
+      include: projectInclude,
     })
-    res.status(201).json(project)
+
+    // If a template was selected, copy its sections and tasks
+    if (templateId) {
+      const template = await prisma.projectTemplate.findUnique({
+        where: { id: templateId },
+        include: {
+          sections: {
+            orderBy: { order: 'asc' },
+            include: {
+              tasks: {
+                where: { parentTaskId: null },
+                orderBy: { order: 'asc' },
+                include: { subTasks: { orderBy: { order: 'asc' } } },
+              },
+            },
+          },
+        },
+      })
+      if (template) {
+        for (const section of template.sections) {
+          const newSection = await prisma.section.create({
+            data: {
+              projectId: project.id,
+              name: section.name,
+              color: section.color,
+              order: section.order,
+            },
+          })
+          for (const task of section.tasks) {
+            const newTask = await prisma.task.create({
+              data: {
+                title: task.title,
+                description: task.description,
+                estimatedHours: task.estimatedHours,
+                projectId: project.id,
+                sectionId: newSection.id,
+                order: task.order,
+                status: 'NOT_STARTED',
+                createdById: req.user!.id,
+              },
+            })
+            for (const sub of task.subTasks) {
+              await prisma.task.create({
+                data: {
+                  title: sub.title,
+                  description: sub.description,
+                  estimatedHours: sub.estimatedHours,
+                  projectId: project.id,
+                  sectionId: newSection.id,
+                  parentTaskId: newTask.id,
+                  order: sub.order,
+                  status: 'NOT_STARTED',
+                  createdById: req.user!.id,
+                },
+              })
+            }
+          }
+        }
+      }
+    }
+
+    // Re-fetch with sections populated
+    const populated = await prisma.project.findUnique({ where: { id: project.id }, include: projectInclude })
+    res.status(201).json(populated)
   } catch (e) { next(e) }
 }
 

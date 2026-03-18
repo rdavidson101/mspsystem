@@ -4,6 +4,7 @@ import {
   getTasks, getTask, createTask, updateTask, deleteTask, reorderTasks,
   getTaskComments, createTaskComment, deleteTaskComment,
   startTimer, stopTimer, getTimer, getTaskTimeByUser,
+  getTaskAttachments, createTaskAttachment, deleteTaskAttachment,
 } from './tasks.controller'
 
 export const tasksRouter = Router()
@@ -24,3 +25,7 @@ tasksRouter.get('/:id/timer', getTimer)
 tasksRouter.post('/:id/timer/start', startTimer)
 tasksRouter.post('/:id/timer/stop', stopTimer)
 tasksRouter.get('/:id/time-by-user', getTaskTimeByUser)
+
+tasksRouter.get('/:id/attachments', getTaskAttachments)
+tasksRouter.post('/:id/attachments', createTaskAttachment)
+tasksRouter.delete('/:id/attachments/:attachmentId', deleteTaskAttachment)

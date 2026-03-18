@@ -60,7 +60,7 @@ export async function getTask(req: AuthRequest, res: Response, next: NextFunctio
 
 export async function createTask(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { title, description, status, assigneeIds, projectId, sectionId, parentTaskId, dueDate, startDate, order } = req.body
+    const { title, description, status, assigneeIds, projectId, sectionId, parentTaskId, dueDate, startDate, order, estimatedHours } = req.body
     const lastTask = await prisma.task.findFirst({
       where: { sectionId: sectionId || null, parentTaskId: parentTaskId || null },
       orderBy: { order: 'desc' },
@@ -75,6 +75,7 @@ export async function createTask(req: AuthRequest, res: Response, next: NextFunc
         parentTaskId: parentTaskId || null,
         dueDate: dueDate ? new Date(dueDate) : null,
         startDate: startDate ? new Date(startDate) : null,
+        estimatedHours: estimatedHours ? Number(estimatedHours) : null,
         order: order ?? (lastTask?.order ?? -1) + 1,
         createdById: req.user!.id,
         assignees: assigneeIds?.length ? {
@@ -92,7 +93,7 @@ export async function createTask(req: AuthRequest, res: Response, next: NextFunc
 
 export async function updateTask(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { title, description, status, assigneeIds, sectionId, dueDate, startDate, order, priority } = req.body
+    const { title, description, status, assigneeIds, sectionId, dueDate, startDate, order, priority, estimatedHours } = req.body
     const data: any = {}
     if (title !== undefined) data.title = title
     if (description !== undefined) data.description = description || null
@@ -102,6 +103,7 @@ export async function updateTask(req: AuthRequest, res: Response, next: NextFunc
     if (startDate !== undefined) data.startDate = startDate ? new Date(startDate) : null
     if (order !== undefined) data.order = order
     if (priority !== undefined) data.priority = priority
+    if (estimatedHours !== undefined) data.estimatedHours = estimatedHours ? Number(estimatedHours) : null
     if (status === 'DONE') data.completedAt = new Date()
 
     // Handle multiple assignees
@@ -285,5 +287,32 @@ export async function getTaskTimeByUser(req: AuthRequest, res: Response, next: N
       }
     }
     res.json(result)
+  } catch (e) { next(e) }
+}
+
+export async function getTaskAttachments(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const attachments = await prisma.attachment.findMany({
+      where: { taskId: req.params.id },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json(attachments)
+  } catch (e) { next(e) }
+}
+
+export async function createTaskAttachment(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { name, url, size, mimeType } = req.body
+    const attachment = await prisma.attachment.create({
+      data: { name, url, size: Number(size), mimeType, taskId: req.params.id },
+    })
+    res.status(201).json(attachment)
+  } catch (e) { next(e) }
+}
+
+export async function deleteTaskAttachment(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    await prisma.attachment.delete({ where: { id: req.params.attachmentId } })
+    res.json({ success: true })
   } catch (e) { next(e) }
 }
