@@ -20,6 +20,8 @@ import { expensesRouter } from './modules/expenses/expenses.router'
 import { todosRouter } from './modules/todos/todos.router'
 import { dashboardRouter } from './modules/dashboard/dashboard.router'
 import { announcementsRouter } from './modules/announcements/announcements.router'
+import { categoriesRouter } from './modules/categories/categories.router'
+import { macrosRouter } from './modules/macros/macros.router'
 import { errorHandler } from './middleware/errorHandler'
 
 const app = express()
@@ -38,7 +40,6 @@ app.use(morgan('dev'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// Routes
 app.use('/api/auth', authRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/companies', companiesRouter)
@@ -54,9 +55,10 @@ app.use('/api/expenses', expensesRouter)
 app.use('/api/todos', todosRouter)
 app.use('/api/dashboard', dashboardRouter)
 app.use('/api/announcements', announcementsRouter)
+app.use('/api/categories', categoriesRouter)
+app.use('/api/macros', macrosRouter)
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }))
-
 app.use(errorHandler)
 
 io.on('connection', (socket) => {

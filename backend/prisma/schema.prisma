@@ -101,16 +101,17 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // Relations
-  assignedTickets    Ticket[]      @relation("AssignedTechnician")
-  createdTickets     Ticket[]      @relation("TicketCreator")
+  assignedTickets    Ticket[]        @relation("AssignedTechnician")
+  createdTickets     Ticket[]        @relation("TicketCreator")
   ticketComments     TicketComment[]
-  assignedTasks      Task[]        @relation("AssignedUser")
-  createdTasks       Task[]        @relation("TaskCreator")
+  ticketHistory      TicketHistory[]
+  assignedTasks      Task[]          @relation("AssignedUser")
+  createdTasks       Task[]          @relation("TaskCreator")
   timeEntries        TimeEntry[]
   projects           ProjectMember[]
   todos              Todo[]
   refreshTokens      RefreshToken[]
+  macros             Macro[]
 
   @@map("users")
 }
@@ -124,6 +125,31 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@map("refresh_tokens")
+}
+
+model TicketCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  color     String   @default("#6366f1")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  tickets   Ticket[]
+
+  @@map("ticket_categories")
+}
+
+model Macro {
+  id          String   @id @default(uuid())
+  name        String
+  content     String
+  isGlobal    Boolean  @default(true)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("macros")
 }
 
 model Company {
@@ -144,7 +170,6 @@ model Company {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relations
   contacts    Contact[]
   tickets     Ticket[]
   projects    Project[]
@@ -169,7 +194,6 @@ model Contact {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relations
   tickets     Ticket[]
   leads       Lead[]
 
@@ -195,29 +219,30 @@ model Lead {
 }
 
 model Ticket {
-  id              String         @id @default(uuid())
-  number          Int            @unique @default(autoincrement())
+  id              String          @id @default(uuid())
+  number          Int             @unique @default(autoincrement())
   title           String
   description     String?
-  status          TicketStatus   @default(OPEN)
-  priority        TicketPriority @default(MEDIUM)
-  category        String?
+  status          TicketStatus    @default(OPEN)
+  priority        TicketPriority  @default(MEDIUM)
+  categoryId      String?
+  category        TicketCategory? @relation(fields: [categoryId], references: [id])
   tags            String[]
   dueDate         DateTime?
   resolvedAt      DateTime?
   companyId       String?
-  company         Company?       @relation(fields: [companyId], references: [id])
+  company         Company?        @relation(fields: [companyId], references: [id])
   contactId       String?
-  contact         Contact?       @relation(fields: [contactId], references: [id])
+  contact         Contact?        @relation(fields: [contactId], references: [id])
   assignedToId    String?
-  assignedTo      User?          @relation("AssignedTechnician", fields: [assignedToId], references: [id])
+  assignedTo      User?           @relation("AssignedTechnician", fields: [assignedToId], references: [id])
   createdById     String
-  createdBy       User           @relation("TicketCreator", fields: [createdById], references: [id])
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdBy       User            @relation("TicketCreator", fields: [createdById], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  // Relations
   comments        TicketComment[]
+  history         TicketHistory[]
   timeEntries     TimeEntry[]
   attachments     Attachment[]
 
@@ -225,17 +250,31 @@ model Ticket {
 }
 
 model TicketComment {
+  id         String   @id @default(uuid())
+  content    String
+  isInternal Boolean  @default(false)
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("ticket_comments")
+}
+
+model TicketHistory {
   id        String   @id @default(uuid())
-  content   String
-  isInternal Boolean @default(false)
   ticketId  String
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+  field     String
+  oldValue  String?
+  newValue  String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  @@map("ticket_comments")
+  @@map("ticket_history")
 }
 
 model Project {
@@ -251,7 +290,6 @@ model Project {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  // Relations
   members     ProjectMember[]
   tasks       Task[]
   timeEntries TimeEntry[]
@@ -273,32 +311,31 @@ model ProjectMember {
 }
 
 model Task {
-  id            String       @id @default(uuid())
-  number        Int          @unique @default(autoincrement())
-  title         String
-  description   String?
-  status        TaskStatus   @default(NOT_STARTED)
-  priority      TaskPriority @default(MEDIUM)
-  tags          String[]
-  startDate     DateTime?
-  dueDate       DateTime?
-  completedAt   DateTime?
+  id             String       @id @default(uuid())
+  number         Int          @unique @default(autoincrement())
+  title          String
+  description    String?
+  status         TaskStatus   @default(NOT_STARTED)
+  priority       TaskPriority @default(MEDIUM)
+  tags           String[]
+  startDate      DateTime?
+  dueDate        DateTime?
+  completedAt    DateTime?
   estimatedHours Float?
-  projectId     String?
-  project       Project?     @relation(fields: [projectId], references: [id])
-  assignedToId  String?
-  assignedTo    User?        @relation("AssignedUser", fields: [assignedToId], references: [id])
-  createdById   String
-  createdBy     User         @relation("TaskCreator", fields: [createdById], references: [id])
-  parentTaskId  String?
-  parentTask    Task?        @relation("SubTasks", fields: [parentTaskId], references: [id])
-  subTasks      Task[]       @relation("SubTasks")
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  projectId      String?
+  project        Project?     @relation(fields: [projectId], references: [id])
+  assignedToId   String?
+  assignedTo     User?        @relation("AssignedUser", fields: [assignedToId], references: [id])
+  createdById    String
+  createdBy      User         @relation("TaskCreator", fields: [createdById], references: [id])
+  parentTaskId   String?
+  parentTask     Task?        @relation("SubTasks", fields: [parentTaskId], references: [id])
+  subTasks       Task[]       @relation("SubTasks")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-  // Relations
-  timeEntries   TimeEntry[]
-  attachments   Attachment[]
+  timeEntries    TimeEntry[]
+  attachments    Attachment[]
 
   @@map("tasks")
 }
@@ -324,56 +361,54 @@ model TimeEntry {
 }
 
 model Contract {
-  id          String         @id @default(uuid())
-  name        String
-  description String?
-  status      ContractStatus @default(DRAFT)
-  startDate   DateTime
-  endDate     DateTime
-  value       Float
+  id           String         @id @default(uuid())
+  name         String
+  description  String?
+  status       ContractStatus @default(DRAFT)
+  startDate    DateTime
+  endDate      DateTime
+  value        Float
   billingCycle String?
-  companyId   String
-  company     Company        @relation(fields: [companyId], references: [id])
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  companyId    String
+  company      Company        @relation(fields: [companyId], references: [id])
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
-  // Relations
-  invoices    Invoice[]
+  invoices     Invoice[]
 
   @@map("contracts")
 }
 
 model Invoice {
-  id          String        @id @default(uuid())
-  number      String        @unique
-  status      InvoiceStatus @default(DRAFT)
-  issueDate   DateTime      @default(now())
-  dueDate     DateTime
-  subtotal    Float
-  tax         Float         @default(0)
-  total       Float
-  notes       String?
-  companyId   String
-  company     Company       @relation(fields: [companyId], references: [id])
-  contractId  String?
-  contract    Contract?     @relation(fields: [contractId], references: [id])
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id         String        @id @default(uuid())
+  number     String        @unique
+  status     InvoiceStatus @default(DRAFT)
+  issueDate  DateTime      @default(now())
+  dueDate    DateTime
+  subtotal   Float
+  tax        Float         @default(0)
+  total      Float
+  notes      String?
+  companyId  String
+  company    Company       @relation(fields: [companyId], references: [id])
+  contractId String?
+  contract   Contract?     @relation(fields: [contractId], references: [id])
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 
-  // Relations
-  items       InvoiceItem[]
+  items      InvoiceItem[]
 
   @@map("invoices")
 }
 
 model InvoiceItem {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   description String
   quantity    Float
   unitPrice   Float
   total       Float
   invoiceId   String
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@map("invoice_items")
 }
@@ -393,18 +428,18 @@ model Expense {
 }
 
 model Todo {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   description String?
-  completed   Boolean  @default(false)
+  completed   Boolean   @default(false)
   dueDate     DateTime?
-  priority    String   @default("MEDIUM")
+  priority    String    @default("MEDIUM")
   tags        String[]
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
   completedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@map("todos")
 }
