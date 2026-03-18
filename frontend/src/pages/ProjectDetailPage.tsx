@@ -992,15 +992,25 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
             )}
             {comments.map((c: any) => {
               const parsed = parseContent(c.content)
+              const isOwn = c.user.id === user?.id
               return (
-                <div key={c.id} className="flex gap-3 group/comment">
+                <div key={c.id} className="flex gap-3">
                   <div className="flex-shrink-0">
                     <Avatar name={`${c.user.firstName} ${c.user.lastName}`} avatar={c.user.avatar} size={8} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-semibold text-slate-800">{c.user.firstName} {c.user.lastName}</span>
                       <span className="text-xs text-slate-400">{formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}</span>
+                      {isOwn && (
+                        <button
+                          onClick={() => { if (confirm('Delete this update?')) deleteCommentMut.mutate(c.id) }}
+                          className="ml-auto flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors px-1.5 py-0.5 rounded hover:bg-red-50"
+                          title="Delete update"
+                        >
+                          <Trash2 size={11} /> Delete
+                        </button>
+                      )}
                     </div>
                     <div className="bg-slate-50 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-slate-700">
                       {parsed.text && <p className="whitespace-pre-wrap leading-relaxed">{renderMentions(parsed.text)}</p>}
@@ -1013,14 +1023,6 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                       )}
                     </div>
                   </div>
-                  {c.user.id === user?.id && (
-                    <button
-                      onClick={() => deleteCommentMut.mutate(c.id)}
-                      className="opacity-0 group-hover/comment:opacity-100 p-1.5 text-slate-300 hover:text-red-500 flex-shrink-0 self-start mt-1 transition-colors rounded"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
                 </div>
               )
             })}
