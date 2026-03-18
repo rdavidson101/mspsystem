@@ -3,7 +3,7 @@ import { authenticate } from '../../middleware/auth'
 import {
   getTasks, getTask, createTask, updateTask, deleteTask, reorderTasks,
   getTaskComments, createTaskComment, deleteTaskComment,
-  startTimer, stopTimer, getTimer,
+  startTimer, stopTimer, getTimer, getTaskTimeByUser,
 } from './tasks.controller'
 
 export const tasksRouter = Router()
@@ -23,3 +23,4 @@ tasksRouter.delete('/:id/comments/:commentId', deleteTaskComment)
 tasksRouter.get('/:id/timer', getTimer)
 tasksRouter.post('/:id/timer/start', startTimer)
 tasksRouter.post('/:id/timer/stop', stopTimer)
+tasksRouter.get('/:id/time-by-user', getTaskTimeByUser)

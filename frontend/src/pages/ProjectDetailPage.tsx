@@ -5,8 +5,8 @@ import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 import {
   ArrowLeft, Plus, ChevronDown, ChevronRight, GripVertical,
-  Play, Pause, MessageSquare, Trash2, UserPlus, X, Check,
-  FolderKanban, Calendar, Clock
+  Play, Pause, LayoutList, Trash2, UserPlus, X, Check,
+  FolderKanban, Clock, Timer
 } from 'lucide-react'
 import clsx from 'clsx'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -391,13 +391,14 @@ function TaskRow({ task, depth = 0, projectMembers, onOpenComments, onRefresh }:
           )}
         </div>
 
-        {/* Comments */}
+        {/* Details */}
         <div className="w-12 flex-shrink-0 flex justify-center">
           <button
             onClick={() => onOpenComments(task)}
+            title="Open details"
             className="flex items-center gap-0.5 text-slate-400 hover:text-primary-600 transition-colors px-1"
           >
-            <MessageSquare size={13} />
+            <LayoutList size={13} />
             {commentCount > 0 && <span className="text-xs">{commentCount}</span>}
           </button>
         </div>
@@ -526,7 +527,7 @@ function SectionBlock({ section, projectMembers, onOpenComments, onRefresh, proj
             <div className="w-28 flex-shrink-0 py-2 px-1">Start</div>
             <div className="w-28 flex-shrink-0 py-2 px-1">Due</div>
             <div className="w-32 flex-shrink-0 py-2 px-1">Timer</div>
-            <div className="w-12 flex-shrink-0 py-2 text-center">Notes</div>
+            <div className="w-12 flex-shrink-0 py-2 text-center">Details</div>
             <div className="w-16 flex-shrink-0" />
           </div>
 
@@ -559,24 +560,50 @@ function SectionBlock({ section, projectMembers, onOpenComments, onRefresh, proj
   )
 }
 
-// ── Task comments modal ────────────────────────────────────────────────────────
-function TaskCommentsModal({ task, onClose }: { task: any; onClose: () => void }) {
+// ── Task detail modal ──────────────────────────────────────────────────────────
+function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh }: {
+  task: any; projectMembers: any[]; onClose: () => void; onRefresh: () => void
+}) {
   const { user } = useAuthStore()
   const [text, setText] = useState('')
   const [images, setImages] = useState<string[]>([])
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleVal, setTitleVal] = useState(initialTask.title)
+  const [showStatus, setShowStatus] = useState(false)
+  const [showAssignees, setShowAssignees] = useState(false)
+  const statusRef = useRef<HTMLButtonElement>(null)
+  const assigneeRef = useRef<HTMLButtonElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const { data: comments = [], refetch } = useQuery({
-    queryKey: ['task-comments', task.id],
-    queryFn: () => api.get(`/tasks/${task.id}/comments`).then(r => r.data),
+  // Fresh task data
+  const { data: task = initialTask, refetch: refetchTask } = useQuery({
+    queryKey: ['task-detail', initialTask.id],
+    queryFn: () => api.get(`/tasks/${initialTask.id}`).then(r => r.data),
+  })
+
+  // Per-user time breakdown
+  const { data: timeByUser = [], refetch: refetchTime } = useQuery({
+    queryKey: ['task-time-by-user', initialTask.id],
+    queryFn: () => api.get(`/tasks/${initialTask.id}/time-by-user`).then(r => r.data),
+  })
+
+  // Comments
+  const { data: comments = [], refetch: refetchComments } = useQuery({
+    queryKey: ['task-comments', initialTask.id],
+    queryFn: () => api.get(`/tasks/${initialTask.id}/comments`).then(r => r.data),
+  })
+
+  const updateMut = useMutation({
+    mutationFn: (data: any) => api.patch(`/tasks/${initialTask.id}`, data).then(r => r.data),
+    onSuccess: () => { refetchTask(); refetchTime(); onRefresh() },
   })
   const addCommentMut = useMutation({
-    mutationFn: (content: string) => api.post(`/tasks/${task.id}/comments`, { content }).then(r => r.data),
-    onSuccess: () => { refetch(); setText(''); setImages([]) },
+    mutationFn: (content: string) => api.post(`/tasks/${initialTask.id}/comments`, { content }).then(r => r.data),
+    onSuccess: () => { refetchComments(); setText(''); setImages([]) },
   })
   const deleteCommentMut = useMutation({
-    mutationFn: (commentId: string) => api.delete(`/tasks/${task.id}/comments/${commentId}`).then(r => r.data),
-    onSuccess: () => refetch(),
+    mutationFn: (id: string) => api.delete(`/tasks/${initialTask.id}/comments/${id}`).then(r => r.data),
+    onSuccess: () => refetchComments(),
   })
 
   function handlePaste(e: React.ClipboardEvent) {
@@ -590,7 +617,6 @@ function TaskCommentsModal({ task, onClose }: { task: any; onClose: () => void }
       }
     })
   }
-
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     Array.from(e.target.files || []).forEach(file => {
       const reader = new FileReader()
@@ -598,120 +624,348 @@ function TaskCommentsModal({ task, onClose }: { task: any; onClose: () => void }
       reader.readAsDataURL(file)
     })
   }
-
   function submit() {
     if (!text.trim() && images.length === 0) return
     addCommentMut.mutate(JSON.stringify({ text: text.trim(), images }))
   }
-
   function parseContent(raw: string) {
     try { return JSON.parse(raw) } catch { return { text: raw, images: [] } }
   }
 
   const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.NOT_STARTED
+  const assignees: any[] = task.assignees || []
+  const assigneeIds = new Set(assignees.map((a: any) => a.user.id))
+  const totalTracked: number = timeByUser.reduce((sum: number, e: any) => sum + e.hours, 0)
+
+  function toggleAssignee(uid: string) {
+    const newIds = assigneeIds.has(uid)
+      ? [...assigneeIds].filter(id => id !== uid)
+      : [...assigneeIds, uid]
+    updateMut.mutate({ assigneeIds: newIds })
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-end">
-      <div className="absolute inset-0 bg-black/20" onClick={onClose} />
-      <div className="relative bg-white h-full w-full max-w-lg shadow-2xl flex flex-col">
-        <div className="flex items-start justify-between p-5 border-b border-slate-200">
-          <div className="flex-1 min-w-0">
-            <h2 className="font-semibold text-slate-900 text-base line-clamp-2">{task.title}</h2>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className={clsx('inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full', statusCfg.bg, statusCfg.color)}>
-                <div className={clsx('w-1.5 h-1.5 rounded-full', statusCfg.dot)} />
-                {statusCfg.label}
-              </span>
-              {(task.assignees || []).length > 0 && (
-                <div className="flex -space-x-1">
-                  {task.assignees.map((a: any) => (
-                    <Avatar key={a.user.id} name={`${a.user.firstName} ${a.user.lastName}`} avatar={a.user.avatar} size={5} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl flex overflow-hidden" style={{ maxHeight: '88vh' }}>
+
+        {/* ── LEFT: Task details ── */}
+        <div className="w-80 flex-shrink-0 border-r border-slate-200 flex flex-col bg-slate-50/60 overflow-y-auto">
+
+          {/* Title block */}
+          <div className="p-5 bg-white border-b border-slate-200">
+            {editingTitle ? (
+              <textarea
+                autoFocus
+                rows={3}
+                className="w-full text-[15px] font-semibold text-slate-900 border border-primary-300 rounded-lg px-3 py-2 resize-none outline-none focus:ring-2 focus:ring-primary-200"
+                value={titleVal}
+                onChange={e => setTitleVal(e.target.value)}
+                onBlur={() => { updateMut.mutate({ title: titleVal }); setEditingTitle(false) }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); updateMut.mutate({ title: titleVal }); setEditingTitle(false) }
+                  if (e.key === 'Escape') { setTitleVal(task.title); setEditingTitle(false) }
+                }}
+              />
+            ) : (
+              <h2
+                className="text-[15px] font-semibold text-slate-900 cursor-pointer hover:text-primary-700 leading-snug"
+                onClick={() => { setTitleVal(task.title); setEditingTitle(true) }}
+                title="Click to edit title"
+              >
+                {task.title}
+              </h2>
+            )}
+            {task.section && (
+              <div className="flex items-center gap-1.5 mt-2.5">
+                <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: task.section.color }} />
+                <span className="text-xs text-slate-400 font-medium">{task.section.name}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 p-5 space-y-6">
+
+            {/* Status */}
+            <div>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Status</p>
+              <button
+                ref={statusRef}
+                onClick={() => setShowStatus(s => !s)}
+                className={clsx('flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold w-full', statusCfg.bg, statusCfg.color)}
+              >
+                <div className={clsx('w-2 h-2 rounded-full flex-shrink-0', statusCfg.dot)} />
+                <span className="flex-1 text-left">{statusCfg.label}</span>
+                <ChevronDown size={14} />
+              </button>
+              <Dropdown trigger={statusRef as React.RefObject<HTMLElement>} open={showStatus} onClose={() => setShowStatus(false)}>
+                {STATUSES.map(s => {
+                  const cfg = STATUS_CONFIG[s]
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => { updateMut.mutate({ status: s }); setShowStatus(false) }}
+                      className={clsx('w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-50', cfg.color)}
+                    >
+                      <div className={clsx('w-2 h-2 rounded-full flex-shrink-0', cfg.dot)} />
+                      <span className="flex-1 text-left font-medium">{cfg.label}</span>
+                      {task.status === s && <Check size={12} />}
+                    </button>
+                  )
+                })}
+              </Dropdown>
+            </div>
+
+            {/* Assignees */}
+            <div>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Assignees</p>
+              <button
+                ref={assigneeRef}
+                onClick={() => setShowAssignees(s => !s)}
+                className="flex items-center gap-2 px-3 py-2.5 bg-white border border-slate-200 hover:border-primary-300 rounded-xl w-full min-h-[42px] transition-colors"
+              >
+                {assignees.length > 0 ? (
+                  <>
+                    <div className="flex -space-x-2 flex-1">
+                      {assignees.slice(0, 5).map((a: any) => (
+                        <div key={a.user.id} title={`${a.user.firstName} ${a.user.lastName}`} className="ring-2 ring-white rounded-full">
+                          <Avatar name={`${a.user.firstName} ${a.user.lastName}`} avatar={a.user.avatar} size={6} />
+                        </div>
+                      ))}
+                      {assignees.length > 5 && (
+                        <div className="w-6 h-6 rounded-full bg-slate-200 ring-2 ring-white flex items-center justify-center text-slate-600 text-xs font-bold">
+                          +{assignees.length - 5}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-400 flex-shrink-0">{assignees.length} assigned</span>
+                  </>
+                ) : (
+                  <span className="text-sm text-slate-400 flex items-center gap-1.5">
+                    <UserPlus size={13} /> Add assignee
+                  </span>
+                )}
+              </button>
+              <Dropdown trigger={assigneeRef as React.RefObject<HTMLElement>} open={showAssignees} onClose={() => setShowAssignees(false)}>
+                <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">Select assignees</div>
+                {projectMembers.map((m: any) => {
+                  const isAssigned = assigneeIds.has(m.user.id)
+                  return (
+                    <button
+                      key={m.user.id}
+                      onClick={() => toggleAssignee(m.user.id)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-slate-50"
+                    >
+                      <Avatar name={`${m.user.firstName} ${m.user.lastName}`} avatar={m.user.avatar} size={6} />
+                      <span className="flex-1 text-left">{m.user.firstName} {m.user.lastName}</span>
+                      <div className={clsx('w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors',
+                        isAssigned ? 'bg-primary-500 text-white' : 'border border-slate-300'
+                      )}>
+                        {isAssigned && <Check size={10} />}
+                      </div>
+                    </button>
+                  )
+                })}
+              </Dropdown>
+              {/* Assignee name list */}
+              {assignees.length > 0 && (
+                <div className="mt-2.5 space-y-1.5">
+                  {assignees.map((a: any) => (
+                    <div key={a.user.id} className="flex items-center gap-2 text-sm text-slate-600">
+                      <Avatar name={`${a.user.firstName} ${a.user.lastName}`} avatar={a.user.avatar} size={5} />
+                      <span>{a.user.firstName} {a.user.lastName}</span>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
-          </div>
-          <button onClick={onClose} className="ml-3 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
-            <X size={18} />
-          </button>
-        </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {comments.length === 0 && (
-            <div className="text-center py-8 text-slate-400 text-sm">No updates yet</div>
-          )}
-          {comments.map((c: any) => {
-            const parsed = parseContent(c.content)
-            return (
-              <div key={c.id} className="flex gap-3 group/comment">
-                <Avatar name={`${c.user.firstName} ${c.user.lastName}`} avatar={c.user.avatar} size={7} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm font-medium text-slate-800">{c.user.firstName} {c.user.lastName}</span>
-                    <span className="text-xs text-slate-400">{formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}</span>
-                  </div>
-                  <div className="mt-1 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
-                    {parsed.text && <p className="whitespace-pre-wrap">{parsed.text}</p>}
-                    {parsed.images?.map((img: string, i: number) => (
-                      <img key={i} src={img} alt="" className="mt-2 max-w-full rounded-lg max-h-64 object-contain" />
-                    ))}
-                  </div>
-                </div>
-                {c.user.id === user?.id && (
-                  <button
-                    onClick={() => deleteCommentMut.mutate(c.id)}
-                    className="opacity-0 group-hover/comment:opacity-100 p-1 text-slate-300 hover:text-red-500 flex-shrink-0 self-start"
-                  >
-                    <Trash2 size={12} />
-                  </button>
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Start Date</p>
+                <input
+                  type="date"
+                  value={task.startDate ? format(new Date(task.startDate), 'yyyy-MM-dd') : ''}
+                  onChange={e => updateMut.mutate({ startDate: e.target.value || null })}
+                  className="w-full text-sm text-slate-700 border border-slate-200 hover:border-slate-300 focus:border-primary-300 rounded-xl px-2.5 py-2 outline-none bg-white"
+                />
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Due Date</p>
+                <input
+                  type="date"
+                  value={task.dueDate ? format(new Date(task.dueDate), 'yyyy-MM-dd') : ''}
+                  onChange={e => updateMut.mutate({ dueDate: e.target.value || null })}
+                  className={clsx(
+                    'w-full text-sm border border-slate-200 hover:border-slate-300 focus:border-primary-300 rounded-xl px-2.5 py-2 outline-none bg-white',
+                    task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE'
+                      ? 'text-red-500 font-semibold border-red-200' : 'text-slate-700'
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Time tracked per user */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <Timer size={11} /> Time Tracked
+                </p>
+                {totalTracked > 0 && (
+                  <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">
+                    {formatHours(totalTracked)} total
+                  </span>
                 )}
               </div>
-            )
-          })}
-        </div>
-
-        <div className="p-4 border-t border-slate-200 space-y-2">
-          {images.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {images.map((img, i) => (
-                <div key={i} className="relative group/img">
-                  <img src={img} alt="" className="h-16 w-16 object-cover rounded-lg border border-slate-200" />
-                  <button
-                    onClick={() => setImages(imgs => imgs.filter((_, idx) => idx !== i))}
-                    className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/img:opacity-100"
-                  >
-                    <X size={9} />
-                  </button>
+              {timeByUser.length === 0 ? (
+                <div className="text-center py-4 rounded-xl bg-white border border-slate-100">
+                  <Clock size={18} className="mx-auto mb-1 text-slate-300" />
+                  <p className="text-xs text-slate-400">No time logged yet</p>
                 </div>
-              ))}
-            </div>
-          )}
-          <div className="flex items-end gap-2">
-            <Avatar name={`${user?.firstName} ${user?.lastName}`} size={7} />
-            <div className="flex-1">
-              <textarea
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-200"
-                rows={2}
-                placeholder="Write an update… (paste images directly)"
-                value={text}
-                onChange={e => setText(e.target.value)}
-                onPaste={handlePaste}
-                onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit() }}
-              />
+              ) : (
+                <div className="space-y-3">
+                  {timeByUser.map((entry: any) => {
+                    const pct = totalTracked > 0 ? Math.min((entry.hours / totalTracked) * 100, 100) : 0
+                    const hasActive = !!entry.activeTimer
+                    return (
+                      <div key={entry.user?.id} className="bg-white rounded-xl border border-slate-100 px-3 py-2.5">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <Avatar name={`${entry.user?.firstName} ${entry.user?.lastName}`} avatar={entry.user?.avatar} size={6} />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-medium text-slate-700 truncate block">{entry.user?.firstName} {entry.user?.lastName}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {hasActive && (
+                              <span className="flex items-center gap-1 text-[10px] font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full">
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse inline-block" />
+                                Live
+                              </span>
+                            )}
+                            <span className="text-xs font-bold text-slate-900 tabular-nums">
+                              {entry.hours > 0 ? formatHours(entry.hours) : hasActive ? '—' : '0m'}
+                            </span>
+                          </div>
+                        </div>
+                        {totalTracked > 0 && entry.hours > 0 && (
+                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary-400 rounded-full transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
-          <div className="flex items-center justify-between pl-9">
-            <button onClick={() => fileRef.current?.click()} className="text-xs text-slate-400 hover:text-slate-600">
-              📎 Attach image
+        </div>
+
+        {/* ── RIGHT: Updates ── */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white flex-shrink-0">
+            <h3 className="font-semibold text-slate-900 text-base">Updates</h3>
+            <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+              <X size={18} />
             </button>
-            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
-            <button
-              onClick={submit}
-              disabled={!text.trim() && images.length === 0}
-              className="btn-primary text-sm px-4 py-1.5 disabled:opacity-50"
-            >
-              Post
-            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+            {comments.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                <LayoutList size={32} className="mb-3 opacity-30" />
+                <p className="text-sm font-medium">No updates yet</p>
+                <p className="text-xs mt-1">Be the first to post an update below</p>
+              </div>
+            )}
+            {comments.map((c: any) => {
+              const parsed = parseContent(c.content)
+              return (
+                <div key={c.id} className="flex gap-3 group/comment">
+                  <div className="flex-shrink-0">
+                    <Avatar name={`${c.user.firstName} ${c.user.lastName}`} avatar={c.user.avatar} size={8} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="text-sm font-semibold text-slate-800">{c.user.firstName} {c.user.lastName}</span>
+                      <span className="text-xs text-slate-400">{formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}</span>
+                    </div>
+                    <div className="bg-slate-50 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-slate-700">
+                      {parsed.text && <p className="whitespace-pre-wrap leading-relaxed">{parsed.text}</p>}
+                      {parsed.images?.length > 0 && (
+                        <div className="mt-2 space-y-2">
+                          {parsed.images.map((img: string, i: number) => (
+                            <img key={i} src={img} alt="" className="max-w-full rounded-xl max-h-72 object-contain border border-slate-100" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {c.user.id === user?.id && (
+                    <button
+                      onClick={() => deleteCommentMut.mutate(c.id)}
+                      className="opacity-0 group-hover/comment:opacity-100 p-1.5 text-slate-300 hover:text-red-500 flex-shrink-0 self-start mt-1 transition-colors rounded"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Comment input */}
+          <div className="px-6 py-4 border-t border-slate-200 bg-white flex-shrink-0 space-y-3">
+            {images.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {images.map((img, i) => (
+                  <div key={i} className="relative group/img">
+                    <img src={img} alt="" className="h-16 w-16 object-cover rounded-xl border border-slate-200" />
+                    <button
+                      onClick={() => setImages(imgs => imgs.filter((_, idx) => idx !== i))}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/img:opacity-100 shadow-sm"
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-0.5">
+                <Avatar name={`${user?.firstName} ${user?.lastName}`} size={8} />
+              </div>
+              <div className="flex-1 bg-slate-50 rounded-2xl border border-slate-200 focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100 transition-all">
+                <textarea
+                  className="w-full bg-transparent px-4 pt-3 pb-2 text-sm resize-none outline-none text-slate-700 placeholder-slate-400"
+                  rows={3}
+                  placeholder="Write an update… (⌘↵ to post, paste images directly)"
+                  value={text}
+                  onChange={e => setText(e.target.value)}
+                  onPaste={handlePaste}
+                  onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit() }}
+                />
+                <div className="flex items-center justify-between px-3 pb-2.5">
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    className="text-xs text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1"
+                  >
+                    📎 Attach
+                  </button>
+                  <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+                  <button
+                    onClick={submit}
+                    disabled={!text.trim() && images.length === 0}
+                    className="btn-primary text-sm px-5 py-1.5 disabled:opacity-40 rounded-xl"
+                  >
+                    Post Update
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -927,7 +1181,14 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      {commentTask && <TaskCommentsModal task={commentTask} onClose={() => setCommentTask(null)} />}
+      {commentTask && (
+        <TaskDetailModal
+          task={commentTask}
+          projectMembers={project.members}
+          onClose={() => setCommentTask(null)}
+          onRefresh={refetch}
+        />
+      )}
       {showMembers && <MemberPanel project={project} onClose={() => setShowMembers(false)} onRefresh={refetch} />}
     </div>
   )

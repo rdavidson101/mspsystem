@@ -225,3 +225,36 @@ export async function getTimer(req: AuthRequest, res: Response, next: NextFuncti
     res.json({ timer: timer || null, totalHours })
   } catch (e) { next(e) }
 }
+
+export async function getTaskTimeByUser(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const grouped = await prisma.timeEntry.groupBy({
+      by: ['userId'],
+      where: { taskId: req.params.id },
+      _sum: { hours: true },
+    })
+    if (grouped.length === 0) return res.json([])
+    const userIds = grouped.map(e => e.userId)
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, firstName: true, lastName: true, avatar: true },
+    })
+    // Also include users with an active timer (show session in progress)
+    const activeTimers = await prisma.activeTimer.findMany({
+      where: { taskId: req.params.id },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+    })
+    const result = grouped.map(e => ({
+      user: users.find(u => u.id === e.userId),
+      hours: e._sum.hours || 0,
+      activeTimer: activeTimers.find(t => t.userId === e.userId) || null,
+    }))
+    // Add users who only have active timers (no logged entries yet)
+    for (const at of activeTimers) {
+      if (!result.find(r => r.user?.id === at.userId)) {
+        result.push({ user: at.user, hours: 0, activeTimer: at })
+      }
+    }
+    res.json(result)
+  } catch (e) { next(e) }
+}
