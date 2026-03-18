@@ -109,6 +109,7 @@ function NavItem({ item }: NavItemProps) {
               <NavLink
                 key={child.href}
                 to={child.href}
+                end
                 className={({ isActive }) => clsx(
                   'flex items-center px-3 py-2 rounded-lg text-sm transition-colors',
                   isActive ? 'text-white bg-sidebar-active' : 'text-slate-400 hover:text-white hover:bg-sidebar-hover'
