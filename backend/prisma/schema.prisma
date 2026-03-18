@@ -1,0 +1,436 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =================== ENUMS ===================
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  TECHNICIAN
+  CLIENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CLIENT
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum ExpenseCategory {
+  SOFTWARE
+  HARDWARE
+  TRAVEL
+  SERVICES
+  UTILITIES
+  OTHER
+}
+
+// =================== MODELS ===================
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  firstName    String
+  lastName     String
+  role         UserRole @default(TECHNICIAN)
+  avatar       String?
+  phone        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  assignedTickets    Ticket[]      @relation("AssignedTechnician")
+  createdTickets     Ticket[]      @relation("TicketCreator")
+  ticketComments     TicketComment[]
+  assignedTasks      Task[]        @relation("AssignedUser")
+  createdTasks       Task[]        @relation("TaskCreator")
+  timeEntries        TimeEntry[]
+  projects           ProjectMember[]
+  todos              Todo[]
+  refreshTokens      RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model Company {
+  id          String   @id @default(uuid())
+  name        String
+  domain      String?
+  industry    String?
+  phone       String?
+  email       String?
+  address     String?
+  city        String?
+  state       String?
+  zip         String?
+  country     String?
+  website     String?
+  notes       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  contacts    Contact[]
+  tickets     Ticket[]
+  projects    Project[]
+  leads       Lead[]
+  contracts   Contract[]
+  invoices    Invoice[]
+
+  @@map("companies")
+}
+
+model Contact {
+  id          String   @id @default(uuid())
+  firstName   String
+  lastName    String
+  email       String?
+  phone       String?
+  title       String?
+  isPrimary   Boolean  @default(false)
+  notes       String?
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tickets     Ticket[]
+  leads       Lead[]
+
+  @@map("contacts")
+}
+
+model Lead {
+  id          String     @id @default(uuid())
+  title       String
+  value       Float?
+  status      LeadStatus @default(NEW)
+  source      String?
+  notes       String?
+  companyId   String?
+  company     Company?   @relation(fields: [companyId], references: [id])
+  contactId   String?
+  contact     Contact?   @relation(fields: [contactId], references: [id])
+  expectedClose DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("leads")
+}
+
+model Ticket {
+  id              String         @id @default(uuid())
+  number          Int            @unique @default(autoincrement())
+  title           String
+  description     String?
+  status          TicketStatus   @default(OPEN)
+  priority        TicketPriority @default(MEDIUM)
+  category        String?
+  tags            String[]
+  dueDate         DateTime?
+  resolvedAt      DateTime?
+  companyId       String?
+  company         Company?       @relation(fields: [companyId], references: [id])
+  contactId       String?
+  contact         Contact?       @relation(fields: [contactId], references: [id])
+  assignedToId    String?
+  assignedTo      User?          @relation("AssignedTechnician", fields: [assignedToId], references: [id])
+  createdById     String
+  createdBy       User           @relation("TicketCreator", fields: [createdById], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  comments        TicketComment[]
+  timeEntries     TimeEntry[]
+  attachments     Attachment[]
+
+  @@map("tickets")
+}
+
+model TicketComment {
+  id        String   @id @default(uuid())
+  content   String
+  isInternal Boolean @default(false)
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ticket_comments")
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(PLANNING)
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Float?
+  companyId   String?
+  company     Company?      @relation(fields: [companyId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  members     ProjectMember[]
+  tasks       Task[]
+  timeEntries TimeEntry[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  role      String   @default("MEMBER")
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model Task {
+  id            String       @id @default(uuid())
+  number        Int          @unique @default(autoincrement())
+  title         String
+  description   String?
+  status        TaskStatus   @default(NOT_STARTED)
+  priority      TaskPriority @default(MEDIUM)
+  tags          String[]
+  startDate     DateTime?
+  dueDate       DateTime?
+  completedAt   DateTime?
+  estimatedHours Float?
+  projectId     String?
+  project       Project?     @relation(fields: [projectId], references: [id])
+  assignedToId  String?
+  assignedTo    User?        @relation("AssignedUser", fields: [assignedToId], references: [id])
+  createdById   String
+  createdBy     User         @relation("TaskCreator", fields: [createdById], references: [id])
+  parentTaskId  String?
+  parentTask    Task?        @relation("SubTasks", fields: [parentTaskId], references: [id])
+  subTasks      Task[]       @relation("SubTasks")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  timeEntries   TimeEntry[]
+  attachments   Attachment[]
+
+  @@map("tasks")
+}
+
+model TimeEntry {
+  id          String   @id @default(uuid())
+  description String?
+  hours       Float
+  date        DateTime @default(now())
+  billable    Boolean  @default(true)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  ticketId    String?
+  ticket      Ticket?  @relation(fields: [ticketId], references: [id])
+  taskId      String?
+  task        Task?    @relation(fields: [taskId], references: [id])
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("time_entries")
+}
+
+model Contract {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  status      ContractStatus @default(DRAFT)
+  startDate   DateTime
+  endDate     DateTime
+  value       Float
+  billingCycle String?
+  companyId   String
+  company     Company        @relation(fields: [companyId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relations
+  invoices    Invoice[]
+
+  @@map("contracts")
+}
+
+model Invoice {
+  id          String        @id @default(uuid())
+  number      String        @unique
+  status      InvoiceStatus @default(DRAFT)
+  issueDate   DateTime      @default(now())
+  dueDate     DateTime
+  subtotal    Float
+  tax         Float         @default(0)
+  total       Float
+  notes       String?
+  companyId   String
+  company     Company       @relation(fields: [companyId], references: [id])
+  contractId  String?
+  contract    Contract?     @relation(fields: [contractId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  items       InvoiceItem[]
+
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  description String
+  quantity    Float
+  unitPrice   Float
+  total       Float
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_items")
+}
+
+model Expense {
+  id          String          @id @default(uuid())
+  title       String
+  amount      Float
+  category    ExpenseCategory @default(OTHER)
+  date        DateTime        @default(now())
+  description String?
+  receipt     String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("expenses")
+}
+
+model Todo {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  completed   Boolean  @default(false)
+  dueDate     DateTime?
+  priority    String   @default("MEDIUM")
+  tags        String[]
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("todos")
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  name      String
+  url       String
+  size      Int
+  mimeType  String
+  ticketId  String?
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id])
+  taskId    String?
+  task      Task?    @relation(fields: [taskId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("attachments")
+}
+
+model Announcement {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("announcements")
+}

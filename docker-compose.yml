@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: msp_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-msp_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-msp_password}
+      POSTGRES_DB: ${POSTGRES_DB:-msp_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - msp_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-msp_user} -d ${POSTGRES_DB:-msp_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: msp_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-msp_user}:${POSTGRES_PASSWORD:-msp_password}@postgres:5432/${POSTGRES_DB:-msp_db}
+      JWT_SECRET: ${JWT_SECRET:-supersecretjwtkey_change_in_production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-supersecreterefreshjwtkey_change_in_production}
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 4000
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - msp_network
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm run dev"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: msp_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - msp_network
+
+volumes:
+  postgres_data:
+
+networks:
+  msp_network:
+    driver: bridge
