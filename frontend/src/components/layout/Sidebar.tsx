@@ -24,6 +24,7 @@ const mainNav = [
   {
     label: 'Tickets', icon: Ticket, children: [
       { label: 'All Tickets', href: '/tickets' },
+      { label: 'My Tickets', href: '/my-tickets' },
       { label: 'Macros', href: '/macros' },
     ]
   },
