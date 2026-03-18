@@ -8,6 +8,7 @@ interface User {
   lastName: string
   role: string
   avatar?: string
+  twoFactorEnabled?: boolean
 }
 
 interface AuthState {

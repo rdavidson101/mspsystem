@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import { Shield, CheckCircle2, AlertTriangle } from 'lucide-react'
@@ -13,14 +13,31 @@ export default function ProfilePage() {
   })
   const [saved, setSaved] = useState(false)
 
-  // 2FA state
+  // 2FA state — seeded from API, not stale JWT store
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('')
   const [setupStep, setSetupStep] = useState<'idle' | 'scan' | 'verify'>('idle')
   const [verifyToken, setVerifyToken] = useState('')
   const [disableToken, setDisableToken] = useState('')
   const [showDisable, setShowDisable] = useState(false)
-  const [twoFAEnabled, setTwoFAEnabled] = useState((user as any)?.twoFactorEnabled || false)
+  const [twoFAEnabled, setTwoFAEnabled] = useState(user?.twoFactorEnabled || false)
   const [twoFAError, setTwoFAError] = useState('')
+
+  // Fetch fresh user data from API on mount so twoFactorEnabled is accurate
+  useEffect(() => {
+    if (!user?.id) return
+    api.get(`/users/${user.id}`).then(res => {
+      const fresh = res.data
+      setTwoFAEnabled(!!fresh.twoFactorEnabled)
+      updateUser({ twoFactorEnabled: !!fresh.twoFactorEnabled })
+      setProfileForm(f => ({
+        ...f,
+        firstName: fresh.firstName || f.firstName,
+        lastName: fresh.lastName || f.lastName,
+        email: fresh.email || f.email,
+        phone: fresh.phone || '',
+      }))
+    }).catch(() => {})
+  }, [user?.id])
 
   async function saveProfile() {
     const res = await api.patch(`/users/${user!.id}`, profileForm)
@@ -39,6 +56,7 @@ export default function ProfilePage() {
     try {
       await api.post('/auth/2fa/enable', { token: verifyToken })
       setTwoFAEnabled(true)
+      updateUser({ twoFactorEnabled: true })
       setSetupStep('idle')
       setVerifyToken('')
       setTwoFAError('')
@@ -51,6 +69,7 @@ export default function ProfilePage() {
     try {
       await api.post('/auth/2fa/disable', { token: disableToken })
       setTwoFAEnabled(false)
+      updateUser({ twoFactorEnabled: false })
       setShowDisable(false)
       setDisableToken('')
       setTwoFAError('')
