@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Bell, Ticket, CheckCheck, X, Trash2 } from 'lucide-react'
+import { Bell, Ticket, CheckCheck, X, Trash2, AtSign } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import clsx from 'clsx'
@@ -134,9 +134,13 @@ export default function NotificationBell() {
                       }
                     </div>
                     <div className={clsx('w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0',
-                      n.type === 'TICKET_ASSIGNED' ? 'bg-primary-100' : 'bg-slate-100'
+                      n.type === 'TICKET_ASSIGNED' ? 'bg-primary-100'
+                      : n.type === 'TASK_MENTION' ? 'bg-purple-100'
+                      : 'bg-slate-100'
                     )}>
-                      <Ticket size={13} className={n.type === 'TICKET_ASSIGNED' ? 'text-primary-600' : 'text-slate-500'} />
+                      {n.type === 'TICKET_ASSIGNED' && <Ticket size={13} className="text-primary-600" />}
+                      {n.type === 'TASK_MENTION' && <AtSign size={13} className="text-purple-600" />}
+                      {n.type !== 'TICKET_ASSIGNED' && n.type !== 'TASK_MENTION' && <Bell size={13} className="text-slate-500" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={clsx('text-xs font-semibold', !n.read ? 'text-slate-900' : 'text-slate-600')}>{n.title}</p>

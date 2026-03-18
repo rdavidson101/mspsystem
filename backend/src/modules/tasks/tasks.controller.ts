@@ -159,6 +159,36 @@ export async function createTaskComment(req: AuthRequest, res: Response, next: N
       data: { taskId: req.params.id, userId: req.user!.id, content },
       include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
     })
+
+    // Parse @[Name](userId) mentions and notify each mentioned user
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g
+    const mentionedUserIds = new Set<string>()
+    let m: RegExpExecArray | null
+    // Content is stored as JSON string — extract the text portion to scan
+    let textToScan = content
+    try { textToScan = JSON.parse(content).text || content } catch {}
+    while ((m = mentionRegex.exec(textToScan)) !== null) {
+      const uid = m[2]
+      if (uid !== req.user!.id) mentionedUserIds.add(uid)
+    }
+
+    if (mentionedUserIds.size > 0) {
+      const task = await prisma.task.findUnique({
+        where: { id: req.params.id },
+        select: { title: true, projectId: true },
+      })
+      const mentioner = `${(req.user as any).firstName || ''} ${(req.user as any).lastName || ''}`.trim() || 'Someone'
+      await prisma.notification.createMany({
+        data: Array.from(mentionedUserIds).map(uid => ({
+          userId: uid,
+          type: 'TASK_MENTION',
+          title: `${mentioner} mentioned you`,
+          body: `You were mentioned in a comment on "${task?.title || 'a task'}"`,
+          link: task?.projectId ? `/projects/${task.projectId}` : null,
+        })),
+      })
+    }
+
     res.status(201).json(comment)
   } catch (e) { next(e) }
 }

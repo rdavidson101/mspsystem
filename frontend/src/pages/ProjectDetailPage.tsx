@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import {
   ArrowLeft, Plus, ChevronDown, ChevronRight, GripVertical,
   Play, Pause, LayoutList, Trash2, UserPlus, X, Check,
-  FolderKanban, Clock, Timer, Search
+  FolderKanban, Clock, Timer, Search, AtSign
 } from 'lucide-react'
 import clsx from 'clsx'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -46,6 +46,34 @@ function formatHours(hours: number) {
   if (h > 0 && m > 0) return `${h}h ${m}m`
   if (h > 0) return `${h}h`
   return `${m}m`
+}
+
+// ── Mention helpers ───────────────────────────────────────────────────────────
+// Format: @[Display Name](userId) stored inside JSON text field
+const MENTION_RE = /@\[([^\]]+)\]\(([^)]+)\)/g
+
+function detectMention(value: string, cursor: number): { start: number; search: string } | null {
+  const before = value.slice(0, cursor)
+  for (let i = cursor - 1; i >= 0; i--) {
+    const ch = before[i]
+    if (ch === '\n' || ch === ' ') return null
+    if (ch === '@') {
+      const prev = before[i - 1]
+      if (i === 0 || /\s/.test(prev)) return { start: i, search: before.slice(i + 1) }
+      return null
+    }
+  }
+  return null
+}
+
+function renderMentions(raw: string) {
+  const parts = raw.split(/@\[([^\]]+)\]\([^)]+\)/g)
+  // split gives alternating [text, name, text, name, ...]
+  return parts.map((part, i) =>
+    i % 2 === 1
+      ? <span key={i} className="text-primary-700 font-semibold bg-primary-50 px-0.5 rounded">@{part}</span>
+      : <span key={i}>{part}</span>
+  )
 }
 
 function Avatar({ name, avatar, size = 6 }: { name: string; avatar?: string; size?: number }) {
@@ -592,9 +620,12 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   const [showStatus, setShowStatus] = useState(false)
   const [showAssignees, setShowAssignees] = useState(false)
   const [assigneeSearch, setAssigneeSearch] = useState('')
+  const [mention, setMention] = useState<{ start: number; search: string; top: number; left: number; width: number } | null>(null)
   const statusRef = useRef<HTMLButtonElement>(null)
   const assigneeRef = useRef<HTMLButtonElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const mentionPickerRef = useRef<HTMLDivElement>(null)
 
   // Fresh task data
   const { data: task = initialTask, refetch: refetchTask } = useQuery({
@@ -626,6 +657,41 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
     mutationFn: (id: string) => api.delete(`/tasks/${initialTask.id}/comments/${id}`).then(r => r.data),
     onSuccess: () => refetchComments(),
   })
+
+  // Close mention picker on outside click
+  useEffect(() => {
+    if (!mention) return
+    function handler(e: MouseEvent) {
+      if (mentionPickerRef.current && !mentionPickerRef.current.contains(e.target as Node)) {
+        setMention(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [mention])
+
+  function handleTextChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const val = e.target.value
+    setText(val)
+    const cursor = e.target.selectionStart ?? val.length
+    const detected = detectMention(val, cursor)
+    if (detected && textareaRef.current) {
+      const rect = textareaRef.current.getBoundingClientRect()
+      setMention({ ...detected, top: rect.top, left: rect.left, width: rect.width })
+    } else {
+      setMention(null)
+    }
+  }
+
+  function selectMention(member: any) {
+    if (!mention) return
+    const displayName = `${member.user.firstName} ${member.user.lastName}`
+    const before = text.slice(0, mention.start)
+    const after = text.slice(mention.start + 1 + mention.search.length)
+    setText(`${before}@[${displayName}](${member.user.id}) ${after}`)
+    setMention(null)
+    setTimeout(() => textareaRef.current?.focus(), 0)
+  }
 
   function handlePaste(e: React.ClipboardEvent) {
     Array.from(e.clipboardData.items).forEach(item => {
@@ -934,7 +1000,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                       <span className="text-xs text-slate-400">{formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}</span>
                     </div>
                     <div className="bg-slate-50 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-slate-700">
-                      {parsed.text && <p className="whitespace-pre-wrap leading-relaxed">{parsed.text}</p>}
+                      {parsed.text && <p className="whitespace-pre-wrap leading-relaxed">{renderMentions(parsed.text)}</p>}
                       {parsed.images?.length > 0 && (
                         <div className="mt-2 space-y-2">
                           {parsed.images.map((img: string, i: number) => (
@@ -974,19 +1040,59 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                 ))}
               </div>
             )}
+            {/* @ mention picker — fixed above textarea */}
+            {mention && (() => {
+              const mentionMembers = projectMembers.filter((m: any) =>
+                `${m.user.firstName} ${m.user.lastName}`.toLowerCase().includes(mention.search.toLowerCase())
+              )
+              if (mentionMembers.length === 0) return null
+              const pickerH = Math.min(mentionMembers.length, 5) * 52 + 12
+              const spaceAbove = mention.top
+              const top = spaceAbove > pickerH + 8 ? mention.top - pickerH - 8 : mention.top + 8
+              return (
+                <div
+                  ref={mentionPickerRef}
+                  style={{ position: 'fixed', top, left: mention.left, width: mention.width, zIndex: 9999 }}
+                  className="bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
+                >
+                  <div className="px-3 py-1.5 border-b border-slate-100 flex items-center gap-1.5 bg-slate-50">
+                    <AtSign size={11} className="text-primary-500" />
+                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Mention a team member</span>
+                  </div>
+                  {mentionMembers.slice(0, 5).map((m: any) => (
+                    <button
+                      key={m.user.id}
+                      onMouseDown={e => { e.preventDefault(); selectMention(m) }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-primary-50 transition-colors text-left"
+                    >
+                      <Avatar name={`${m.user.firstName} ${m.user.lastName}`} avatar={m.user.avatar} size={7} />
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">{m.user.firstName} {m.user.lastName}</p>
+                        <p className="text-xs text-slate-400">{m.user.role}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
+
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 mt-0.5">
                 <Avatar name={`${user?.firstName} ${user?.lastName}`} size={8} />
               </div>
               <div className="flex-1 bg-slate-50 rounded-2xl border border-slate-200 focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100 transition-all">
                 <textarea
+                  ref={textareaRef}
                   className="w-full bg-transparent px-4 pt-3 pb-2 text-sm resize-none outline-none text-slate-700 placeholder-slate-400"
                   rows={3}
-                  placeholder="Write an update… (⌘↵ to post, paste images directly)"
+                  placeholder="Write an update… type @ to mention someone"
                   value={text}
-                  onChange={e => setText(e.target.value)}
+                  onChange={handleTextChange}
                   onPaste={handlePaste}
-                  onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit() }}
+                  onKeyDown={e => {
+                    if (e.key === 'Escape') { setMention(null); return }
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit()
+                  }}
                 />
                 <div className="flex items-center justify-between px-3 pb-2.5">
                   <button
