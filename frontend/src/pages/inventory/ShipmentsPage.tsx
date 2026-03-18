@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { format } from 'date-fns'
-import { Package, MapPin, User } from 'lucide-react'
+import { Package, MapPin, User, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 
 const statusColors: Record<string, string> = {
@@ -33,9 +33,16 @@ export default function ShipmentsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['shipments'] }); qc.invalidateQueries({ queryKey: ['assets'] }) },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/inventory/shipments/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['shipments'] }),
+  })
+
   const pending = shipments.filter((s: any) => s.status === 'PENDING')
   const active = shipments.filter((s: any) => ['PROCESSING', 'SHIPPED'].includes(s.status))
   const completed = shipments.filter((s: any) => ['DELIVERED', 'CANCELLED'].includes(s.status))
+
+  const isCompleted = (s: any) => ['DELIVERED', 'CANCELLED'].includes(s.status)
 
   const ShipmentCard = ({ s }: { s: any }) => (
     <div className="card p-4 space-y-3">
@@ -49,7 +56,18 @@ export default function ShipmentsPage() {
             <p className="text-xs text-slate-400 font-mono">{s.asset?.ref || ''} {s.asset?.serialNumber ? `· S/N ${s.asset.serialNumber}` : ''}</p>
           </div>
         </div>
-        <span className={clsx('badge text-xs', statusColors[s.status])}>{s.status}</span>
+        <div className="flex items-center gap-2">
+          <span className={clsx('badge text-xs', statusColors[s.status])}>{s.status}</span>
+          {isCompleted(s) && (
+            <button
+              onClick={() => deleteMutation.mutate(s.id)}
+              className="p-1 hover:bg-red-50 rounded text-slate-300 hover:text-red-400 transition-colors"
+              title="Remove from dashboard"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-3 text-xs text-slate-600">
         <div className="flex items-start gap-1.5">

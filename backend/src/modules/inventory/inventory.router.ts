@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { authenticate } from '../../middleware/auth'
 import { getAssets, getAsset, createAsset, updateAsset, deleteAsset, requestShipment } from './assets.controller'
 import { getManufacturers, createManufacturer, updateManufacturer, deleteManufacturer } from './manufacturers.controller'
-import { getShipments, updateShipment } from './shipments.controller'
+import { getShipments, updateShipment, deleteShipment } from './shipments.controller'
 
 export const inventoryRouter = Router()
 inventoryRouter.use(authenticate)
@@ -24,3 +24,4 @@ inventoryRouter.delete('/manufacturers/:id', deleteManufacturer)
 // Shipments
 inventoryRouter.get('/shipments', getShipments)
 inventoryRouter.patch('/shipments/:id', updateShipment)
+inventoryRouter.delete('/shipments/:id', deleteShipment)

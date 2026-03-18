@@ -36,13 +36,21 @@ export async function createUser(req: AuthRequest, res: Response, next: NextFunc
 
 export async function updateUser(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { password, ...data } = req.body
-    const updateData: any = { ...data }
+    const { password, firstName, lastName, email, phone, role, userType, isActive, canApproveChanges } = req.body
+    const updateData: any = {}
+    if (firstName !== undefined) updateData.firstName = firstName
+    if (lastName !== undefined) updateData.lastName = lastName
+    if (email !== undefined) updateData.email = email
+    if (phone !== undefined) updateData.phone = phone
+    if (role !== undefined) updateData.role = role
+    if (userType !== undefined) updateData.userType = userType
+    if (isActive !== undefined) updateData.isActive = isActive
+    if (canApproveChanges !== undefined) updateData.canApproveChanges = canApproveChanges
     if (password) updateData.password = await bcrypt.hash(password, 10)
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data: updateData,
-      select: { id: true, email: true, firstName: true, lastName: true, role: true },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true, userType: true, phone: true, isActive: true, canApproveChanges: true, twoFactorEnabled: true },
     })
     res.json(user)
   } catch (e) { next(e) }
