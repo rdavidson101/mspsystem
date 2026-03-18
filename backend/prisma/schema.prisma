@@ -92,6 +92,42 @@ enum ExpenseCategory {
   OTHER
 }
 
+enum AssetStatus {
+  IN_STOCK
+  DEPLOYED
+  LOST
+  STOLEN
+  DECOMMISSIONED
+  SHIPPING
+}
+
+enum ShipmentStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum ChangeStatus {
+  DRAFT
+  SUBMITTED
+  INTERNAL_REVIEW
+  CUSTOMER_REVIEW
+  APPROVED
+  REJECTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ChangeRisk {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 // =================== MODELS ===================
 
 model User {
@@ -107,6 +143,7 @@ model User {
   avatar            String?
   phone             String?
   isActive          Boolean  @default(true)
+  canApproveChanges Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -122,6 +159,10 @@ model User {
   refreshTokens      RefreshToken[]
   macros             Macro[]
   notifications      Notification[]
+  internalApprovalChanges Change[] @relation("InternalApprover")
+  customerApprovalChanges Change[] @relation("CustomerApprover")
+  createdChanges          Change[] @relation("ChangeCreator")
+  shipmentRequests        ShipmentRequest[]
 
   @@map("users")
 }
@@ -199,6 +240,8 @@ model Company {
   leads       Lead[]
   contracts   Contract[]
   invoices    Invoice[]
+  assets      Asset[]
+  changes     Change[]
 
   @@map("companies")
 }
@@ -507,4 +550,106 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@map("notifications")
+}
+
+model Manufacturer {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  website   String?
+  phone     String?
+  email     String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assets    Asset[]
+
+  @@map("manufacturers")
+}
+
+model Asset {
+  id             String        @id @default(uuid())
+  number         Int           @unique @default(autoincrement())
+  name           String
+  modelNumber    String?
+  serialNumber   String?
+  status         AssetStatus   @default(IN_STOCK)
+  purchaseDate   DateTime?
+  purchasePrice  Float?
+  warrantyExpiry DateTime?
+  notes          String?
+  manufacturerId String?
+  manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
+  companyId      String?
+  company        Company?      @relation(fields: [companyId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  shipmentRequests ShipmentRequest[]
+
+  @@map("assets")
+}
+
+model ShipmentRequest {
+  id            String         @id @default(uuid())
+  assetId       String
+  asset         Asset          @relation(fields: [assetId], references: [id])
+  recipientName String
+  company       String?
+  addressLine1  String
+  addressLine2  String?
+  city          String
+  state         String?
+  zip           String?
+  country       String         @default("UK")
+  purpose       String
+  status        ShipmentStatus @default(PENDING)
+  notes         String?
+  requestedById String
+  requestedBy   User           @relation(fields: [requestedById], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("shipment_requests")
+}
+
+model Change {
+  id                 String       @id @default(uuid())
+  number             Int          @unique @default(autoincrement())
+  title              String
+  status             ChangeStatus @default(DRAFT)
+  risk               ChangeRisk   @default(MEDIUM)
+
+  scheduledStart     DateTime?
+  durationMinutes    Int?
+
+  companyId          String?
+  companyRef         Company?     @relation(fields: [companyId], references: [id])
+
+  scope              String?
+  reason             String?
+  risks              String?
+  implementationPlan String?
+  validationSteps    String?
+  rollbackSteps      String?
+
+  internalApproverId    String?
+  internalApprover      User?    @relation("InternalApprover", fields: [internalApproverId], references: [id])
+  internalApprovedAt    DateTime?
+  internalRejectedAt    DateTime?
+  internalNotes         String?
+
+  customerApproverName  String?
+  customerApproverEmail String?
+  customerApprovedAt    DateTime?
+  customerRejectedAt    DateTime?
+  customerNotes         String?
+
+  createdById  String
+  createdBy    User     @relation("ChangeCreator", fields: [createdById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("changes")
 }

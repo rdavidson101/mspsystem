@@ -11,7 +11,7 @@ export async function getUsers(req: AuthRequest, res: Response, next: NextFuncti
     if (type) where.userType = type as string
     const users = await prisma.user.findMany({
       where,
-      select: { id: true, email: true, firstName: true, lastName: true, role: true, userType: true, avatar: true, isActive: true, phone: true, twoFactorEnabled: true, createdAt: true },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true, userType: true, avatar: true, isActive: true, canApproveChanges: true, phone: true, twoFactorEnabled: true, createdAt: true },
       orderBy: { firstName: 'asc' },
     })
     res.json(users)

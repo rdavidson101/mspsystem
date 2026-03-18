@@ -24,6 +24,8 @@ import { categoriesRouter } from './modules/categories/categories.router'
 import { macrosRouter } from './modules/macros/macros.router'
 import { slaRouter } from './modules/sla/sla.router'
 import { notificationsRouter } from './modules/notifications/notifications.router'
+import { inventoryRouter } from './modules/inventory/inventory.router'
+import { changesRouter } from './modules/changes/changes.router'
 import { errorHandler } from './middleware/errorHandler'
 
 const app = express()
@@ -61,6 +63,8 @@ app.use('/api/categories', categoriesRouter)
 app.use('/api/macros', macrosRouter)
 app.use('/api/sla', slaRouter)
 app.use('/api/notifications', notificationsRouter)
+app.use('/api/inventory', inventoryRouter)
+app.use('/api/changes', changesRouter)
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }))
 app.use(errorHandler)

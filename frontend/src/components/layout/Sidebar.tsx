@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Users, TrendingUp, Receipt, FileText,
   FolderKanban, CheckSquare, Ticket, Clock,
-  Settings, HelpCircle, ChevronDown, Building2, Shield
+  Settings, HelpCircle, ChevronDown, Building2, Shield, Package, GitMerge
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
@@ -38,6 +38,12 @@ const mainNav = [
   { label: 'Projects', href: '/projects', icon: FolderKanban },
   { label: 'Tasks', href: '/tasks', icon: CheckSquare },
   {
+    label: 'Inventory', icon: Package, children: [
+      { label: 'Assets', href: '/inventory/assets' },
+      { label: 'Shipments', href: '/inventory/shipments' },
+    ]
+  },
+  {
     label: 'Tickets', icon: Ticket, children: [
       { label: 'Triage Queue', href: '/triage' },
       { label: 'All Tickets', href: '/tickets' },
@@ -45,6 +51,7 @@ const mainNav = [
       { label: 'Macros', href: '/macros' },
     ]
   },
+  { label: 'Changes', href: '/changes', icon: GitMerge },
   { label: 'Time Tracking', href: '/time-tracking', icon: Clock },
   { label: 'Contacts', href: '/contacts', icon: Users },
 ]

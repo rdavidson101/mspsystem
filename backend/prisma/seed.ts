@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, TicketStatus, TicketPriority, ProjectStatus, TaskStatus, TaskPriority, LeadStatus } from '@prisma/client'
+import { PrismaClient, UserRole, TicketStatus, TicketPriority, ProjectStatus, TaskStatus, TaskPriority, LeadStatus, AssetStatus } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -16,8 +16,8 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@msp.local' },
-    update: {},
-    create: { email: 'admin@msp.local', password: hashedPassword, firstName: 'Admin', lastName: 'User', role: UserRole.ADMIN, userType: 'INTERNAL' },
+    update: { canApproveChanges: true },
+    create: { email: 'admin@msp.local', password: hashedPassword, firstName: 'Admin', lastName: 'User', role: UserRole.ADMIN, userType: 'INTERNAL', canApproveChanges: true },
   })
 
   const tech = await prisma.user.upsert({
@@ -172,6 +172,77 @@ async function main() {
   await prisma.lead.create({ data: { title: 'Enterprise Security Package', value: 25000, status: LeadStatus.PROPOSAL, companyId: company1.id, source: 'Website' } })
 
   await prisma.announcement.create({ data: { title: 'System Maintenance Window', content: 'Scheduled maintenance on Sunday 2-4 AM EST', isActive: true } })
+
+  // Manufacturers
+  const apple = await prisma.manufacturer.upsert({
+    where: { name: 'Apple' },
+    update: {},
+    create: { name: 'Apple', website: 'https://www.apple.com', email: 'support@apple.com', phone: '1-800-275-2273' },
+  })
+
+  const dell = await prisma.manufacturer.upsert({
+    where: { name: 'Dell' },
+    update: {},
+    create: { name: 'Dell', website: 'https://www.dell.com', email: 'support@dell.com', phone: '1-800-624-9897' },
+  })
+
+  const hp = await prisma.manufacturer.upsert({
+    where: { name: 'HP' },
+    update: {},
+    create: { name: 'HP', website: 'https://www.hp.com', email: 'support@hp.com', phone: '1-800-474-6836' },
+  })
+
+  // Assets
+  await prisma.asset.createMany({
+    data: [
+      {
+        name: 'MacBook Pro 14"',
+        modelNumber: 'MBP14-2023',
+        serialNumber: 'C02XG0XJLVCG',
+        status: AssetStatus.IN_STOCK,
+        purchaseDate: new Date('2023-06-01'),
+        purchasePrice: 1999.00,
+        warrantyExpiry: new Date('2026-06-01'),
+        manufacturerId: apple.id,
+        notes: 'M2 Pro chip, 16GB RAM, 512GB SSD',
+      },
+      {
+        name: 'Dell Latitude 5540',
+        modelNumber: 'LAT5540',
+        serialNumber: 'DLL5540ABC123',
+        status: AssetStatus.DEPLOYED,
+        purchaseDate: new Date('2023-03-15'),
+        purchasePrice: 1299.00,
+        warrantyExpiry: new Date('2026-03-15'),
+        manufacturerId: dell.id,
+        companyId: company1.id,
+        notes: 'Intel i7, 16GB RAM, 256GB SSD',
+      },
+      {
+        name: 'HP LaserJet Pro M404n',
+        modelNumber: 'M404N',
+        serialNumber: 'CNBGH12345',
+        status: AssetStatus.IN_STOCK,
+        purchaseDate: new Date('2022-11-10'),
+        purchasePrice: 349.99,
+        warrantyExpiry: new Date('2025-11-10'),
+        manufacturerId: hp.id,
+        notes: 'Monochrome laser printer',
+      },
+      {
+        name: 'Dell PowerEdge R750',
+        modelNumber: 'R750',
+        serialNumber: 'SRVDLL750XYZ',
+        status: AssetStatus.DEPLOYED,
+        purchaseDate: new Date('2022-08-20'),
+        purchasePrice: 8500.00,
+        warrantyExpiry: new Date('2027-08-20'),
+        manufacturerId: dell.id,
+        companyId: company1.id,
+        notes: 'Rack server, 2x Intel Xeon, 128GB RAM, 4TB RAID',
+      },
+    ],
+  })
 
   console.log('Seed complete!')
   console.log('Login: admin@msp.local / admin123')

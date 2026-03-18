@@ -90,6 +90,7 @@ export default function UserManagementPage() {
               {tab === 'INTERNAL' && <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Role</th>}
               {tab === 'CLIENT' && <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Company</th>}
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Phone</th>
+              {tab === 'INTERNAL' && <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Change Approver</th>}
               {tab === 'INTERNAL' && <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">2FA</th>}
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Status</th>
               <th className="py-3 px-4 w-20"></th>
@@ -120,6 +121,13 @@ export default function UserManagementPage() {
                 <td className="py-3 px-4 text-sm text-slate-500">{u.phone || '—'}</td>
                 {tab === 'INTERNAL' && (
                   <td className="py-3 px-4">
+                    {u.canApproveChanges
+                      ? <span className="flex items-center gap-1 text-xs text-blue-600 font-medium"><CheckCircle2 size={12} /> Approver</span>
+                      : <span className="text-xs text-slate-400">—</span>}
+                  </td>
+                )}
+                {tab === 'INTERNAL' && (
+                  <td className="py-3 px-4">
                     {u.twoFactorEnabled
                       ? <span className="flex items-center gap-1 text-xs text-green-600 font-medium"><CheckCircle2 size={12} /> Enabled</span>
                       : <span className="text-xs text-slate-400">Disabled</span>}
@@ -143,7 +151,7 @@ export default function UserManagementPage() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-12 text-sm text-slate-400">No {tab === 'INTERNAL' ? 'internal staff' : 'client users'} found</td></tr>
+              <tr><td colSpan={tab === 'INTERNAL' ? 8 : 6} className="text-center py-12 text-sm text-slate-400">No {tab === 'INTERNAL' ? 'internal staff' : 'client users'} found</td></tr>
             )}
           </tbody>
         </table>
@@ -204,6 +212,10 @@ export default function UserManagementPage() {
               <div>
                 <label className="label">{editUser ? 'New Password (leave blank to keep)' : 'Password'}</label>
                 <input className="input" type="password" value={form.password} onChange={e => setForm((f: any) => ({ ...f, password: e.target.value }))} />
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="canApprove" checked={form.canApproveChanges || false} onChange={e => setForm((f: any) => ({ ...f, canApproveChanges: e.target.checked }))} className="rounded" />
+                <label htmlFor="canApprove" className="text-sm text-slate-700">Can approve changes</label>
               </div>
             </>
           )}
