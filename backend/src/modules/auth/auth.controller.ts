@@ -31,7 +31,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     res.json({
       token: access,
       refreshToken: refresh,
-      user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, avatar: user.avatar },
+      user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, avatar: user.avatar, twoFactorEnabled: user.twoFactorEnabled },
     })
   } catch (e) { next(e) }
 }
@@ -118,7 +118,7 @@ export async function verify2FA(req: Request, res: Response, next: NextFunction)
     res.json({
       token: access,
       refreshToken: refresh,
-      user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, avatar: user.avatar },
+      user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, avatar: user.avatar, twoFactorEnabled: user.twoFactorEnabled },
     })
   } catch (e) { next(e) }
 }

@@ -47,9 +47,9 @@ enum ProjectStatus {
 
 enum TaskStatus {
   NOT_STARTED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
+  WORKING_ON_IT
+  STUCK
+  DONE
 }
 
 enum TaskPriority {
@@ -163,6 +163,8 @@ model User {
   internalApprovalChanges Change[] @relation("InternalApprover")
   createdChanges          Change[] @relation("ChangeCreator")
   shipmentRequests        ShipmentRequest[]
+  taskComments       TaskComment[]
+  activeTimers       ActiveTimer[]
 
   @@map("users")
 }
@@ -361,6 +363,7 @@ model Project {
   members     ProjectMember[]
   tasks       Task[]
   timeEntries TimeEntry[]
+  sections    Section[]
 
   @@map("projects")
 }
@@ -378,6 +381,22 @@ model ProjectMember {
   @@map("project_members")
 }
 
+model Section {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  color     String   @default("#6366f1")
+  order     Int      @default(0)
+  collapsed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks     Task[]
+
+  @@map("sections")
+}
+
 model Task {
   id             String       @id @default(uuid())
   number         Int          @unique @default(autoincrement())
@@ -392,6 +411,9 @@ model Task {
   estimatedHours Float?
   projectId      String?
   project        Project?     @relation(fields: [projectId], references: [id])
+  sectionId      String?
+  section        Section?     @relation(fields: [sectionId], references: [id])
+  order          Int          @default(0)
   assignedToId   String?
   assignedTo     User?        @relation("AssignedUser", fields: [assignedToId], references: [id])
   createdById    String
@@ -404,8 +426,35 @@ model Task {
 
   timeEntries    TimeEntry[]
   attachments    Attachment[]
+  comments       TaskComment[]
+  activeTimers   ActiveTimer[]
 
   @@map("tasks")
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("task_comments")
+}
+
+model ActiveTimer {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+  startedAt DateTime @default(now())
+
+  @@unique([taskId, userId])
+  @@map("active_timers")
 }
 
 model TimeEntry {

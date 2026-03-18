@@ -1,8 +1,8 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Users, TrendingUp, Receipt, FileText,
-  FolderKanban, CheckSquare, Ticket, Clock,
-  Settings, HelpCircle, ChevronDown, Building2, Shield, Package, GitMerge
+  FolderKanban, Ticket, Clock,
+  ChevronDown, Building2, Shield, Package, GitMerge
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
@@ -24,7 +24,10 @@ function TriageBadge() {
   )
 }
 
-const mainNav = [
+type NavChild = { label: string; href: string }
+type NavItemDef = { label: string; href?: string; icon: React.ElementType; children?: NavChild[] }
+
+const allNav: NavItemDef[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Customers', href: '/customers', icon: Building2 },
   {
@@ -59,9 +62,6 @@ const mainNav = [
   },
   { label: 'Time Tracking', href: '/time-tracking', icon: Clock },
   { label: 'Contacts', href: '/contacts', icon: Users },
-]
-
-const otherNav = [
   {
     label: 'Administration', icon: Shield, children: [
       { label: 'User Management', href: '/admin/users' },
@@ -73,37 +73,33 @@ const otherNav = [
   },
 ]
 
-interface NavItemProps {
-  item: typeof mainNav[0]
-}
-
-function NavItem({ item }: NavItemProps) {
+function NavItem({ item }: { item: NavItemDef }) {
   const location = useLocation()
-  const [open, setOpen] = useState(() => {
-    if ('children' in item && item.children) {
-      return item.children.some(c => location.pathname.startsWith(c.href))
-    }
-    return false
-  })
+  const hasChildren = !!item.children?.length
 
-  if ('children' in item && item.children) {
-    const isActive = item.children.some(c => location.pathname.startsWith(c.href))
+  const isChildActive = hasChildren
+    ? item.children!.some(c => location.pathname === c.href || location.pathname.startsWith(c.href + '/'))
+    : false
+
+  const [open, setOpen] = useState(() => isChildActive)
+
+  if (hasChildren) {
     return (
       <div>
         <button
-          onClick={() => setOpen(!open)}
+          onClick={() => setOpen(o => !o)}
           className={clsx(
             'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-            isActive ? 'bg-sidebar-active text-white' : 'text-slate-300 hover:text-white hover:bg-sidebar-hover'
+            'text-slate-300 hover:text-white hover:bg-sidebar-hover'
           )}
         >
-          <item.icon size={18} />
-          <span className="flex-1 text-left">{item.label}</span>
+          <item.icon size={18} className={isChildActive ? 'text-white' : ''} />
+          <span className={clsx('flex-1 text-left', isChildActive && 'text-white font-medium')}>{item.label}</span>
           <ChevronDown size={14} className={clsx('transition-transform', open && 'rotate-180')} />
         </button>
         {open && (
           <div className="ml-8 mt-1 space-y-1">
-            {item.children.map(child => (
+            {item.children!.map(child => (
               <NavLink
                 key={child.href}
                 to={child.href}
@@ -125,7 +121,8 @@ function NavItem({ item }: NavItemProps) {
 
   return (
     <NavLink
-      to={(item as any).href}
+      to={item.href!}
+      end={item.href === '/projects'}
       className={({ isActive }) => clsx(
         'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
         isActive ? 'bg-sidebar-active text-white' : 'text-slate-300 hover:text-white hover:bg-sidebar-hover'
@@ -139,6 +136,12 @@ function NavItem({ item }: NavItemProps) {
 
 export default function Sidebar() {
   const { user } = useAuthStore()
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+
+  const visibleNav = allNav.filter(item => {
+    if (item.label === 'Administration') return isAdmin
+    return true
+  })
 
   return (
     <aside className="w-56 flex-shrink-0 bg-sidebar flex flex-col h-full">
@@ -150,10 +153,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        <p className="text-slate-500 text-xs font-medium uppercase px-3 mb-2">Main</p>
-        {mainNav.map(item => <NavItem key={item.label} item={item} />)}
-        <p className="text-slate-500 text-xs font-medium uppercase px-3 mt-4 mb-2">Others</p>
-        {otherNav.map(item => <NavItem key={item.label} item={item} />)}
+        {visibleNav.map(item => <NavItem key={item.label} item={item} />)}
       </nav>
 
       <div className="px-3 py-4 border-t border-white/10">
@@ -163,7 +163,7 @@ export default function Sidebar() {
           <div className="mt-2 h-1.5 bg-slate-700 rounded-full">
             <div className="h-full w-1/3 bg-primary-500 rounded-full" />
           </div>
-          <button className="mt-2 text-xs text-primary-400 hover:text-primary-300 font-medium flex items-center gap-1">
+          <button className="mt-2 text-xs text-primary-400 hover:text-primary-300 font-medium">
             Upgrade plan →
           </button>
         </div>
