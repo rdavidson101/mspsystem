@@ -72,17 +72,18 @@ function detectMention(value: string, cursor: number): { start: number; search: 
   return null
 }
 
-// Highlights @Name patterns (plain text, no tokens)
+// Highlights @Name patterns — also converts legacy @[Name](userId) tokens to plain @Name first
 function renderMentions(raw: string) {
+  const normalized = raw.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1')
   const parts: React.ReactNode[] = []
   const re = /@([A-Za-z]+(?:\s[A-Za-z]+)*)/g
   let last = 0; let m: RegExpExecArray | null
-  while ((m = re.exec(raw)) !== null) {
-    if (m.index > last) parts.push(<span key={last}>{raw.slice(last, m.index)}</span>)
+  while ((m = re.exec(normalized)) !== null) {
+    if (m.index > last) parts.push(<span key={last}>{normalized.slice(last, m.index)}</span>)
     parts.push(<span key={m.index} className="text-primary-700 font-semibold bg-primary-50 px-0.5 rounded">{m[0]}</span>)
     last = m.index + m[0].length
   }
-  if (last < raw.length) parts.push(<span key={`t${last}`}>{raw.slice(last)}</span>)
+  if (last < normalized.length) parts.push(<span key={`t${last}`}>{normalized.slice(last)}</span>)
   return parts
 }
 

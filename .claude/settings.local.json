@@ -79,7 +79,8 @@
       "Bash(powershell.exe -Command \"Get-ChildItem ''C:\\\\Program Files\\\\nodejs'' -ErrorAction SilentlyContinue | Select-Object Name\")",
       "Bash(grep \"from ''@dnd-kit\" \"/c/Users/Ryan/Documents/MSP System/frontend/src/pages/ProjectDetailPage.tsx\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git checkout docker-compose.yml && git pull && docker compose down && docker compose up -d --build 2>&1 | tail -15\")",
-      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d 2>&1 | tail -15\")"
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d 2>&1 | tail -15\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d --build 2>&1 | tail -10\")"
     ]
   }
 }
