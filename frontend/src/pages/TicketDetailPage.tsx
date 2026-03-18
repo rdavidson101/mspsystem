@@ -180,7 +180,7 @@ export default function TicketDetailPage() {
   ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start gap-3">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 mt-0.5 flex-shrink-0">

@@ -10,18 +10,28 @@
     @apply bg-slate-50 text-slate-900 font-sans;
     margin: 0;
   }
-  ::-webkit-scrollbar {
+  /* Scrollbar styling for main content only */
+  main ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
-  ::-webkit-scrollbar-track {
+  main ::-webkit-scrollbar-track {
     @apply bg-transparent;
   }
-  ::-webkit-scrollbar-thumb {
+  main ::-webkit-scrollbar-thumb {
     @apply bg-slate-300 rounded-full;
   }
-  ::-webkit-scrollbar-thumb:hover {
+  main ::-webkit-scrollbar-thumb:hover {
     @apply bg-slate-400;
+  }
+
+  /* Hide sidebar scrollbar */
+  aside nav {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  aside nav::-webkit-scrollbar {
+    display: none;
   }
 }
 
