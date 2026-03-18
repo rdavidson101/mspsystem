@@ -36,7 +36,6 @@ const mainNav = [
   },
   { label: 'Expenses', href: '/expenses', icon: Receipt },
   { label: 'Projects', href: '/projects', icon: FolderKanban },
-  { label: 'Tasks', href: '/tasks', icon: CheckSquare },
   {
     label: 'Inventory', icon: Package, children: [
       { label: 'Assets', href: '/inventory/assets' },
@@ -63,7 +62,6 @@ const mainNav = [
 ]
 
 const otherNav = [
-  { label: 'Support', href: '#', icon: HelpCircle },
   {
     label: 'Administration', icon: Shield, children: [
       { label: 'User Management', href: '/admin/users' },
