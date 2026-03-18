@@ -1,10 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Bell, Ticket, CheckCheck, X } from 'lucide-react'
+import { Bell, Ticket, CheckCheck, X, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import clsx from 'clsx'
+
+function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['notifications'] })
+  qc.invalidateQueries({ queryKey: ['notifications', 'count'] })
+}
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false)
@@ -14,23 +19,34 @@ export default function NotificationBell() {
   const { data: countData } = useQuery({
     queryKey: ['notifications', 'count'],
     queryFn: () => api.get('/notifications/unread-count').then(r => r.data),
-    refetchInterval: 30000,
+    refetchInterval: 10000,
   })
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => api.get('/notifications').then(r => r.data),
     enabled: open,
+    refetchInterval: open ? 10000 : false,
   })
 
   const markReadMutation = useMutation({
     mutationFn: (id: string) => api.patch(`/notifications/${id}/read`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['notifications'] }); qc.invalidateQueries({ queryKey: ['notifications', 'count'] }) },
+    onSuccess: () => invalidateAll(qc),
   })
 
   const markAllMutation = useMutation({
     mutationFn: () => api.patch('/notifications/read-all'),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['notifications'] }); qc.invalidateQueries({ queryKey: ['notifications', 'count'] }) },
+    onSuccess: () => invalidateAll(qc),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/notifications/${id}`),
+    onSuccess: () => invalidateAll(qc),
+  })
+
+  const clearReadMutation = useMutation({
+    mutationFn: () => api.delete('/notifications/clear-read'),
+    onSuccess: () => invalidateAll(qc),
   })
 
   useEffect(() => {
@@ -41,7 +57,13 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  // Refresh count when dropdown opens
+  useEffect(() => {
+    if (open) qc.invalidateQueries({ queryKey: ['notifications', 'count'] })
+  }, [open, qc])
+
   const unread = countData?.count || 0
+  const hasRead = notifications.some((n: any) => n.read)
 
   return (
     <div className="relative" ref={ref}>
@@ -51,8 +73,8 @@ export default function NotificationBell() {
       >
         <Bell size={18} />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-            {unread > 9 ? '9+' : unread}
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+            {unread > 99 ? '99+' : unread}
           </span>
         )}
       </button>
@@ -60,14 +82,29 @@ export default function NotificationBell() {
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-            <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
+              {unread > 0 && (
+                <span className="bg-red-100 text-red-600 text-xs font-bold px-1.5 py-0.5 rounded-full">{unread} unread</span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               {unread > 0 && (
                 <button
                   onClick={() => markAllMutation.mutate()}
                   className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+                  title="Mark all as read"
                 >
                   <CheckCheck size={12} /> Mark all read
+                </button>
+              )}
+              {hasRead && (
+                <button
+                  onClick={() => clearReadMutation.mutate()}
+                  className="text-xs text-slate-400 hover:text-red-500 font-medium flex items-center gap-1"
+                  title="Delete all read notifications"
+                >
+                  <Trash2 size={12} />
                 </button>
               )}
               <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600">
@@ -86,36 +123,54 @@ export default function NotificationBell() {
               notifications.map((n: any) => (
                 <div
                   key={n.id}
-                  className={clsx('px-4 py-3 border-b border-slate-50 hover:bg-slate-50 transition-colors', !n.read && 'bg-blue-50/40')}
+                  className={clsx('group px-4 py-3 border-b border-slate-50 hover:bg-slate-50 transition-colors', !n.read && 'bg-blue-50/50')}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={clsx('w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
+                    {/* Unread dot */}
+                    <div className="flex-shrink-0 mt-2">
+                      {!n.read
+                        ? <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                        : <div className="w-2 h-2" />
+                      }
+                    </div>
+                    <div className={clsx('w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0',
                       n.type === 'TICKET_ASSIGNED' ? 'bg-primary-100' : 'bg-slate-100'
                     )}>
                       <Ticket size={13} className={n.type === 'TICKET_ASSIGNED' ? 'text-primary-600' : 'text-slate-500'} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-slate-800">{n.title}</p>
+                      <p className={clsx('text-xs font-semibold', !n.read ? 'text-slate-900' : 'text-slate-600')}>{n.title}</p>
                       <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.body}</p>
-                      <p className="text-xs text-slate-400 mt-1">{formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <p className="text-xs text-slate-400">{formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}</p>
+                        {n.ticketId && (
+                          <Link
+                            to={`/tickets/${n.ticketId}`}
+                            onClick={() => { if (!n.read) markReadMutation.mutate(n.id); setOpen(false) }}
+                            className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                          >
+                            View →
+                          </Link>
+                        )}
+                        {!n.read && (
+                          <button
+                            onClick={() => markReadMutation.mutate(n.id)}
+                            className="text-xs text-slate-400 hover:text-slate-600"
+                          >
+                            Mark read
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    {!n.read && (
-                      <button
-                        onClick={() => markReadMutation.mutate(n.id)}
-                        className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5 hover:bg-blue-700"
-                        title="Mark as read"
-                      />
-                    )}
-                  </div>
-                  {n.ticketId && (
-                    <Link
-                      to={`/tickets/${n.ticketId}`}
-                      onClick={() => { markReadMutation.mutate(n.id); setOpen(false) }}
-                      className="mt-1.5 ml-10 text-xs text-primary-600 hover:text-primary-700 font-medium"
+                    {/* Delete button — visible on hover */}
+                    <button
+                      onClick={() => deleteMutation.mutate(n.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded text-slate-300 hover:text-red-400 transition-all flex-shrink-0"
+                      title="Delete"
                     >
-                      View ticket →
-                    </Link>
-                  )}
+                      <X size={13} />
+                    </button>
+                  </div>
                 </div>
               ))
             )}

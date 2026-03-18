@@ -33,3 +33,17 @@ export async function markAllRead(req: AuthRequest, res: Response, next: NextFun
     res.json({ success: true })
   } catch (e) { next(e) }
 }
+
+export async function deleteNotification(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    await prisma.notification.deleteMany({ where: { id: req.params.id, userId: req.user!.id } })
+    res.json({ success: true })
+  } catch (e) { next(e) }
+}
+
+export async function deleteAllRead(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    await prisma.notification.deleteMany({ where: { userId: req.user!.id, read: true } })
+    res.json({ success: true })
+  } catch (e) { next(e) }
+}
