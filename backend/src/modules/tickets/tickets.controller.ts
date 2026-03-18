@@ -57,7 +57,7 @@ export async function getTicket(req: AuthRequest, res: Response, next: NextFunct
         contact: true,
         category: true,
         assignedTo: { select: { id: true, firstName: true, lastName: true, email: true } },
-        createdBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+        createdBy: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
         comments: {
           include: { user: { select: { id: true, firstName: true, lastName: true } } },
           orderBy: { createdAt: 'asc' },

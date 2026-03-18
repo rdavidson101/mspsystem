@@ -392,7 +392,8 @@ export default function TicketDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-800">{ticket.createdBy?.firstName} {ticket.createdBy?.lastName}</p>
-                  <p className="text-xs text-slate-400">{ticket.createdBy?.email}</p>
+                  {ticket.createdBy?.email && <p className="text-xs text-slate-400">{ticket.createdBy.email}</p>}
+                  {ticket.createdBy?.phone && <p className="text-xs text-slate-400">{ticket.createdBy.phone}</p>}
                 </div>
               </div>
             </div>
