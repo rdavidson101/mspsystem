@@ -156,18 +156,6 @@ export default function Sidebar() {
         {visibleNav.map(item => <NavItem key={item.label} item={item} />)}
       </nav>
 
-      <div className="px-3 py-4 border-t border-white/10">
-        <div className="bg-sidebar-hover rounded-lg p-3">
-          <p className="text-yellow-400 text-xs font-medium">Hey {user?.firstName},</p>
-          <p className="text-slate-400 text-xs mt-1">You have 10 days left in your trial period.</p>
-          <div className="mt-2 h-1.5 bg-slate-700 rounded-full">
-            <div className="h-full w-1/3 bg-primary-500 rounded-full" />
-          </div>
-          <button className="mt-2 text-xs text-primary-400 hover:text-primary-300 font-medium">
-            Upgrade plan →
-          </button>
-        </div>
-      </div>
     </aside>
   )
 }
