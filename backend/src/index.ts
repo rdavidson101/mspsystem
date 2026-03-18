@@ -27,6 +27,7 @@ import { notificationsRouter } from './modules/notifications/notifications.route
 import { inventoryRouter } from './modules/inventory/inventory.router'
 import { changesRouter } from './modules/changes/changes.router'
 import { templatesRouter } from './modules/templates/templates.router'
+import { settingsRouter } from './modules/settings/settings.router'
 import { errorHandler } from './middleware/errorHandler'
 
 const app = express()
@@ -67,6 +68,7 @@ app.use('/api/notifications', notificationsRouter)
 app.use('/api/inventory', inventoryRouter)
 app.use('/api/changes', changesRouter)
 app.use('/api/templates', templatesRouter)
+app.use('/api/settings', settingsRouter)
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }))
 app.use(errorHandler)
