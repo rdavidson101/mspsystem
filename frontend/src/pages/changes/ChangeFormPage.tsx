@@ -4,6 +4,25 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { ArrowLeft, Save, Send } from 'lucide-react'
 
+// Defined OUTSIDE the component so they are stable references across renders
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="card p-5 space-y-4">
+      <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide border-b border-slate-100 pb-2">{title}</h3>
+      {children}
+    </div>
+  )
+}
+
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="label">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
+      {children}
+    </div>
+  )
+}
+
 const empty = {
   title: '',
   risk: 'MEDIUM',
@@ -59,24 +78,6 @@ export default function ChangeFormPage() {
     onSuccess: (data) => navigate(`/changes/${data.id}`),
   })
 
-  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="card p-5 space-y-4">
-      <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide border-b border-slate-100 pb-2">{title}</h3>
-      {children}
-    </div>
-  )
-
-  const Field = ({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
-    <div>
-      <label className="label">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
-      {children}
-    </div>
-  )
-
-  const TextArea = ({ field, rows = 4, placeholder }: { field: string; rows?: number; placeholder?: string }) => (
-    <textarea className="input resize-none font-mono text-xs" rows={rows} value={form[field] || ''} onChange={f(field)} placeholder={placeholder} />
-  )
-
   return (
     <div className="max-w-4xl space-y-5">
       <div className="flex items-center gap-4">
@@ -84,7 +85,7 @@ export default function ChangeFormPage() {
           <ArrowLeft size={18} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{isEdit ? `Edit RFC` : 'Raise RFC'}</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{isEdit ? 'Edit RFC' : 'Raise RFC'}</h1>
           {existing && <p className="text-sm text-slate-500">{existing.ref} · {existing.status}</p>}
         </div>
       </div>
@@ -121,22 +122,22 @@ export default function ChangeFormPage() {
 
       <Section title="Reason & Risk">
         <Field label="Reason for Change" required>
-          <TextArea field="reason" placeholder="Why is this change being made?" />
+          <textarea className="input resize-none" rows={4} value={form.reason || ''} onChange={f('reason')} placeholder="Why is this change being made?" />
         </Field>
         <Field label="Risks Surrounding Change" required>
-          <TextArea field="risks" placeholder="What could go wrong? What is the impact if it does?" />
+          <textarea className="input resize-none" rows={4} value={form.risks || ''} onChange={f('risks')} placeholder="What could go wrong? What is the impact if it does?" />
         </Field>
       </Section>
 
       <Section title="Implementation">
         <Field label="Implementation Plan" required>
-          <TextArea field="implementationPlan" rows={5} placeholder="Step-by-step implementation plan..." />
+          <textarea className="input resize-none" rows={5} value={form.implementationPlan || ''} onChange={f('implementationPlan')} placeholder="Step-by-step implementation plan..." />
         </Field>
         <Field label="Validation Steps" required>
-          <TextArea field="validationSteps" placeholder="How will you confirm the change was successful?" />
+          <textarea className="input resize-none" rows={4} value={form.validationSteps || ''} onChange={f('validationSteps')} placeholder="How will you confirm the change was successful?" />
         </Field>
         <Field label="Rollback Steps" required>
-          <TextArea field="rollbackSteps" placeholder="Steps to reverse the change if something goes wrong..." />
+          <textarea className="input resize-none" rows={4} value={form.rollbackSteps || ''} onChange={f('rollbackSteps')} placeholder="Steps to reverse the change if something goes wrong..." />
         </Field>
       </Section>
 
@@ -147,14 +148,16 @@ export default function ChangeFormPage() {
               <option value="">Select approver</option>
               {approvers.map((u: any) => <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>)}
             </select>
-            {approvers.length === 0 && <p className="text-xs text-amber-600 mt-1">No approvers configured. Set change approval rights in Administration → User Management.</p>}
+            {approvers.length === 0 && (
+              <p className="text-xs text-amber-600 mt-1">No approvers configured. Set change approval rights in Administration → User Management.</p>
+            )}
           </Field>
           <div className="space-y-3">
             <Field label="Customer Approver Name">
-              <input className="input" value={form.customerApproverName} onChange={f('customerApproverName')} placeholder="Customer contact name" />
+              <input className="input" value={form.customerApproverName || ''} onChange={f('customerApproverName')} placeholder="Customer contact name" />
             </Field>
             <Field label="Customer Approver Email">
-              <input className="input" type="email" value={form.customerApproverEmail} onChange={f('customerApproverEmail')} placeholder="customer@example.com" />
+              <input className="input" type="email" value={form.customerApproverEmail || ''} onChange={f('customerApproverEmail')} placeholder="customer@example.com" />
             </Field>
           </div>
         </div>
