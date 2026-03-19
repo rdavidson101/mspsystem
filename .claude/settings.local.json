@@ -85,7 +85,29 @@
       "Bash(xargs grep:*)",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d --build && docker compose exec backend npx prisma db push --accept-data-loss\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose restart backend 2>&1\")",
-      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose restart backend 2>&1 | tail -5\")"
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose restart backend 2>&1 | tail -5\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose exec backend npx prisma db push --accept-data-loss 2>&1 | tail -15\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cat ~/mspsystem/docker-compose.yml\")",
+      "Bash(pscp -pw \"Ubercheese99!\" \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\" ryan@10.1.0.31:~/mspsystem/backend/prisma/schema.prisma)",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"ls ~/mspsystem/backend/prisma/\")",
+      "Bash(pscp -pw \"Ubercheese99!\" \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\" \"ryan@10.1.0.31:/home/ryan/mspsystem/backend/prisma/schema.prisma\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"mkdir -p ~/mspsystem/backend/src/modules/teams\")",
+      "Bash(pscp -pw \"Ubercheese99!\" \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\src\\\\modules\\\\teams\\\\teams.controller.ts\" \"ryan@10.1.0.31:/home/ryan/mspsystem/backend/src/modules/teams/teams.controller.ts\")",
+      "Bash(pscp -pw \"Ubercheese99!\" \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\src\\\\modules\\\\teams\\\\teams.router.ts\" \"ryan@10.1.0.31:/home/ryan/mspsystem/backend/src/modules/teams/teams.router.ts\")",
+      "Bash(pscp -pw \"Ubercheese99!\" \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\src\\\\modules\\\\auth\\\\auth.router.ts\" \"ryan@10.1.0.31:/home/ryan/mspsystem/backend/src/modules/auth/auth.router.ts\")",
+      "Bash(pscp -pw \"Ubercheese99!\" \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\src\\\\index.ts\" \"ryan@10.1.0.31:/home/ryan/mspsystem/backend/src/index.ts\")",
+      "Bash(pscp -pw \"Ubercheese99!\" \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\src\\\\modules\\\\tickets\\\\tickets.controller.ts\" \"ryan@10.1.0.31:/home/ryan/mspsystem/backend/src/modules/tickets/tickets.controller.ts\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"sleep 4 && docker logs msp_backend --tail 8 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"sleep 6 && docker logs msp_backend --tail 5 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"sleep 10 && docker logs msp_backend 2>&1 | tail -10\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker logs msp_backend --since 5m 2>&1 | grep -E ''\\(Server running|error|Error|Restarting|teams\\)'' | tail -20\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker logs msp_backend --since 2m 2>&1 | tail -30\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker ps | grep msp_backend && docker logs msp_backend --since 3m 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"curl -s http://localhost:4000/api/health 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker logs msp_backend 2>&1 | grep -A5 ''11:17:30''\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker logs msp_backend 2>&1 | wc -l && docker logs msp_backend 2>&1 | tail -50\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"sleep 15 && docker logs msp_backend --since 2m 2>&1 | tail -20\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"curl -s http://localhost:4000/api/health\")"
     ]
   }
 }

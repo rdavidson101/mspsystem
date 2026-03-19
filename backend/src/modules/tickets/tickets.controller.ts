@@ -18,6 +18,7 @@ const TICKET_INCLUDE = {
   category: { select: { id: true, name: true, color: true } },
   assignedTo: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
   createdBy: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
+  serviceTeam: { select: { id: true, name: true } },
   _count: { select: { comments: true, timeEntries: true } },
 }
 
@@ -38,18 +39,34 @@ async function recordHistory(
 
 export async function getTickets(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { status, priority, assignedToId, categoryId, search } = req.query
+    const { status, priority, assignedToId, categoryId, search, companyId, createdById, createdAtFrom, createdAtTo, resolvedAtFrom, resolvedAtTo, serviceTeamId, active } = req.query
+
+    const where: any = {}
+    if (active === 'true') where.status = { not: 'CLOSED' }
+    else if (status) where.status = status as any
+    if (priority) where.priority = priority as any
+    if (assignedToId) where.assignedToId = String(assignedToId)
+    if (categoryId) where.categoryId = String(categoryId)
+    if (companyId) where.companyId = String(companyId)
+    if (createdById) where.createdById = String(createdById)
+    if (serviceTeamId) where.serviceTeamId = String(serviceTeamId)
+    if (search) where.OR = [
+      { title: { contains: String(search), mode: 'insensitive' } },
+      { description: { contains: String(search), mode: 'insensitive' } },
+    ]
+    if (createdAtFrom || createdAtTo) {
+      where.createdAt = {}
+      if (createdAtFrom) where.createdAt.gte = new Date(String(createdAtFrom))
+      if (createdAtTo) where.createdAt.lte = new Date(String(createdAtTo))
+    }
+    if (resolvedAtFrom || resolvedAtTo) {
+      where.resolvedAt = {}
+      if (resolvedAtFrom) where.resolvedAt.gte = new Date(String(resolvedAtFrom))
+      if (resolvedAtTo) where.resolvedAt.lte = new Date(String(resolvedAtTo))
+    }
+
     const tickets = await prisma.ticket.findMany({
-      where: {
-        ...(status ? { status: status as any } : {}),
-        ...(priority ? { priority: priority as any } : {}),
-        ...(assignedToId ? { assignedToId: String(assignedToId) } : {}),
-        ...(categoryId ? { categoryId: String(categoryId) } : {}),
-        ...(search ? { OR: [
-          { title: { contains: String(search), mode: 'insensitive' } },
-          { description: { contains: String(search), mode: 'insensitive' } },
-        ]} : {}),
-      },
+      where,
       include: TICKET_INCLUDE,
       orderBy: { createdAt: 'desc' },
     })
@@ -67,6 +84,7 @@ export async function getTicket(req: AuthRequest, res: Response, next: NextFunct
         category: true,
         assignedTo: { select: { id: true, firstName: true, lastName: true, email: true, jobTitle: true } },
         createdBy: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, jobTitle: true } },
+        serviceTeam: { select: { id: true, name: true } },
         comments: {
           include: { user: { select: { id: true, firstName: true, lastName: true, jobTitle: true } } },
           orderBy: { createdAt: 'asc' },
@@ -97,8 +115,14 @@ export async function createTicket(req: AuthRequest, res: Response, next: NextFu
     const slaResolutionDue = slaPolicy ? new Date(now.getTime() + slaPolicy.resolutionTime * 60000) : undefined
     const slaResponseDue = slaPolicy ? new Date(now.getTime() + slaPolicy.responseTime * 60000) : undefined
 
+    let serviceTeamId: string | undefined
+    if (req.body.companyId) {
+      const co = await prisma.company.findUnique({ where: { id: req.body.companyId }, select: { serviceTeamId: true } })
+      if (co?.serviceTeamId) serviceTeamId = co.serviceTeamId
+    }
+
     const ticket = await prisma.ticket.create({
-      data: { ...req.body, createdById: req.user!.id, slaResolutionDue, slaResponseDue },
+      data: { ...req.body, createdById: req.user!.id, slaResolutionDue, slaResponseDue, ...(serviceTeamId ? { serviceTeamId } : {}) },
       include: TICKET_INCLUDE,
     })
     await recordHistory(ticket.id, req.user!.id, [
@@ -221,6 +245,18 @@ export async function addComment(req: AuthRequest, res: Response, next: NextFunc
         `${req.user!.email} replied to "${ticket.title}"`,
         ticket.id
       )
+    }
+    const mentionedUserIds: string[] = Array.isArray(req.body.mentionedUserIds) ? req.body.mentionedUserIds : []
+    for (const mentionedId of mentionedUserIds) {
+      if (mentionedId !== req.user!.id) {
+        await createNotification(
+          mentionedId,
+          'MENTION',
+          `You were mentioned in ${ticketRef(ticket!.number)}`,
+          `${req.user!.email} mentioned you in "${ticket!.title}"`,
+          req.params.id
+        )
+      }
     }
     io.emit('ticket:comment', comment)
     res.status(201).json(comment)

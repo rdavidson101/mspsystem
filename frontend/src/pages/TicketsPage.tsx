@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { Link } from 'react-router-dom'
@@ -62,17 +62,30 @@ export default function TicketsPage() {
   const qc = useQueryClient()
   const { user } = useAuthStore()
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('active')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const PAGE_SIZE = 20
+  const [page, setPage] = useState(0)
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({
     title: '', description: '', priority: 'MEDIUM', categoryId: '', companyId: '', assignedToId: '',
   })
 
+  useEffect(() => { setPage(0) }, [statusFilter, categoryFilter, search])
+
   const { data: tickets = [] } = useQuery({
     queryKey: ['tickets', statusFilter, categoryFilter, search],
-    queryFn: () => api.get('/tickets', { params: { status: statusFilter || undefined, categoryId: categoryFilter || undefined, search: search || undefined } }).then(r => r.data),
+    queryFn: () => api.get('/tickets', {
+      params: {
+        ...(statusFilter === 'active' ? { active: 'true' } : { status: statusFilter || undefined }),
+        categoryId: categoryFilter || undefined,
+        search: search || undefined
+      }
+    }).then(r => r.data),
   })
+
+  const totalPages = Math.ceil(tickets.length / PAGE_SIZE)
+  const paginated = tickets.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
   const { data: companies = [] } = useQuery({ queryKey: ['companies'], queryFn: () => api.get('/companies').then(r => r.data) })
   const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: () => api.get('/users').then(r => r.data) })
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => api.get('/categories').then(r => r.data) })
@@ -107,6 +120,7 @@ export default function TicketsPage() {
       {/* Status summary pills */}
       <div className="flex gap-2 flex-wrap">
         {[
+          { key: 'active', label: 'Active', count: tickets.length },
           { key: '', label: 'All', count: tickets.length },
           { key: 'AWAITING_TRIAGE', label: 'Triage', count: statusCounts['AWAITING_TRIAGE'] || 0 },
           { key: 'OPEN', label: 'Open', count: statusCounts['OPEN'] || 0 },
@@ -163,7 +177,7 @@ export default function TicketsPage() {
             </tr>
           </thead>
           <tbody>
-            {tickets.map((ticket: any) => (
+            {paginated.map((ticket: any) => (
               <tr key={ticket.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                 <td className="py-3 px-4">
                   <Link to={`/tickets/${ticket.id}`} className="text-xs font-mono font-semibold text-primary-600 hover:text-primary-700">
@@ -220,6 +234,15 @@ export default function TicketsPage() {
             )}
           </tbody>
         </table>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+            <span className="text-xs text-slate-500">Page {page + 1} of {totalPages}</span>
+            <div className="flex gap-2">
+              <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="btn-secondary text-xs py-1 px-3 disabled:opacity-40">← Prev</button>
+              <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="btn-secondary text-xs py-1 px-3 disabled:opacity-40">Next →</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create Modal */}

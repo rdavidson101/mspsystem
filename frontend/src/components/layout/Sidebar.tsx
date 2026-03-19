@@ -51,14 +51,7 @@ const allNav: NavItemDef[] = [
       { label: 'Shipments', href: '/inventory/shipments' },
     ]
   },
-  {
-    label: 'Tickets', icon: Ticket, children: [
-      { label: 'Triage Queue', href: '/triage' },
-      { label: 'All Tickets', href: '/tickets' },
-      { label: 'My Tickets', href: '/my-tickets' },
-      { label: 'Macros', href: '/macros' },
-    ]
-  },
+  { label: 'Tickets', icon: Ticket },
   {
     label: 'Changes', icon: GitMerge, children: [
       { label: 'All Changes', href: '/changes' },
@@ -142,18 +135,40 @@ export default function Sidebar() {
   const { user } = useAuthStore()
   const location = useLocation()
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+
+  const { data: myTeams = [] } = useQuery({
+    queryKey: ['my-teams'],
+    queryFn: () => api.get('/auth/me/teams').then((r: any) => r.data),
+  })
+
+  const ticketsItem: NavItemDef = {
+    label: 'Tickets',
+    icon: Ticket,
+    children: [
+      { label: 'Triage Queue', href: '/triage' },
+      { label: 'All Tickets', href: '/tickets' },
+      { label: 'My Tickets', href: '/my-tickets' },
+      { label: 'Search', href: '/tickets/search' },
+      { label: 'Macros', href: '/macros' },
+      ...myTeams.map((t: any) => ({ label: t.name, href: `/tickets/team/${t.id}` })),
+    ],
+  }
+
   const [openLabel, setOpenLabel] = useState<string | null>(() => {
     // Pre-open the group that has the active child
     const active = allNav.find(item =>
       item.children?.some(c => location.pathname.startsWith(c.href))
     )
+    // Also check tickets paths
+    if (!active && (location.pathname.startsWith('/tickets') || location.pathname.startsWith('/triage') || location.pathname.startsWith('/my-tickets') || location.pathname.startsWith('/macros'))) {
+      return 'Tickets'
+    }
     return active?.label || null
   })
 
-  const visibleNav = allNav.filter(item => {
-    if (item.label === 'Administration') return isAdmin
-    return true
-  })
+  const visibleNav = allNav
+    .map(item => item.label === 'Tickets' ? ticketsItem : item)
+    .filter(item => item.label === 'Administration' ? isAdmin : true)
 
   return (
     <aside className="w-56 flex-shrink-0 bg-sidebar flex flex-col h-full">

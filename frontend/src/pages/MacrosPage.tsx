@@ -4,7 +4,7 @@ import { api } from '@/lib/api'
 import { Plus, Zap, Pencil, Trash2, X } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 
-const VARIABLES = ['{{requester_name}}', '{{ticket_ref}}', '{{assignee_name}}', '{{company_name}}', '{{priority}}']
+const VARIABLES = ['{{requester_name}}', '{{ticket_ref}}', '{{current_user}}', '{{company_name}}', '{{priority}}']
 
 export default function MacrosPage() {
   const qc = useQueryClient()

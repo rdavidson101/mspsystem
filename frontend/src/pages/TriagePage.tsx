@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { AlertTriangle } from 'lucide-react'
 import clsx from 'clsx'
+import { useAuthStore } from '@/store/authStore'
 
 const priorityColors: Record<string, string> = {
   LOW: 'bg-slate-100 text-slate-600',
@@ -17,9 +19,19 @@ function ticketRef(number: number) {
 }
 
 export default function TriagePage() {
+  const { user } = useAuthStore()
+  const [teamFilter, setTeamFilter] = useState<string>(() => '')
+
+  const { data: teams = [] } = useQuery({ queryKey: ['teams'], queryFn: () => api.get('/teams').then(r => r.data) })
+  const { data: myTeams = [] } = useQuery({ queryKey: ['my-teams'], queryFn: () => api.get('/auth/me/teams').then(r => r.data) })
+
+  useEffect(() => {
+    if ((myTeams as any[]).length > 0 && !teamFilter) setTeamFilter((myTeams as any[])[0].id)
+  }, [myTeams])
+
   const { data: tickets = [] } = useQuery({
-    queryKey: ['tickets', 'AWAITING_TRIAGE'],
-    queryFn: () => api.get('/tickets', { params: { status: 'AWAITING_TRIAGE' } }).then(r => r.data),
+    queryKey: ['tickets', 'AWAITING_TRIAGE', teamFilter],
+    queryFn: () => api.get('/tickets', { params: { status: 'AWAITING_TRIAGE', serviceTeamId: teamFilter || undefined } }).then(r => r.data),
     refetchInterval: 30000,
   })
 
@@ -29,6 +41,12 @@ export default function TriagePage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Triage Queue</h1>
           <p className="text-sm text-slate-500">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''} awaiting triage</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <select value={teamFilter} onChange={e => setTeamFilter(e.target.value)} className="input text-sm w-auto">
+            <option value="">All Teams</option>
+            {(teams as any[]).map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
         </div>
       </div>
 

@@ -134,7 +134,9 @@ export default function TicketDetailPage() {
   const { user } = useAuthStore()
   const [comment, setComment] = useState('')
   const [isInternal, setIsInternal] = useState(false)
-  const [activeTab, setActiveTab] = useState<'activity' | 'history'>('activity')
+  const [activeTab, setActiveTab] = useState<'updates' | 'history'>('updates')
+  const [mentionSearch, setMentionSearch] = useState('')
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
   const [showMacroPicker, setShowMacroPicker] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [triageForm, setTriageForm] = useState<{ priority: string; categoryId: string; assignedToId: string }>({
@@ -150,6 +152,7 @@ export default function TicketDetailPage() {
   const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: () => api.get('/users').then(r => r.data) })
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => api.get('/categories').then(r => r.data) })
   const { data: macros = [] } = useQuery({ queryKey: ['macros'], queryFn: () => api.get('/macros').then(r => r.data) })
+  const { data: internalUsers = [] } = useQuery({ queryKey: ['users', 'INTERNAL'], queryFn: () => api.get('/users', { params: { type: 'INTERNAL' } }).then(r => r.data) })
 
   const updateMutation = useMutation({
     mutationFn: (data: any) => api.put(`/tickets/${id}`, data),
@@ -157,7 +160,7 @@ export default function TicketDetailPage() {
   })
   const commentMutation = useMutation({
     mutationFn: (data: any) => api.post(`/tickets/${id}/comments`, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ticket', id] }); setComment('') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ticket', id] }); setComment(''); setMentionedUserIds([]) },
   })
 
   function insertMacro(macro: any) {
@@ -167,17 +170,40 @@ export default function TicketDetailPage() {
     setTimeout(() => textareaRef.current?.focus(), 50)
   }
 
+  function handleCommentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const val = e.target.value
+    setComment(val)
+    const words = val.split(/\s/)
+    const lastWord = words[words.length - 1]
+    if (lastWord.startsWith('@') && lastWord.length > 1) {
+      setMentionSearch(lastWord.slice(1).toLowerCase())
+    } else {
+      setMentionSearch('')
+    }
+  }
+
+  function insertMention(u: any) {
+    const words = comment.split(/\s/)
+    words[words.length - 1] = `@${u.firstName} ${u.lastName} `
+    setComment(words.join(' '))
+    if (!mentionedUserIds.includes(u.id)) {
+      setMentionedUserIds(ids => [...ids, u.id])
+    }
+    setMentionSearch('')
+    setTimeout(() => textareaRef.current?.focus(), 50)
+  }
+
+  const filteredMentions = mentionSearch
+    ? (internalUsers as any[]).filter((u: any) =>
+        `${u.firstName} ${u.lastName}`.toLowerCase().includes(mentionSearch)
+      ).slice(0, 6)
+    : []
+
   if (!ticket) return (
     <div className="flex items-center justify-center h-64 text-slate-400">Loading...</div>
   )
 
   const totalHours = (ticket.timeEntries || []).reduce((s: number, e: any) => s + e.hours, 0)
-
-  // Merge comments and history for activity tab, sorted by date
-  const activityItems = [
-    ...(ticket.comments || []).map((c: any) => ({ ...c, _type: 'comment' })),
-    ...(ticket.history || []).map((h: any) => ({ ...h, _type: 'history' })),
-  ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 
   return (
     <div className="space-y-6">
@@ -290,15 +316,15 @@ export default function TicketDetailPage() {
             <div className="border-b border-slate-100 px-4">
               <div className="flex gap-0">
                 <button
-                  onClick={() => setActiveTab('activity')}
+                  onClick={() => setActiveTab('updates')}
                   className={clsx(
                     'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
-                    activeTab === 'activity' ? 'border-primary-600 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+                    activeTab === 'updates' ? 'border-primary-600 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700'
                   )}
                 >
-                  <MessageSquare size={14} /> Activity
+                  <MessageSquare size={14} /> Updates
                   <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full">
-                    {(ticket.comments?.length || 0) + (ticket.history?.length || 0)}
+                    {ticket.comments?.length || 0}
                   </span>
                 </button>
                 <button
@@ -317,18 +343,14 @@ export default function TicketDetailPage() {
             </div>
 
             <div className="p-5">
-              {/* Activity tab: interleaved comments + history */}
-              {activeTab === 'activity' && (
+              {/* Updates tab: comments only */}
+              {activeTab === 'updates' && (
                 <div className="space-y-3">
-                  {activityItems.map((item: any) =>
-                    item._type === 'comment' ? (
-                      <CommentBubble key={`c-${item.id}`} comment={item} />
-                    ) : (
-                      <HistoryEntry key={`h-${item.id}`} entry={item} />
-                    )
-                  )}
-                  {activityItems.length === 0 && (
-                    <p className="text-sm text-slate-400 text-center py-4">No activity yet.</p>
+                  {(ticket.comments || []).map((comment: any) => (
+                    <CommentBubble key={`c-${comment.id}`} comment={comment} />
+                  ))}
+                  {(ticket.comments || []).length === 0 && (
+                    <p className="text-sm text-slate-400 text-center py-4">No updates yet.</p>
                   )}
                 </div>
               )}
@@ -358,17 +380,31 @@ export default function TicketDetailPage() {
                     <span className="text-xs font-semibold text-orange-600">Internal Note — not visible to customer</span>
                   </div>
                 )}
-                <textarea
-                  ref={textareaRef}
-                  value={comment}
-                  onChange={e => setComment(e.target.value)}
-                  placeholder={isInternal ? 'Add an internal note...' : 'Write a reply...'}
-                  className={clsx(
-                    'w-full px-4 py-3 text-sm outline-none resize-none bg-transparent',
-                    isInternal ? 'text-orange-900 placeholder-orange-300' : 'text-slate-700 placeholder-slate-400'
+                <div className="relative">
+                  {mentionSearch && filteredMentions.length > 0 && (
+                    <div className="absolute bottom-full mb-1 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-20 overflow-hidden max-h-48 overflow-y-auto">
+                      {filteredMentions.map((u: any) => (
+                        <button key={u.id} type="button" onClick={() => insertMention(u)}
+                          className="flex items-center gap-2 w-full px-3 py-2 hover:bg-slate-50 text-left">
+                          <UserAvatar user={u} size="xs" showHoverCard={false} />
+                          <span className="text-sm text-slate-800">{u.firstName} {u.lastName}</span>
+                          {u.jobTitle && <span className="text-xs text-slate-400">{u.jobTitle}</span>}
+                        </button>
+                      ))}
+                    </div>
                   )}
-                  rows={4}
-                />
+                  <textarea
+                    ref={textareaRef}
+                    value={comment}
+                    onChange={handleCommentChange}
+                    placeholder={isInternal ? 'Add an internal note...' : 'Write a reply...'}
+                    className={clsx(
+                      'w-full px-4 py-3 text-sm outline-none resize-none bg-transparent',
+                      isInternal ? 'text-orange-900 placeholder-orange-300' : 'text-slate-700 placeholder-slate-400'
+                    )}
+                    rows={4}
+                  />
+                </div>
                 <div className="flex items-center justify-between px-4 pb-3 gap-3">
                   <div className="flex items-center gap-2">
                     {/* Internal toggle */}
@@ -422,7 +458,7 @@ export default function TicketDetailPage() {
                   </div>
 
                   <button
-                    onClick={() => commentMutation.mutate({ content: comment, isInternal })}
+                    onClick={() => commentMutation.mutate({ content: comment, isInternal, mentionedUserIds })}
                     disabled={!comment.trim() || commentMutation.isPending}
                     className={clsx(
                       'flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50',

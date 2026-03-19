@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Tag, Clock, Plus, Pencil, Trash2 } from 'lucide-react'
+import { Tag, Clock, Plus, Pencil, Trash2, Users, X } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import clsx from 'clsx'
+import UserAvatar from '@/components/ui/UserAvatar'
 
 const PRESET_COLORS = ['#3b82f6','#f97316','#8b5cf6','#06b6d4','#ef4444','#10b981','#f59e0b','#ec4899','#6366f1','#14b8a6']
 
@@ -23,7 +24,7 @@ const priorityBadgeColors: Record<string, string> = {
 
 export default function TicketSettingsPage() {
   const qc = useQueryClient()
-  const [activeTab, setActiveTab] = useState<'categories' | 'sla'>('categories')
+  const [activeTab, setActiveTab] = useState<'categories' | 'sla' | 'teams'>('categories')
 
   // Categories state
   const [showCatModal, setShowCatModal] = useState(false)
@@ -91,6 +92,7 @@ export default function TicketSettingsPage() {
   const tabs = [
     { id: 'categories' as const, label: 'Categories', icon: Tag },
     { id: 'sla' as const, label: 'SLA Policies', icon: Clock },
+    { id: 'teams' as const, label: 'Service Teams', icon: Users },
   ]
 
   return (
@@ -200,6 +202,10 @@ export default function TicketSettingsPage() {
         </div>
       )}
 
+      {activeTab === 'teams' && (
+        <TeamsTab />
+      )}
+
       {/* Category modal */}
       <Modal
         open={showCatModal}
@@ -251,6 +257,117 @@ export default function TicketSettingsPage() {
             <button type="submit" className="btn-primary" disabled={catMutation.isPending}>
               {catMutation.isPending ? 'Saving...' : 'Save'}
             </button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  )
+}
+
+function TeamsTab() {
+  const qc = useQueryClient()
+  const [showModal, setShowModal] = useState(false)
+  const [editingTeam, setEditingTeam] = useState<any>(null)
+  const [teamForm, setTeamForm] = useState({ name: '', description: '' })
+  const [addMemberTeamId, setAddMemberTeamId] = useState<string | null>(null)
+  const [memberUserId, setMemberUserId] = useState('')
+
+  const { data: teams = [] } = useQuery({ queryKey: ['teams'], queryFn: () => api.get('/teams').then(r => r.data) })
+  const { data: internalUsers = [] } = useQuery({ queryKey: ['users', 'INTERNAL'], queryFn: () => api.get('/users', { params: { type: 'INTERNAL' } }).then(r => r.data) })
+
+  const teamMutation = useMutation({
+    mutationFn: (data: any) => editingTeam ? api.put(`/teams/${editingTeam.id}`, data) : api.post('/teams', data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['teams'] }); setShowModal(false); setEditingTeam(null) }
+  })
+  const deleteTeamMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/teams/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['teams'] })
+  })
+  const addMemberMutation = useMutation({
+    mutationFn: ({ teamId, userId }: any) => api.post(`/teams/${teamId}/members`, { userId }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['teams'] }); setAddMemberTeamId(null); setMemberUserId('') }
+  })
+  const removeMemberMutation = useMutation({
+    mutationFn: ({ teamId, userId }: any) => api.delete(`/teams/${teamId}/members/${userId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['teams'] })
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold text-slate-900">Service Desk Teams</h2>
+          <p className="text-sm text-slate-500 mt-0.5">Assign users to teams and link teams to customers for automatic ticket routing.</p>
+        </div>
+        <button onClick={() => { setEditingTeam(null); setTeamForm({ name: '', description: '' }); setShowModal(true) }} className="btn-primary flex items-center gap-2 text-sm py-1.5">
+          <Plus size={14} /> New Team
+        </button>
+      </div>
+
+      {(teams as any[]).length === 0 && (
+        <div className="card p-10 text-center text-slate-400">
+          <p className="font-medium">No service teams yet</p>
+          <p className="text-sm mt-1">Create a team to start routing tickets automatically</p>
+        </div>
+      )}
+
+      {(teams as any[]).map((team: any) => (
+        <div key={team.id} className="card p-5">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div>
+              <h3 className="font-semibold text-slate-900">{team.name}</h3>
+              {team.description && <p className="text-sm text-slate-500 mt-0.5">{team.description}</p>}
+              <p className="text-xs text-slate-400 mt-1">{team._count?.tickets || 0} tickets · {team._count?.companies || 0} customers</p>
+            </div>
+            <div className="flex gap-1">
+              <button onClick={() => { setEditingTeam(team); setTeamForm({ name: team.name, description: team.description || '' }); setShowModal(true) }} className="p-1.5 text-slate-400 hover:text-primary-600 rounded"><Pencil size={13} /></button>
+              <button onClick={() => { if (confirm(`Delete team "${team.name}"?`)) deleteTeamMutation.mutate(team.id) }} className="p-1.5 text-slate-400 hover:text-red-500 rounded"><Trash2 size={13} /></button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Members</p>
+            {team.members.map((m: any) => (
+              <div key={m.id} className="flex items-center gap-2">
+                <UserAvatar user={m.user} size="xs" showHoverCard={false} />
+                <span className="text-sm text-slate-700 flex-1">{m.user.firstName} {m.user.lastName}</span>
+                {m.user.jobTitle && <span className="text-xs text-slate-400">{m.user.jobTitle}</span>}
+                <button onClick={() => removeMemberMutation.mutate({ teamId: team.id, userId: m.userId })} className="p-1 text-slate-300 hover:text-red-500 rounded"><X size={12} /></button>
+              </div>
+            ))}
+            {team.members.length === 0 && <p className="text-xs text-slate-400 italic">No members yet</p>}
+
+            {addMemberTeamId === team.id ? (
+              <div className="flex gap-2 mt-2">
+                <select value={memberUserId} onChange={e => setMemberUserId(e.target.value)} className="input text-sm flex-1">
+                  <option value="">Select user…</option>
+                  {(internalUsers as any[]).filter((u: any) => !team.members.some((m: any) => m.userId === u.id)).map((u: any) => (
+                    <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
+                  ))}
+                </select>
+                <button disabled={!memberUserId} onClick={() => addMemberMutation.mutate({ teamId: team.id, userId: memberUserId })} className="btn-primary text-sm py-1.5 disabled:opacity-50">Add</button>
+                <button onClick={() => setAddMemberTeamId(null)} className="btn-secondary text-sm py-1.5">Cancel</button>
+              </div>
+            ) : (
+              <button onClick={() => setAddMemberTeamId(team.id)} className="text-xs text-primary-600 hover:text-primary-700 font-medium mt-1">+ Add member</button>
+            )}
+          </div>
+        </div>
+      ))}
+
+      <Modal open={showModal} onClose={() => { setShowModal(false); setEditingTeam(null) }} title={editingTeam ? 'Edit Team' : 'New Team'} size="sm">
+        <form onSubmit={e => { e.preventDefault(); teamMutation.mutate(teamForm) }} className="space-y-4">
+          <div>
+            <label className="label">Team Name</label>
+            <input className="input" value={teamForm.name} onChange={e => setTeamForm(f => ({ ...f, name: e.target.value }))} required placeholder="e.g. Level 1 Support" />
+          </div>
+          <div>
+            <label className="label">Description</label>
+            <input className="input" value={teamForm.description} onChange={e => setTeamForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional description" />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={() => { setShowModal(false); setEditingTeam(null) }} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary" disabled={teamMutation.isPending}>{teamMutation.isPending ? 'Saving…' : 'Save'}</button>
           </div>
         </form>
       </Modal>

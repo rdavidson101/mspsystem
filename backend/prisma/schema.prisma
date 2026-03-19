@@ -172,6 +172,7 @@ model User {
   createdTemplates   ProjectTemplate[] @relation("TemplateCreator")
   projectComments    ProjectComment[]
   managedCompanies   Company[] @relation("AccountManager")
+  serviceTeamMemberships ServiceTeamMember[]
 
   @@map("users")
 }
@@ -240,6 +241,8 @@ model Company {
   notes       String?
   isActive    Boolean  @default(true)
   isInternal  Boolean  @default(false)
+  serviceTeamId String?
+  serviceTeam   ServiceTeam? @relation(fields: [serviceTeamId], references: [id])
   accountManagerId String?
   accountManager   User?    @relation("AccountManager", fields: [accountManagerId], references: [id])
   createdAt   DateTime @default(now())
@@ -308,6 +311,8 @@ model Ticket {
   tags            String[]
   dueDate         DateTime?
   resolvedAt      DateTime?
+  serviceTeamId   String?
+  serviceTeam     ServiceTeam? @relation(fields: [serviceTeamId], references: [id])
   slaResolutionDue DateTime?
   slaResponseDue   DateTime?
   companyId       String?
@@ -787,4 +792,26 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+model ServiceTeam {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  members     ServiceTeamMember[]
+  companies   Company[]
+  tickets     Ticket[]
+  @@map("service_teams")
+}
+
+model ServiceTeamMember {
+  id      String      @id @default(uuid())
+  teamId  String
+  team    ServiceTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([teamId, userId])
+  @@map("service_team_members")
 }
