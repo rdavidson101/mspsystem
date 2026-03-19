@@ -233,8 +233,9 @@ export async function getComments(req: AuthRequest, res: Response, next: NextFun
 export async function addComment(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id }, select: { id: true, number: true, title: true, assignedToId: true } })
+    const { content, isInternal, mentionedUserIds: rawMentions } = req.body
     const comment = await prisma.ticketComment.create({
-      data: { ...req.body, ticketId: req.params.id, userId: req.user!.id },
+      data: { content, isInternal: isInternal ?? false, ticketId: req.params.id, userId: req.user!.id },
       include: { user: { select: { id: true, firstName: true, lastName: true, jobTitle: true } } },
     })
     if (ticket && ticket.assignedToId && ticket.assignedToId !== req.user!.id) {
@@ -246,7 +247,7 @@ export async function addComment(req: AuthRequest, res: Response, next: NextFunc
         ticket.id
       )
     }
-    const mentionedUserIds: string[] = Array.isArray(req.body.mentionedUserIds) ? req.body.mentionedUserIds : []
+    const mentionedUserIds: string[] = Array.isArray(rawMentions) ? rawMentions : []
     for (const mentionedId of mentionedUserIds) {
       if (mentionedId !== req.user!.id) {
         await createNotification(
