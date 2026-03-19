@@ -98,3 +98,16 @@ export async function deleteUser(req: AuthRequest, res: Response, next: NextFunc
     res.json({ success: true })
   } catch (e) { next(e) }
 }
+
+export async function resetUserMfa(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    if (req.user!.role !== 'ADMIN' && req.user!.role !== 'MANAGER') {
+      throw new AppError(403, 'Not authorized')
+    }
+    await prisma.user.update({
+      where: { id: req.params.id },
+      data: { twoFactorEnabled: false, twoFactorSecret: null },
+    })
+    res.json({ success: true })
+  } catch (e) { next(e) }
+}

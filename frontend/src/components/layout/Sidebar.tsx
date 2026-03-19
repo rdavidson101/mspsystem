@@ -79,7 +79,7 @@ const allNav: NavItemDef[] = [
   },
 ]
 
-function NavItem({ item }: { item: NavItemDef }) {
+function NavItem({ item, open, onToggle }: { item: NavItemDef; open?: boolean; onToggle?: () => void }) {
   const location = useLocation()
   const hasChildren = !!item.children?.length
 
@@ -87,13 +87,11 @@ function NavItem({ item }: { item: NavItemDef }) {
     ? item.children!.some(c => location.pathname === c.href || location.pathname.startsWith(c.href + '/'))
     : false
 
-  const [open, setOpen] = useState(() => isChildActive)
-
   if (hasChildren) {
     return (
       <div>
         <button
-          onClick={() => setOpen(o => !o)}
+          onClick={() => onToggle?.()}
           className={clsx(
             'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
             'text-slate-300 hover:text-white hover:bg-sidebar-hover'
@@ -142,7 +140,15 @@ function NavItem({ item }: { item: NavItemDef }) {
 
 export default function Sidebar() {
   const { user } = useAuthStore()
+  const location = useLocation()
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+  const [openLabel, setOpenLabel] = useState<string | null>(() => {
+    // Pre-open the group that has the active child
+    const active = allNav.find(item =>
+      item.children?.some(c => location.pathname.startsWith(c.href))
+    )
+    return active?.label || null
+  })
 
   const visibleNav = allNav.filter(item => {
     if (item.label === 'Administration') return isAdmin
@@ -159,9 +165,15 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        {visibleNav.map(item => <NavItem key={item.label} item={item} />)}
+        {visibleNav.map(item => (
+          <NavItem
+            key={item.label}
+            item={item}
+            open={item.children ? openLabel === item.label : undefined}
+            onToggle={() => setOpenLabel(l => l === item.label ? null : item.label)}
+          />
+        ))}
       </nav>
-
     </aside>
   )
 }

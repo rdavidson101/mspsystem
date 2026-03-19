@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { authenticate } from '../../middleware/auth'
-import { getUsers, getUser, createUser, updateUser, deleteUser } from './users.controller'
+import { getUsers, getUser, createUser, updateUser, deleteUser, resetUserMfa } from './users.controller'
 
 export const usersRouter = Router()
 usersRouter.use(authenticate)
@@ -9,3 +9,4 @@ usersRouter.post('/', createUser)
 usersRouter.get('/:id', getUser)
 usersRouter.patch('/:id', updateUser)
 usersRouter.delete('/:id', deleteUser)
+usersRouter.post('/:id/reset-mfa', resetUserMfa)

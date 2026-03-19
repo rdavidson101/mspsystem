@@ -13,6 +13,14 @@ function signTokens(user: { id: string; email: string; role: string }) {
   return { access, refresh }
 }
 
+async function getSessionDays(): Promise<number> {
+  try {
+    const row = await prisma.systemSetting.findUnique({ where: { key: 'sessionDays' } })
+    const n = parseInt(row?.value || '7', 10)
+    return isNaN(n) || n < 1 ? 7 : n
+  } catch { return 7 }
+}
+
 export async function login(req: Request, res: Response, next: NextFunction) {
   try {
     const { email, password } = req.body
@@ -22,11 +30,35 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     if (!user.password) throw new AppError(401, 'Invalid credentials')
     const valid = await bcrypt.compare(password, user.password)
     if (!valid) throw new AppError(401, 'Invalid credentials')
+
+    // Maintenance mode check
+    const maintenanceSetting = await prisma.systemSetting.findUnique({ where: { key: 'maintenanceMode' } })
+    if (maintenanceSetting?.value === 'true' && user.role !== 'ADMIN') {
+      throw new AppError(503, 'System is currently under maintenance. Only administrators can log in.')
+    }
+
     if (user.twoFactorEnabled) {
       return res.json({ requires2FA: true, userId: user.id })
     }
+
+    // Enforce MFA check
+    const enforceMfaSetting = await prisma.systemSetting.findUnique({ where: { key: 'enforceMfa' } })
+    if (enforceMfaSetting?.value === 'true' && !user.twoFactorEnabled) {
+      const setupToken = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET!,
+        { expiresIn: '15m' }
+      )
+      return res.json({
+        requiresMfaSetup: true,
+        setupToken,
+        user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, avatar: user.avatar },
+      })
+    }
+
+    const sessionDays = await getSessionDays()
     const { access, refresh } = signTokens({ id: user.id, email: user.email, role: user.role })
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const expiresAt = new Date(Date.now() + sessionDays * 24 * 60 * 60 * 1000)
     await prisma.refreshToken.create({ data: { token: refresh, userId: user.id, expiresAt } })
     res.json({
       token: access,
@@ -52,11 +84,12 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
     if (!stored || stored.expiresAt < new Date()) throw new AppError(401, 'Invalid refresh token')
     const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET!) as any
     const user = stored.user
-    const { access, refresh: newRefresh } = signTokens({ id: user.id, email: user.email, role: user.role })
+    const { access: newAccess, refresh: newRefresh } = signTokens({ id: user.id, email: user.email, role: user.role })
     await prisma.refreshToken.delete({ where: { id: stored.id } })
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const sessionDays = await getSessionDays()
+    const expiresAt = new Date(Date.now() + sessionDays * 24 * 60 * 60 * 1000)
     await prisma.refreshToken.create({ data: { token: newRefresh, userId: user.id, expiresAt } })
-    res.json({ token: access, refreshToken: newRefresh })
+    res.json({ token: newAccess, refreshToken: newRefresh })
   } catch (e) { next(e) }
 }
 
@@ -89,12 +122,28 @@ export async function enable2FA(req: AuthRequest, res: Response, next: NextFunct
     const valid = authenticator.verify({ token, secret: user.twoFactorSecret })
     if (!valid) throw new AppError(400, 'Invalid verification code')
     await prisma.user.update({ where: { id: user.id }, data: { twoFactorEnabled: true } })
-    res.json({ success: true })
+
+    // Issue full auth tokens so MFA-setup flow can complete login
+    const { access, refresh } = signTokens({ id: user.id, email: user.email, role: user.role })
+    const sessionDays = await getSessionDays()
+    const expiresAt = new Date(Date.now() + sessionDays * 24 * 60 * 60 * 1000)
+    await prisma.refreshToken.create({ data: { token: refresh, userId: user.id, expiresAt } })
+    res.json({
+      success: true,
+      token: access,
+      refreshToken: refresh,
+      user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, avatar: user.avatar, twoFactorEnabled: true },
+    })
   } catch (e) { next(e) }
 }
 
 export async function disable2FA(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    // Block if MFA is enforced globally
+    const enforceMfaSetting = await prisma.systemSetting.findUnique({ where: { key: 'enforceMfa' } })
+    if (enforceMfaSetting?.value === 'true') {
+      throw new AppError(403, 'MFA is enforced by your administrator and cannot be disabled.')
+    }
     const { token } = req.body
     const user = await prisma.user.findUnique({ where: { id: req.user!.id } })
     if (!user || !user.twoFactorSecret) throw new AppError(400, '2FA not enabled')
@@ -113,12 +162,31 @@ export async function verify2FA(req: Request, res: Response, next: NextFunction)
     const valid = authenticator.verify({ token, secret: user.twoFactorSecret })
     if (!valid) throw new AppError(400, 'Invalid verification code')
     const { access, refresh } = signTokens({ id: user.id, email: user.email, role: user.role })
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const sessionDays = await getSessionDays()
+    const expiresAt = new Date(Date.now() + sessionDays * 24 * 60 * 60 * 1000)
     await prisma.refreshToken.create({ data: { token: refresh, userId: user.id, expiresAt } })
     res.json({
       token: access,
       refreshToken: refresh,
       user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, avatar: user.avatar, twoFactorEnabled: user.twoFactorEnabled },
     })
+  } catch (e) { next(e) }
+}
+
+export async function getActiveTimers(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const timers = await prisma.activeTimer.findMany({
+      where: { userId: req.user!.id },
+      include: {
+        task: {
+          select: {
+            id: true,
+            title: true,
+            project: { select: { id: true, name: true } },
+          },
+        },
+      },
+    })
+    res.json(timers)
   } catch (e) { next(e) }
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Plus, Pencil, UserX, CheckCircle2 } from 'lucide-react'
+import { Plus, Pencil, UserX, CheckCircle2, RotateCcw } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import clsx from 'clsx'
 
@@ -36,6 +36,11 @@ export default function UserManagementPage() {
 
   const deactivateMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/users/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  })
+
+  const resetMfaMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/users/${id}/reset-mfa`).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   })
 
@@ -140,10 +145,19 @@ export default function UserManagementPage() {
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-1 justify-end">
-                    <button onClick={() => openEdit(u)} className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600">
+                    <button onClick={() => openEdit(u)} className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600" title="Edit user">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => deactivateMutation.mutate(u.id)} className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-500">
+                    {tab === 'INTERNAL' && u.twoFactorEnabled && (
+                      <button
+                        onClick={() => { if (confirm(`Reset MFA for ${u.firstName} ${u.lastName}? They will need to set it up again.`)) resetMfaMutation.mutate(u.id) }}
+                        className="p-1.5 hover:bg-orange-50 rounded text-slate-400 hover:text-orange-500 transition-colors"
+                        title="Reset MFA"
+                      >
+                        <RotateCcw size={14} />
+                      </button>
+                    )}
+                    <button onClick={() => deactivateMutation.mutate(u.id)} className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-500" title="Deactivate user">
                       <UserX size={14} />
                     </button>
                   </div>

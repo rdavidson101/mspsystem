@@ -1,8 +1,36 @@
-import { Search, Share2, MessageSquare, ChevronDown, User, LogOut, Shield } from 'lucide-react'
+import { ChevronDown, User, LogOut, Shield, Clock } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import NotificationBell from '@/components/ui/NotificationBell'
 import { useState, useRef, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+
+function ActiveTimerIndicator() {
+  const { data: timers = [] } = useQuery({
+    queryKey: ['active-timers-header'],
+    queryFn: () => api.get('/auth/me/timers').then(r => r.data),
+    refetchInterval: 30000,
+  })
+
+  if (!timers.length) return null
+
+  // Find the first timer that has a project
+  const timerWithProject = timers.find((t: any) => t.task?.project)
+  const projectName = timerWithProject?.task?.project?.name || timers[0]?.task?.title || 'a task'
+
+  return (
+    <div
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-50 border border-orange-200"
+      title={`Timer running on "${projectName}"`}
+    >
+      <Clock size={14} className="text-orange-500 animate-pulse" />
+      <span className="text-xs font-semibold text-orange-600 hidden sm:block">
+        Tracking: {projectName}
+      </span>
+    </div>
+  )
+}
 
 export default function Header() {
   const { user, logout } = useAuthStore()
@@ -27,27 +55,11 @@ export default function Header() {
     <header className="h-16 bg-white border-b border-slate-100 flex items-center px-6 gap-4 flex-shrink-0">
       <div className="flex-1" />
 
-      {/* Search */}
-      <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-64">
-        <Search size={15} className="text-slate-400" />
-        <input
-          type="text"
-          placeholder="Search..."
-          className="bg-transparent text-sm flex-1 outline-none text-slate-700 placeholder-slate-400"
-        />
-        <kbd className="text-xs text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded">⌘1</kbd>
-      </div>
+      {/* Active timer indicator */}
+      <ActiveTimerIndicator />
 
-      {/* Icons */}
-      <div className="flex items-center gap-1">
-        <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-500">
-          <Share2 size={18} />
-        </button>
-        <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-500">
-          <MessageSquare size={18} />
-        </button>
-        <NotificationBell />
-      </div>
+      {/* Notifications */}
+      <NotificationBell />
 
       {/* User menu */}
       <div className="relative" ref={menuRef}>
