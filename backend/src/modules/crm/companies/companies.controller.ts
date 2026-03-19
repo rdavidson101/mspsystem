@@ -11,6 +11,7 @@ export async function getCompanies(req: AuthRequest, res: Response, next: NextFu
       include: {
         users: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true }, orderBy: { firstName: 'asc' }, take: 8 },
         accountManager: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } },
+        serviceTeam: { select: { id: true, name: true } },
         _count: { select: { contacts: true, tickets: true, projects: true, users: true } },
       },
       orderBy: [{ isInternal: 'desc' }, { name: 'asc' }],
@@ -51,7 +52,7 @@ export async function createCompany(req: AuthRequest, res: Response, next: NextF
 
 export async function updateCompany(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { name, domain, industry, phone, email, address, city, state, zip, country, website, notes, isActive, accountManagerId } = req.body
+    const { name, domain, industry, phone, email, address, city, state, zip, country, website, notes, isActive, accountManagerId, serviceTeamId } = req.body
     const data: any = {}
     if (name !== undefined) data.name = name
     if (domain !== undefined) data.domain = domain || null
@@ -67,6 +68,7 @@ export async function updateCompany(req: AuthRequest, res: Response, next: NextF
     if (notes !== undefined) data.notes = notes || null
     if (isActive !== undefined) data.isActive = isActive
     if (accountManagerId !== undefined) data.accountManagerId = accountManagerId || null
+    if (serviceTeamId !== undefined) data.serviceTeamId = serviceTeamId || null
     const company = await prisma.company.update({
       where: { id: req.params.id },
       data,

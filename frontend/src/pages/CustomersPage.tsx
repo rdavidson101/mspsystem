@@ -14,15 +14,16 @@ const PAGE_SIZE = 9
 const EMPTY_FORM = {
   name: '', industry: '', phone: '', email: '',
   website: '', address: '', city: '', country: '', notes: '',
-  accountManagerId: '',
+  accountManagerId: '', serviceTeamId: '',
 }
 
-function CustomerModal({ initial, onClose, onSave, title, users }: {
+function CustomerModal({ initial, onClose, onSave, title, users, teams }: {
   initial: typeof EMPTY_FORM & { id?: string }
   onClose: () => void
   onSave: (data: any) => void
   title: string
   users: any[]
+  teams: any[]
 }) {
   const [form, setForm] = useState(initial)
   const f = (k: keyof typeof EMPTY_FORM) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -79,18 +80,33 @@ function CustomerModal({ initial, onClose, onSave, title, users }: {
             <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5">Notes</label>
             <textarea rows={3} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 resize-none" value={form.notes} onChange={f('notes')} placeholder="Any additional notes…" />
           </div>
-          <div>
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5">Account Manager</label>
-            <select
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 bg-white"
-              value={form.accountManagerId || ''}
-              onChange={f('accountManagerId')}
-            >
-              <option value="">None</option>
-              {users.map((u: any) => (
-                <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5">Account Manager</label>
+              <select
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 bg-white"
+                value={form.accountManagerId || ''}
+                onChange={f('accountManagerId')}
+              >
+                <option value="">None</option>
+                {users.map((u: any) => (
+                  <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5">Service Team</label>
+              <select
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 bg-white"
+                value={form.serviceTeamId || ''}
+                onChange={f('serviceTeamId')}
+              >
+                <option value="">None</option>
+                {teams.map((t: any) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
         <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-2">
@@ -120,6 +136,10 @@ export default function CustomersPage() {
   const { data: internalUsers = [] } = useQuery({
     queryKey: ['users', 'INTERNAL'],
     queryFn: () => api.get('/users', { params: { type: 'INTERNAL' } }).then(r => r.data),
+  })
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teams'],
+    queryFn: () => api.get('/teams').then(r => r.data),
   })
 
   const createMut = useMutation({
@@ -362,11 +382,20 @@ export default function CustomersPage() {
                   </div>
                 </div>
 
-                {/* Account Manager */}
-                {company.accountManager && (
-                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                    <UserAvatar user={company.accountManager} size="xs" />
-                    <span className="text-xs text-slate-500">AM: {company.accountManager.firstName} {company.accountManager.lastName}</span>
+                {/* Account Manager + Service Team */}
+                {(company.accountManager || company.serviceTeam) && (
+                  <div className="flex items-center gap-3 pt-1 border-t border-slate-100 flex-wrap">
+                    {company.accountManager && (
+                      <div className="flex items-center gap-1.5">
+                        <UserAvatar user={company.accountManager} size="xs" />
+                        <span className="text-xs text-slate-500">AM: {company.accountManager.firstName} {company.accountManager.lastName}</span>
+                      </div>
+                    )}
+                    {company.serviceTeam && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-semibold bg-primary-50 text-primary-600 border border-primary-100 px-2 py-0.5 rounded-full">{company.serviceTeam.name}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -406,6 +435,7 @@ export default function CustomersPage() {
           onClose={() => setShowCreate(false)}
           onSave={data => createMut.mutate(data)}
           users={internalUsers}
+          teams={teams}
         />
       )}
 
@@ -413,10 +443,11 @@ export default function CustomersPage() {
       {editing && (
         <CustomerModal
           title="Edit Customer"
-          initial={{ ...editing, accountManagerId: editing.accountManagerId || '' }}
+          initial={{ ...editing, accountManagerId: editing.accountManagerId || '', serviceTeamId: editing.serviceTeamId || '' }}
           onClose={() => setEditing(null)}
           onSave={data => updateMut.mutate({ ...data, id: editing.id })}
           users={internalUsers}
+          teams={teams}
         />
       )}
     </div>
