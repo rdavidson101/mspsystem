@@ -120,17 +120,18 @@ export default function SystemSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-slate-900">System Settings</h1>
         <p className="text-sm text-slate-500 mt-1">Configure your MSP system preferences and security policies.</p>
       </div>
 
-      {/* MSP Identity */}
+      {/* Row 1 — MSP Identity (full width) */}
       <Section icon={Building2} title="MSP Identity" description="Sets your company name and creates a special MSP customer record that cannot be deleted.">
-        <div className="space-y-4">
-          <div>
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-2">MSP Company Name</label>
+        <div className="flex gap-6 items-start">
+          {/* Input + save */}
+          <div className="flex-1 min-w-0 space-y-3">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">MSP Company Name</label>
             <div className="flex gap-3">
               <input
                 className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
@@ -142,38 +143,40 @@ export default function SystemSettingsPage() {
             </div>
           </div>
 
-          {mspCompany && (
-            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <Building2 size={16} className="text-amber-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-slate-900">{mspCompany.name}</span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-                    <Star size={8} fill="currentColor" /> MSP
-                  </span>
+          {/* MSP company card */}
+          <div className="flex-1 min-w-0">
+            {mspCompany ? (
+              <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <Building2 size={16} className="text-amber-600" />
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {mspCompany._count?.users ?? 0} team members · {mspCompany._count?.tickets ?? 0} tickets · {mspCompany._count?.projects ?? 0} projects
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-slate-900 truncate">{mspCompany.name}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 flex-shrink-0">
+                      <Star size={8} fill="currentColor" /> MSP
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {mspCompany._count?.users ?? 0} team members · {mspCompany._count?.tickets ?? 0} tickets · {mspCompany._count?.projects ?? 0} projects
+                  </p>
+                </div>
+                <span className="text-xs text-amber-600 font-medium bg-amber-100 px-2 py-1 rounded-lg flex-shrink-0">Protected</span>
               </div>
-              <span className="text-xs text-amber-600 font-medium bg-amber-100 px-2 py-1 rounded-lg flex-shrink-0">Protected</span>
-            </div>
-          )}
-          {!mspCompany && (
-            <div className="text-xs text-slate-400 bg-slate-50 rounded-xl px-4 py-3 border border-slate-200">
-              No MSP company set yet. Enter a name above and click Save to create it.
-            </div>
-          )}
+            ) : (
+              <div className="text-xs text-slate-400 bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 h-full flex items-center">
+                No MSP company set yet. Enter a name and click Save to create it.
+              </div>
+            )}
+          </div>
         </div>
       </Section>
 
-      {/* Currency */}
-      <Section icon={DollarSign} title="Currency" description="The currency used throughout the system for budgets, invoices, and expenses.">
-        <div className="flex gap-3 items-end">
-          <div className="flex-1">
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-2">Currency</label>
+      {/* Row 2 — Currency, Timezone, Session Length (3 columns) */}
+      <div className="grid grid-cols-3 gap-6">
+        <Section icon={DollarSign} title="Currency" description="Used for budgets, invoices, and expenses.">
+          <div className="space-y-3">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Currency</label>
             <select
               value={currency}
               onChange={e => setCurrency(e.target.value)}
@@ -183,16 +186,13 @@ export default function SystemSettingsPage() {
                 <option key={c.code} value={c.code}>{c.label}</option>
               ))}
             </select>
+            <SaveButton settingKey="currency" value={currency} />
           </div>
-          <SaveButton settingKey="currency" value={currency} />
-        </div>
-      </Section>
+        </Section>
 
-      {/* Timezone */}
-      <Section icon={Globe} title="Timezone" description="The local timezone for displaying dates and times across the system.">
-        <div className="flex gap-3 items-end">
-          <div className="flex-1">
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-2">Timezone</label>
+        <Section icon={Globe} title="Timezone" description="Local timezone for dates and times across the system.">
+          <div className="space-y-3">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Timezone</label>
             <select
               value={timezone}
               onChange={e => setTimezone(e.target.value)}
@@ -202,16 +202,13 @@ export default function SystemSettingsPage() {
                 <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
               ))}
             </select>
+            <SaveButton settingKey="timezone" value={timezone} />
           </div>
-          <SaveButton settingKey="timezone" value={timezone} />
-        </div>
-      </Section>
+        </Section>
 
-      {/* Session Length */}
-      <Section icon={Clock} title="Login Session Length" description="How long users stay logged in before their session expires and they must sign in again.">
-        <div className="flex gap-3 items-end">
-          <div className="flex-1">
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-2">Session Duration</label>
+        <Section icon={Clock} title="Session Length" description="How long users stay logged in before re-authentication.">
+          <div className="space-y-3">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Duration</label>
             <select
               value={sessionDays}
               onChange={e => setSessionDays(e.target.value)}
@@ -221,25 +218,23 @@ export default function SystemSettingsPage() {
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
+            <SaveButton settingKey="sessionDays" value={sessionDays} />
+            <p className="text-xs text-slate-400">Applies to new logins only.</p>
           </div>
-          <SaveButton settingKey="sessionDays" value={sessionDays} />
-        </div>
-        <p className="text-xs text-slate-400 mt-3">Changes apply to new logins only. Existing sessions are not affected.</p>
-      </Section>
+        </Section>
+      </div>
 
-      {/* Security */}
-      <Section icon={Shield} title="Security" description="Authentication and access control policies for your team.">
-        <div className="space-y-5">
-          {/* Enforce MFA */}
+      {/* Row 3 — Security + Maintenance (2 columns) */}
+      <div className="grid grid-cols-2 gap-6">
+        <Section icon={Shield} title="Security" description="Authentication and access control policies for your team.">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-slate-800">Enforce MFA for all users</p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                When enabled, all internal users must set up two-factor authentication before accessing the system.
-                Users without MFA will be prompted to set it up on their next login.
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                All internal users must set up two-factor authentication before accessing the system. Users without MFA will be prompted on their next login.
               </p>
             </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex flex-col items-center gap-1.5 flex-shrink-0 pt-0.5">
               <button
                 onClick={() => {
                   const newVal = !enforceMfa
@@ -247,52 +242,54 @@ export default function SystemSettingsPage() {
                   saveMut.mutate({ enforceMfa: String(newVal) })
                 }}
                 className={clsx(
-                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0',
+                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
                   enforceMfa ? 'bg-primary-600' : 'bg-slate-200'
                 )}
               >
                 <span className={clsx('inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform', enforceMfa ? 'translate-x-6' : 'translate-x-1')} />
               </button>
               <span className={clsx('text-xs font-semibold', enforceMfa ? 'text-primary-600' : 'text-slate-400')}>
-                {enforceMfa ? 'Enabled' : 'Disabled'}
+                {enforceMfa ? 'On' : 'Off'}
               </span>
             </div>
           </div>
-        </div>
-      </Section>
+        </Section>
 
-      {/* Maintenance Mode */}
-      <Section icon={AlertTriangle} title="Maintenance Mode" description="When enabled, only administrators can log in. All other users will see a maintenance message.">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-slate-800">Maintenance Mode</p>
-            {maintenanceMode && (
-              <div className="mt-2 flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs px-3 py-2 rounded-lg">
-                <AlertTriangle size={12} />
-                <span className="font-semibold">Maintenance mode is ACTIVE — only admins can log in.</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <button
-              onClick={() => {
-                const newVal = !maintenanceMode
-                setMaintenanceMode(newVal)
-                saveMut.mutate({ maintenanceMode: String(newVal) })
-              }}
-              className={clsx(
-                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0',
-                maintenanceMode ? 'bg-amber-500' : 'bg-slate-200'
+        <Section icon={AlertTriangle} title="Maintenance Mode" description="When enabled, only administrators can log in.">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Maintenance Mode</p>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Prevents non-admin users from logging in. Use when performing system maintenance or upgrades.
+              </p>
+              {maintenanceMode && (
+                <div className="mt-3 flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs px-3 py-2 rounded-lg">
+                  <AlertTriangle size={11} />
+                  <span className="font-semibold">ACTIVE — only admins can log in.</span>
+                </div>
               )}
-            >
-              <span className={clsx('inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform', maintenanceMode ? 'translate-x-6' : 'translate-x-1')} />
-            </button>
-            <span className={clsx('text-xs font-semibold', maintenanceMode ? 'text-amber-600' : 'text-slate-400')}>
-              {maintenanceMode ? 'Active' : 'Off'}
-            </span>
+            </div>
+            <div className="flex flex-col items-center gap-1.5 flex-shrink-0 pt-0.5">
+              <button
+                onClick={() => {
+                  const newVal = !maintenanceMode
+                  setMaintenanceMode(newVal)
+                  saveMut.mutate({ maintenanceMode: String(newVal) })
+                }}
+                className={clsx(
+                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                  maintenanceMode ? 'bg-amber-500' : 'bg-slate-200'
+                )}
+              >
+                <span className={clsx('inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform', maintenanceMode ? 'translate-x-6' : 'translate-x-1')} />
+              </button>
+              <span className={clsx('text-xs font-semibold', maintenanceMode ? 'text-amber-600' : 'text-slate-400')}>
+                {maintenanceMode ? 'Active' : 'Off'}
+              </span>
+            </div>
           </div>
-        </div>
-      </Section>
+        </Section>
+      </div>
     </div>
   )
 }
