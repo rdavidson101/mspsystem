@@ -13,10 +13,10 @@ async function createNotification(userId: string, type: string, title: string, b
 
 const TICKET_INCLUDE = {
   company: { select: { id: true, name: true } },
-  contact: { select: { id: true, firstName: true, lastName: true } },
+  contact: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
   category: { select: { id: true, name: true, color: true } },
-  assignedTo: { select: { id: true, firstName: true, lastName: true } },
-  createdBy: { select: { id: true, firstName: true, lastName: true } },
+  assignedTo: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
+  createdBy: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
   _count: { select: { comments: true, timeEntries: true } },
 }
 
@@ -64,18 +64,18 @@ export async function getTicket(req: AuthRequest, res: Response, next: NextFunct
         company: true,
         contact: true,
         category: true,
-        assignedTo: { select: { id: true, firstName: true, lastName: true, email: true } },
-        createdBy: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+        assignedTo: { select: { id: true, firstName: true, lastName: true, email: true, jobTitle: true } },
+        createdBy: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, jobTitle: true } },
         comments: {
-          include: { user: { select: { id: true, firstName: true, lastName: true } } },
+          include: { user: { select: { id: true, firstName: true, lastName: true, jobTitle: true } } },
           orderBy: { createdAt: 'asc' },
         },
         history: {
-          include: { user: { select: { id: true, firstName: true, lastName: true } } },
+          include: { user: { select: { id: true, firstName: true, lastName: true, jobTitle: true } } },
           orderBy: { createdAt: 'asc' },
         },
         timeEntries: {
-          include: { user: { select: { id: true, firstName: true, lastName: true } } },
+          include: { user: { select: { id: true, firstName: true, lastName: true, jobTitle: true } } },
         },
       },
     })
@@ -193,7 +193,7 @@ export async function getComments(req: AuthRequest, res: Response, next: NextFun
   try {
     const comments = await prisma.ticketComment.findMany({
       where: { ticketId: req.params.id },
-      include: { user: { select: { id: true, firstName: true, lastName: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, jobTitle: true } } },
       orderBy: { createdAt: 'asc' },
     })
     res.json(comments)
@@ -205,7 +205,7 @@ export async function addComment(req: AuthRequest, res: Response, next: NextFunc
     const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id }, select: { id: true, number: true, title: true, assignedToId: true } })
     const comment = await prisma.ticketComment.create({
       data: { ...req.body, ticketId: req.params.id, userId: req.user!.id },
-      include: { user: { select: { id: true, firstName: true, lastName: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, jobTitle: true } } },
     })
     if (ticket && ticket.assignedToId && ticket.assignedToId !== req.user!.id) {
       await createNotification(
@@ -225,7 +225,7 @@ export async function getHistory(req: AuthRequest, res: Response, next: NextFunc
   try {
     const history = await prisma.ticketHistory.findMany({
       where: { ticketId: req.params.id },
-      include: { user: { select: { id: true, firstName: true, lastName: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, jobTitle: true } } },
       orderBy: { createdAt: 'asc' },
     })
     res.json(history)

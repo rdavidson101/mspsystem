@@ -4,8 +4,8 @@ import { AuthRequest } from '../../middleware/auth'
 import { AppError } from '../../middleware/errorHandler'
 
 const taskInclude = {
-  assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } } },
-  createdBy: { select: { id: true, firstName: true, lastName: true } },
+  assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } } },
+  createdBy: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
   section: { select: { id: true, name: true, color: true } },
   activeTimers: true,
   _count: { select: { comments: true } },
@@ -47,7 +47,7 @@ export async function getTask(req: AuthRequest, res: Response, next: NextFunctio
         ...taskInclude,
         subTasks: { include: taskInclude, orderBy: { order: 'asc' } },
         comments: {
-          include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+          include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } },
           orderBy: { createdAt: 'asc' },
         },
       },
@@ -147,7 +147,7 @@ export async function getTaskComments(req: AuthRequest, res: Response, next: Nex
   try {
     const comments = await prisma.taskComment.findMany({
       where: { taskId: req.params.id },
-      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } },
       orderBy: { createdAt: 'asc' },
     })
     res.json(comments)
@@ -159,7 +159,7 @@ export async function createTaskComment(req: AuthRequest, res: Response, next: N
     const { content } = req.body
     const comment = await prisma.taskComment.create({
       data: { taskId: req.params.id, userId: req.user!.id, content },
-      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } },
     })
 
     // Read mentionedIds array from the JSON payload
@@ -268,12 +268,12 @@ export async function getTaskTimeByUser(req: AuthRequest, res: Response, next: N
     const userIds = grouped.map(e => e.userId)
     const users = await prisma.user.findMany({
       where: { id: { in: userIds } },
-      select: { id: true, firstName: true, lastName: true, avatar: true },
+      select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true },
     })
     // Also include users with an active timer (show session in progress)
     const activeTimers = await prisma.activeTimer.findMany({
       where: { taskId: req.params.id },
-      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } },
     })
     const result = grouped.map(e => ({
       user: users.find(u => u.id === e.userId),
@@ -321,7 +321,7 @@ export async function getTaskTimeEntries(req: AuthRequest, res: Response, next: 
   try {
     const entries = await prisma.timeEntry.findMany({
       where: { taskId: req.params.id },
-      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } },
       orderBy: { date: 'desc' },
     })
     res.json(entries)
@@ -343,7 +343,7 @@ export async function createManualTimeEntry(req: AuthRequest, res: Response, nex
         taskId: req.params.id,
         projectId: task?.projectId || null,
       },
-      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } },
     })
     res.status(201).json(entry)
   } catch (e) { next(e) }

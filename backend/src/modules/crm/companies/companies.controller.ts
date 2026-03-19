@@ -9,7 +9,7 @@ export async function getCompanies(req: AuthRequest, res: Response, next: NextFu
     const companies = await prisma.company.findMany({
       where: search ? { name: { contains: String(search), mode: 'insensitive' } } : {},
       include: {
-        users: { select: { id: true, firstName: true, lastName: true, avatar: true }, orderBy: { firstName: 'asc' }, take: 8 },
+        users: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true }, orderBy: { firstName: 'asc' }, take: 8 },
         _count: { select: { contacts: true, tickets: true, projects: true, users: true } },
       },
       orderBy: [{ isInternal: 'desc' }, { name: 'asc' }],

@@ -5,7 +5,7 @@ import { AppError } from '../../middleware/errorHandler'
 
 const projectInclude = {
   company: { select: { id: true, name: true } },
-  members: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true, avatar: true } } } },
+  members: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true, avatar: true, jobTitle: true } } } },
   sections: {
     orderBy: { order: 'asc' as const },
     include: {
@@ -13,11 +13,11 @@ const projectInclude = {
         where: { parentTaskId: null },
         orderBy: { order: 'asc' as const },
         include: {
-          assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } } },
+          assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } } },
           subTasks: {
             orderBy: { order: 'asc' as const },
             include: {
-              assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } } },
+              assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } } },
               activeTimers: true,
               _count: { select: { comments: true } },
             },
@@ -46,7 +46,7 @@ export async function getProjects(req: AuthRequest, res: Response, next: NextFun
       where,
       include: {
         company: { select: { id: true, name: true } },
-        members: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } } },
+        members: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } } },
         _count: { select: { tasks: true, sections: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -189,7 +189,7 @@ export async function addMember(req: AuthRequest, res: Response, next: NextFunct
       where: { projectId_userId: { projectId: req.params.id, userId } },
       update: { role: role || 'MEMBER' },
       create: { projectId: req.params.id, userId, role: role || 'MEMBER' },
-      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } },
     })
     res.json(member)
   } catch (e) { next(e) }
@@ -258,7 +258,7 @@ export async function getProjectComments(req: AuthRequest, res: Response, next: 
   try {
     const comments = await prisma.projectComment.findMany({
       where: { projectId: req.params.id },
-      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } },
       orderBy: { createdAt: 'asc' },
     })
     res.json(comments)
@@ -270,7 +270,7 @@ export async function createProjectComment(req: AuthRequest, res: Response, next
     const { content } = req.body
     const comment = await prisma.projectComment.create({
       data: { projectId: req.params.id, userId: req.user!.id, content },
-      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } },
     })
     res.status(201).json(comment)
   } catch (e) { next(e) }
