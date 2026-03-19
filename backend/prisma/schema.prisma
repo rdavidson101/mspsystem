@@ -169,6 +169,7 @@ model User {
   activeTimers       ActiveTimer[]
   taskAssignees  TaskAssignee[]
   createdTemplates   ProjectTemplate[] @relation("TemplateCreator")
+  projectComments    ProjectComment[]
 
   @@map("users")
 }
@@ -369,6 +370,7 @@ model Project {
   tasks       Task[]
   timeEntries TimeEntry[]
   sections    Section[]
+  comments    ProjectComment[]
 
   @@map("projects")
 }
@@ -760,6 +762,19 @@ model TemplateTask {
   subTasks       TemplateTask[] @relation("TemplateSubTasks")
 
   @@map("template_tasks")
+}
+
+model ProjectComment {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("project_comments")
 }
 
 model SystemSetting {

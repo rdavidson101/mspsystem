@@ -34,10 +34,14 @@ export async function getProjects(req: AuthRequest, res: Response, next: NextFun
   try {
     const user = req.user!
     const isAdmin = user.role === 'ADMIN' || user.role === 'MANAGER'
-    const where: any = isAdmin ? {} : {
-      members: { some: { userId: user.id } }
+    const mine = req.query.mine === 'true'
+
+    const where: any = {}
+    if (mine || !isAdmin) {
+      where.members = { some: { userId: user.id } }
     }
     if (req.query.status) where.status = req.query.status
+
     const projects = await prisma.project.findMany({
       where,
       include: {
@@ -47,7 +51,18 @@ export async function getProjects(req: AuthRequest, res: Response, next: NextFun
       },
       orderBy: { createdAt: 'desc' },
     })
-    res.json(projects)
+
+    // Get total hours per project
+    const projectIds = projects.map(p => p.id)
+    const timeGroups = projectIds.length > 0 ? await prisma.timeEntry.groupBy({
+      by: ['projectId'],
+      where: { projectId: { in: projectIds } },
+      _sum: { hours: true },
+    }) : []
+    const timeMap = new Map(timeGroups.map(t => [t.projectId, t._sum.hours || 0]))
+
+    const result = projects.map(p => ({ ...p, totalHours: timeMap.get(p.id) || 0 }))
+    res.json(result)
   } catch (e) { next(e) }
 }
 
@@ -235,6 +250,38 @@ export async function reorderSections(req: AuthRequest, res: Response, next: Nex
     await Promise.all(orders.map(({ id, order }: { id: string; order: number }) =>
       prisma.section.update({ where: { id }, data: { order } })
     ))
+    res.json({ success: true })
+  } catch (e) { next(e) }
+}
+
+export async function getProjectComments(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const comments = await prisma.projectComment.findMany({
+      where: { projectId: req.params.id },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+      orderBy: { createdAt: 'asc' },
+    })
+    res.json(comments)
+  } catch (e) { next(e) }
+}
+
+export async function createProjectComment(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { content } = req.body
+    const comment = await prisma.projectComment.create({
+      data: { projectId: req.params.id, userId: req.user!.id, content },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+    })
+    res.status(201).json(comment)
+  } catch (e) { next(e) }
+}
+
+export async function deleteProjectComment(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const comment = await prisma.projectComment.findUnique({ where: { id: req.params.commentId } })
+    if (!comment) throw new AppError(404, 'Comment not found')
+    if (comment.userId !== req.user!.id && req.user!.role !== 'ADMIN') throw new AppError(403, 'Not authorized')
+    await prisma.projectComment.delete({ where: { id: req.params.commentId } })
     res.json({ success: true })
   } catch (e) { next(e) }
 }

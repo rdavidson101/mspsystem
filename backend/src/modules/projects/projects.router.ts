@@ -4,6 +4,7 @@ import {
   getProjects, getProject, createProject, updateProject, deleteProject,
   addMember, removeMember,
   createSection, updateSection, deleteSection, reorderSections,
+  getProjectComments, createProjectComment, deleteProjectComment,
 } from './projects.controller'
 
 export const projectsRouter = Router()
@@ -22,3 +23,7 @@ projectsRouter.post('/:id/sections', createSection)
 projectsRouter.post('/:id/sections/reorder', reorderSections)
 projectsRouter.patch('/:id/sections/:sectionId', updateSection)
 projectsRouter.delete('/:id/sections/:sectionId', deleteSection)
+
+projectsRouter.get('/:id/comments', getProjectComments)
+projectsRouter.post('/:id/comments', createProjectComment)
+projectsRouter.delete('/:id/comments/:commentId', deleteProjectComment)

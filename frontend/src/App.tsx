@@ -8,8 +8,10 @@ import ContactsPage from '@/pages/ContactsPage'
 import LeadsPage from '@/pages/LeadsPage'
 import TicketsPage from '@/pages/TicketsPage'
 import TicketDetailPage from '@/pages/TicketDetailPage'
-import ProjectsPage from '@/pages/ProjectsPage'
 import ProjectDetailPage from '@/pages/ProjectDetailPage'
+import MyProjectsPage from '@/pages/projects/MyProjectsPage'
+import PortfolioManagerPage from '@/pages/projects/PortfolioManagerPage'
+import TemplatesPage from '@/pages/projects/TemplatesPage'
 import TasksPage from '@/pages/TasksPage'
 import ContractsPage from '@/pages/ContractsPage'
 import InvoicesPage from '@/pages/InvoicesPage'
@@ -59,7 +61,10 @@ export default function App() {
           <Route path="leads" element={<LeadsPage />} />
           <Route path="tickets" element={<TicketsPage />} />
           <Route path="tickets/:id" element={<TicketDetailPage />} />
-          <Route path="projects" element={<ProjectsPage />} />
+          <Route path="projects" element={<Navigate to="/projects/my" replace />} />
+          <Route path="projects/my" element={<MyProjectsPage />} />
+          <Route path="projects/portfolio" element={<PortfolioManagerPage />} />
+          <Route path="projects/templates" element={<TemplatesPage />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="contracts" element={<ContractsPage />} />

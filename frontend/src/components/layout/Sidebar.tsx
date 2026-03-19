@@ -38,7 +38,13 @@ const allNav: NavItemDef[] = [
     ]
   },
   { label: 'Expenses', href: '/expenses', icon: Receipt },
-  { label: 'Projects', href: '/projects', icon: FolderKanban },
+  {
+    label: 'Projects', icon: FolderKanban, children: [
+      { label: 'My Projects', href: '/projects/my' },
+      { label: 'Portfolio Manager', href: '/projects/portfolio' },
+      { label: 'Templates', href: '/projects/templates' },
+    ]
+  },
   {
     label: 'Inventory', icon: Package, children: [
       { label: 'Assets', href: '/inventory/assets' },

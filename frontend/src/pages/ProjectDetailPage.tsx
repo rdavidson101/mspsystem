@@ -294,13 +294,20 @@ function TaskRow({ task, depth = 0, projectMembers, onOpenComments, onRefresh }:
               }}
             />
           ) : (
-            <span
-              className={clsx('text-sm cursor-pointer hover:text-primary-600 block truncate', task.status === 'DONE' && 'line-through text-slate-400')}
-              onDoubleClick={() => setEditingTitle(true)}
-              title={task.title}
-            >
-              {task.title}
-            </span>
+            <>
+              <span
+                className={clsx('text-sm cursor-pointer hover:text-primary-600 block truncate', task.status === 'DONE' && 'line-through text-slate-400')}
+                onDoubleClick={() => setEditingTitle(true)}
+                title={task.title}
+              >
+                {task.title}
+              </span>
+              {task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE' && (
+                <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 mt-0.5">
+                  Overdue
+                </span>
+              )}
+            </>
           )}
         </div>
 
@@ -636,10 +643,17 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   const [assigneeSearch, setAssigneeSearch] = useState('')
   const [mention, setMention] = useState<{ start: number; search: string; top: number; left: number; width: number } | null>(null)
   const [mentionedIds, setMentionedIds] = useState<Set<string>>(new Set())
+  const [references, setReferences] = useState<Array<{type: string; id: string; label: string; link: string}>>([])
+  const [showRefPicker, setShowRefPicker] = useState(false)
+  const [refTab, setRefTab] = useState<'ticket'|'change'|'asset'>('ticket')
+  const [refSearch, setRefSearch] = useState('')
+  const [showLogTime, setShowLogTime] = useState(false)
+  const [logHours, setLogHours] = useState('')
+  const [logDesc, setLogDesc] = useState('')
+  const [logDate, setLogDate] = useState(() => new Date().toISOString().split('T')[0])
   const statusRef = useRef<HTMLButtonElement>(null)
   const assigneeRef = useRef<HTMLButtonElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const attachFileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const mentionPickerRef = useRef<HTMLDivElement>(null)
 
@@ -655,6 +669,21 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
     queryFn: () => api.get(`/tasks/${initialTask.id}/time-by-user`).then(r => r.data),
   })
 
+  const { data: timeEntries = [], refetch: refetchEntries } = useQuery({
+    queryKey: ['task-time-entries', initialTask.id],
+    queryFn: () => api.get(`/tasks/${initialTask.id}/time-entries`).then(r => r.data),
+  })
+
+  const addTimeMut = useMutation({
+    mutationFn: (data: any) => api.post(`/tasks/${initialTask.id}/time-entries`, data).then(r => r.data),
+    onSuccess: () => { refetchEntries(); refetchTime(); setShowLogTime(false); setLogHours(''); setLogDesc(''); setLogDate(new Date().toISOString().split('T')[0]) },
+  })
+
+  const deleteTimeMut = useMutation({
+    mutationFn: (entryId: string) => api.delete(`/tasks/${initialTask.id}/time-entries/${entryId}`).then(r => r.data),
+    onSuccess: () => { refetchEntries(); refetchTime() },
+  })
+
   // Comments
   const { data: comments = [], refetch: refetchComments } = useQuery({
     queryKey: ['task-comments', initialTask.id],
@@ -667,7 +696,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   })
   const addCommentMut = useMutation({
     mutationFn: (content: string) => api.post(`/tasks/${initialTask.id}/comments`, { content }).then(r => r.data),
-    onSuccess: () => { refetchComments(); setText(''); setImages([]); setMentionedIds(new Set()) },
+    onSuccess: () => { refetchComments(); setText(''); setImages([]); setMentionedIds(new Set()); setReferences([]) },
   })
   const deleteCommentMut = useMutation({
     mutationFn: (id: string) => api.delete(`/tasks/${initialTask.id}/comments/${id}`).then(r => r.data),
@@ -688,21 +717,21 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
     onSuccess: () => refetchAttachments(),
   })
 
-  function handleAttachFile(e: React.ChangeEvent<HTMLInputElement>) {
-    Array.from(e.target.files || []).forEach(file => {
-      const reader = new FileReader()
-      reader.onload = ev => {
-        uploadAttachmentMut.mutate({
-          name: file.name,
-          url: ev.target?.result as string,
-          size: file.size,
-          mimeType: file.type,
-        })
-      }
-      reader.readAsDataURL(file)
-    })
-    e.target.value = ''
-  }
+  const { data: ticketResults = [] } = useQuery({
+    queryKey: ['ref-search-tickets', refSearch],
+    queryFn: () => refSearch.length >= 2 ? api.get('/tickets', { params: { search: refSearch } }).then(r => r.data) : [],
+    enabled: showRefPicker && refTab === 'ticket' && refSearch.length >= 2,
+  })
+  const { data: changeResults = [] } = useQuery({
+    queryKey: ['ref-search-changes', refSearch],
+    queryFn: () => refSearch.length >= 2 ? api.get('/changes', { params: { search: refSearch } }).then(r => r.data) : [],
+    enabled: showRefPicker && refTab === 'change' && refSearch.length >= 2,
+  })
+  const { data: assetResults = [] } = useQuery({
+    queryKey: ['ref-search-assets', refSearch],
+    queryFn: () => refSearch.length >= 2 ? api.get('/inventory/assets', { params: { search: refSearch } }).then(r => r.data) : [],
+    enabled: showRefPicker && refTab === 'asset' && refSearch.length >= 2,
+  })
 
   // Close mention picker on outside click
   useEffect(() => {
@@ -751,16 +780,31 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
       }
     })
   }
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleCombinedFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     Array.from(e.target.files || []).forEach(file => {
       const reader = new FileReader()
-      reader.onload = ev => setImages(imgs => [...imgs, ev.target?.result as string])
+      reader.onload = ev => {
+        const result = ev.target?.result as string
+        if (file.type.startsWith('image/')) {
+          // Add to inline comment images
+          setImages(imgs => [...imgs, result])
+        } else {
+          // Upload directly as task attachment
+          uploadAttachmentMut.mutate({
+            name: file.name,
+            url: result,
+            size: file.size,
+            mimeType: file.type,
+          })
+        }
+      }
       reader.readAsDataURL(file)
     })
+    e.target.value = ''
   }
   function submit() {
     if (!text.trim() && images.length === 0) return
-    addCommentMut.mutate(JSON.stringify({ text: text.trim(), images, mentionedIds: [...mentionedIds] }))
+    addCommentMut.mutate(JSON.stringify({ text: text.trim(), images, mentionedIds: [...mentionedIds], references }))
   }
   function parseContent(raw: string) {
     try { return JSON.parse(raw) } catch { return { text: raw, images: [] } }
@@ -982,12 +1026,67 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                   <Timer size={11} /> Time Tracked
                 </p>
-                {totalTracked > 0 && (
-                  <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">
-                    {formatHours(totalTracked)} total
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {totalTracked > 0 && (
+                    <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">
+                      {formatHours(totalTracked)} total
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setShowLogTime(s => !s)}
+                    className="text-[10px] font-semibold text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100 px-2 py-1 rounded-lg transition-colors"
+                  >
+                    + Log Time
+                  </button>
+                </div>
               </div>
+              {showLogTime && (
+                <div className="mb-3 bg-white border border-slate-200 rounded-xl p-3 space-y-2">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Log Time Manually</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Hours *</label>
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="0.25"
+                        value={logHours}
+                        onChange={e => setLogHours(e.target.value)}
+                        placeholder="e.g. 1.5"
+                        className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-primary-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Date</label>
+                      <input
+                        type="date"
+                        value={logDate}
+                        onChange={e => setLogDate(e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-primary-300"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-1">Description (optional)</label>
+                    <input
+                      value={logDesc}
+                      onChange={e => setLogDesc(e.target.value)}
+                      placeholder="What did you work on?"
+                      className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-primary-300"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button onClick={() => setShowLogTime(false)} className="text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">Cancel</button>
+                    <button
+                      onClick={() => { if (logHours && Number(logHours) > 0) addTimeMut.mutate({ hours: Number(logHours), description: logDesc || null, date: logDate }) }}
+                      disabled={!logHours || Number(logHours) <= 0 || addTimeMut.isPending}
+                      className="btn-primary text-xs px-3 py-1.5 disabled:opacity-40"
+                    >
+                      {addTimeMut.isPending ? 'Saving…' : 'Save'}
+                    </button>
+                  </div>
+                </div>
+              )}
               {timeByUser.length === 0 ? (
                 <div className="text-center py-4 rounded-xl bg-white border border-slate-100">
                   <Clock size={18} className="mx-auto mb-1 text-slate-300" />
@@ -1025,6 +1124,28 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                             />
                           </div>
                         )}
+                        {/* Individual entries for current user */}
+                        {entry.user?.id === user?.id && (() => {
+                          const myEntries = timeEntries.filter((te: any) => te.userId === user?.id)
+                          if (myEntries.length === 0) return null
+                          return (
+                            <div className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+                              {myEntries.map((te: any) => (
+                                <div key={te.id} className="flex items-center justify-between gap-2 text-[10px] text-slate-500">
+                                  <span className="truncate flex-1">{te.description || 'No description'}</span>
+                                  <span className="font-mono tabular-nums text-slate-600 flex-shrink-0">{formatHours(te.hours)}</span>
+                                  <button
+                                    onClick={() => { if (confirm('Remove this time entry?')) deleteTimeMut.mutate(te.id) }}
+                                    className="text-slate-300 hover:text-red-500 transition-colors flex-shrink-0"
+                                    title="Delete entry"
+                                  >
+                                    <Trash2 size={10} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )
+                        })()}
                       </div>
                     )
                   })}
@@ -1079,6 +1200,20 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                         <div className="mt-2 space-y-2">
                           {parsed.images.map((img: string, i: number) => (
                             <img key={i} src={img} alt="" className="max-w-full rounded-xl max-h-72 object-contain border border-slate-100" />
+                          ))}
+                        </div>
+                      )}
+                      {parsed.references?.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {parsed.references.map((ref: any, i: number) => (
+                            <a key={i} href={ref.link}
+                              className={clsx('inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg hover:opacity-80 transition-opacity',
+                                ref.type === 'ticket' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                                ref.type === 'change' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                                'bg-slate-100 text-slate-600 border border-slate-200')}>
+                              <span className="font-bold">{ref.type === 'ticket' ? 'TKT' : ref.type === 'change' ? 'CR' : 'AST'}</span>
+                              {ref.label}
+                            </a>
                           ))}
                         </div>
                       )}
@@ -1168,6 +1303,20 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
               )
             })()}
 
+            {references.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {references.map((ref, i) => (
+                  <span key={i} className={clsx('inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg',
+                    ref.type === 'ticket' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                    ref.type === 'change' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                    'bg-slate-100 text-slate-600 border border-slate-200')}>
+                    <span className="font-bold">{ref.type === 'ticket' ? 'TKT' : ref.type === 'change' ? 'CR' : 'AST'}</span>
+                    {ref.label}
+                    <button onClick={() => setReferences(refs => refs.filter((_, idx) => idx !== i))} className="hover:opacity-70 ml-0.5">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 mt-0.5">
                 <Avatar name={`${user?.firstName} ${user?.lastName}`} size={8} />
@@ -1194,14 +1343,13 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                     >
                       📎 Attach
                     </button>
-                    <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+                    <input ref={fileRef} type="file" multiple className="hidden" onChange={handleCombinedFileChange} />
                     <button
-                      onClick={() => attachFileRef.current?.click()}
-                      className="text-xs text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1"
+                      onClick={() => setShowRefPicker(p => !p)}
+                      className={clsx('text-xs transition-colors flex items-center gap-1', showRefPicker ? 'text-primary-600' : 'text-slate-400 hover:text-slate-600')}
                     >
-                      📎 Files
+                      🔗 Reference
                     </button>
-                    <input ref={attachFileRef} type="file" multiple className="hidden" onChange={handleAttachFile} />
                   </div>
                   <button
                     onClick={submit}
@@ -1213,6 +1361,66 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                 </div>
               </div>
             </div>
+            {/* Reference picker */}
+            {showRefPicker && (
+              <div className="bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden mt-2">
+                {/* Tabs */}
+                <div className="flex border-b border-slate-100">
+                  {(['ticket','change','asset'] as const).map(tab => (
+                    <button key={tab} onClick={() => { setRefTab(tab); setRefSearch('') }}
+                      className={clsx('flex-1 py-2 text-xs font-semibold capitalize transition-colors',
+                        refTab === tab ? 'text-primary-600 border-b-2 border-primary-500' : 'text-slate-400 hover:text-slate-600')}>
+                      {tab === 'ticket' ? 'Tickets' : tab === 'change' ? 'Changes' : 'Assets'}
+                    </button>
+                  ))}
+                </div>
+                {/* Search */}
+                <div className="px-3 py-2 border-b border-slate-100">
+                  <input
+                    autoFocus
+                    value={refSearch}
+                    onChange={e => setRefSearch(e.target.value)}
+                    placeholder={`Search ${refTab === 'ticket' ? 'tickets' : refTab === 'change' ? 'changes' : 'assets'}…`}
+                    className="w-full text-sm outline-none text-slate-700 placeholder-slate-400"
+                  />
+                </div>
+                {/* Results */}
+                <div className="max-h-48 overflow-y-auto">
+                  {refSearch.length < 2 && (
+                    <div className="px-3 py-3 text-xs text-slate-400">Type at least 2 characters to search</div>
+                  )}
+                  {refSearch.length >= 2 && (() => {
+                    const results = refTab === 'ticket' ? ticketResults : refTab === 'change' ? changeResults : assetResults
+                    if (results.length === 0) return <div className="px-3 py-3 text-xs text-slate-400">No results</div>
+                    return results.slice(0, 8).map((item: any) => {
+                      const label = refTab === 'ticket' ? `#${item.number} ${item.title}` : refTab === 'change' ? `CR-${item.number} ${item.title}` : `${item.name}`
+                      const link = refTab === 'ticket' ? `/tickets/${item.id}` : refTab === 'change' ? `/changes/${item.id}` : `/inventory/assets`
+                      const alreadyAdded = references.some(r => r.id === item.id)
+                      return (
+                        <button key={item.id}
+                          onClick={() => {
+                            if (!alreadyAdded) {
+                              setReferences(refs => [...refs, { type: refTab, id: item.id, label, link }])
+                            }
+                            setShowRefPicker(false)
+                            setRefSearch('')
+                          }}
+                          className={clsx('w-full text-left px-3 py-2 text-xs hover:bg-slate-50 transition-colors flex items-center gap-2',
+                            alreadyAdded && 'opacity-50 cursor-default')}
+                        >
+                          <span className={clsx('text-[10px] font-bold px-1.5 py-0.5 rounded',
+                            refTab === 'ticket' ? 'bg-blue-100 text-blue-700' : refTab === 'change' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600')}>
+                            {refTab === 'ticket' ? 'TKT' : refTab === 'change' ? 'CR' : 'AST'}
+                          </span>
+                          <span className="truncate text-slate-700">{label}</span>
+                          {alreadyAdded && <span className="ml-auto text-slate-400">Added</span>}
+                        </button>
+                      )
+                    })
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

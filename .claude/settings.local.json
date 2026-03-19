@@ -81,7 +81,9 @@
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git checkout docker-compose.yml && git pull && docker compose down && docker compose up -d --build 2>&1 | tail -15\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d 2>&1 | tail -15\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d --build 2>&1 | tail -10\")",
-      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d --build 2>&1 | tail -8\")"
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d --build 2>&1 | tail -8\")",
+      "Bash(xargs grep:*)",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose down && docker compose up -d --build && docker compose exec backend npx prisma db push --accept-data-loss\")"
     ]
   }
 }

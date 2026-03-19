@@ -316,3 +316,45 @@ export async function deleteTaskAttachment(req: AuthRequest, res: Response, next
     res.json({ success: true })
   } catch (e) { next(e) }
 }
+
+export async function getTaskTimeEntries(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const entries = await prisma.timeEntry.findMany({
+      where: { taskId: req.params.id },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+      orderBy: { date: 'desc' },
+    })
+    res.json(entries)
+  } catch (e) { next(e) }
+}
+
+export async function createManualTimeEntry(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { hours, description, date } = req.body
+    if (!hours || Number(hours) <= 0) throw new AppError(400, 'Hours must be greater than 0')
+    const task = await prisma.task.findUnique({ where: { id: req.params.id }, select: { projectId: true } })
+    const entry = await prisma.timeEntry.create({
+      data: {
+        hours: Number(hours),
+        description: description || null,
+        date: date ? new Date(date) : new Date(),
+        billable: true,
+        userId: req.user!.id,
+        taskId: req.params.id,
+        projectId: task?.projectId || null,
+      },
+      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true } } },
+    })
+    res.status(201).json(entry)
+  } catch (e) { next(e) }
+}
+
+export async function deleteTimeEntry(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const entry = await prisma.timeEntry.findUnique({ where: { id: req.params.entryId } })
+    if (!entry) throw new AppError(404, 'Time entry not found')
+    if (entry.userId !== req.user!.id && req.user!.role !== 'ADMIN') throw new AppError(403, 'Not authorized')
+    await prisma.timeEntry.delete({ where: { id: req.params.entryId } })
+    res.json({ success: true })
+  } catch (e) { next(e) }
+}
