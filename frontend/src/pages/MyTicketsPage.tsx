@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { ticketRef } from '@/lib/refs'
 import { Link } from 'react-router-dom'
 import { Search, Ticket } from 'lucide-react'
 import clsx from 'clsx'
@@ -20,10 +21,6 @@ const statusColors: Record<string, string> = {
   WAITING_CLIENT: 'bg-yellow-100 text-yellow-700',
   RESOLVED: 'bg-green-100 text-green-700',
   CLOSED: 'bg-slate-100 text-slate-600',
-}
-
-function ticketRef(number: number) {
-  return `INC-${String(number).padStart(5, '0')}`
 }
 
 function getSlaInfo(ticket: any): { status: 'ok' | 'warning' | 'breached' | 'none'; timeLeft: string } {
@@ -139,12 +136,12 @@ export default function MyTicketsPage() {
             {tickets.map((ticket: any) => (
               <tr key={ticket.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                 <td className="py-3 px-4">
-                  <Link to={`/tickets/${ticket.id}`} className="text-xs font-mono font-semibold text-primary-600 hover:text-primary-700">
+                  <Link to={`/tickets/${ticketRef(ticket.number)}`} className="text-xs font-mono font-semibold text-primary-600 hover:text-primary-700">
                     {ticketRef(ticket.number)}
                   </Link>
                 </td>
                 <td className="py-3 px-4">
-                  <Link to={`/tickets/${ticket.id}`} className="text-sm font-medium text-slate-800 hover:text-primary-600 transition-colors line-clamp-1 max-w-[240px] block">
+                  <Link to={`/tickets/${ticketRef(ticket.number)}`} className="text-sm font-medium text-slate-800 hover:text-primary-600 transition-colors line-clamp-1 max-w-[240px] block">
                     {ticket.title}
                   </Link>
                 </td>

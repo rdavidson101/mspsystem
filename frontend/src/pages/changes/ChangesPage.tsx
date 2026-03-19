@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { changeRef } from '@/lib/refs'
 import { Plus, AlertTriangle } from 'lucide-react'
 import { format } from 'date-fns'
 import clsx from 'clsx'
@@ -88,7 +89,7 @@ export default function ChangesPage() {
           </thead>
           <tbody>
             {changes.map((c: any) => (
-              <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => navigate(`/changes/${c.id}`)}>
+              <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => navigate('/changes/' + changeRef(c.number))}>
                 <td className="py-3 px-4">
                   <span className="font-mono text-xs font-semibold text-primary-600">{c.ref}</span>
                 </td>

@@ -103,7 +103,7 @@ export async function submitChange(req: AuthRequest, res: Response, next: NextFu
         'CHANGE_APPROVAL',
         `Change pending your approval`,
         `RFC-${String(updated.number).padStart(5, '0')} – ${updated.title} requires your internal approval`,
-        `/changes/${updated.id}`
+        `/changes/RFC-${String(updated.number).padStart(5, '0')}`
       )
     }
     res.json({ ...updated, ref: changeRef(updated.number) })
@@ -145,7 +145,7 @@ export async function rejectInternal(req: AuthRequest, res: Response, next: Next
         'CHANGE_REJECTED',
         `RFC rejected and returned to draft`,
         `RFC-${String(updated.number).padStart(5, '0')} – ${updated.title} was rejected by internal review${notes ? `: "${notes}"` : ''}`,
-        `/changes/${updated.id}`
+        `/changes/RFC-${String(updated.number).padStart(5, '0')}`
       )
     }
     res.json({ ...updated, ref: changeRef(updated.number) })

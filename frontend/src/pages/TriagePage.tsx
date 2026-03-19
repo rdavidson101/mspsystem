@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { ticketRef } from '@/lib/refs'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { AlertTriangle } from 'lucide-react'
@@ -12,10 +13,6 @@ const priorityColors: Record<string, string> = {
   MEDIUM: 'bg-blue-100 text-blue-700',
   HIGH: 'bg-orange-100 text-orange-700',
   CRITICAL: 'bg-red-100 text-red-700',
-}
-
-function ticketRef(number: number) {
-  return `INC-${String(number).padStart(5, '0')}`
 }
 
 export default function TriagePage() {
@@ -76,12 +73,12 @@ export default function TriagePage() {
               {tickets.map((ticket: any) => (
                 <tr key={ticket.id} className="border-b border-slate-50 hover:bg-violet-50/40 transition-colors">
                   <td className="py-3 px-4">
-                    <Link to={`/tickets/${ticket.id}`} className="text-xs font-mono font-semibold text-primary-600 hover:text-primary-700">
+                    <Link to={`/tickets/${ticketRef(ticket.number)}`} className="text-xs font-mono font-semibold text-primary-600 hover:text-primary-700">
                       {ticketRef(ticket.number)}
                     </Link>
                   </td>
                   <td className="py-3 px-4">
-                    <Link to={`/tickets/${ticket.id}`} className="text-sm font-medium text-slate-800 hover:text-primary-600 transition-colors line-clamp-1 max-w-[280px] block">
+                    <Link to={`/tickets/${ticketRef(ticket.number)}`} className="text-sm font-medium text-slate-800 hover:text-primary-600 transition-colors line-clamp-1 max-w-[280px] block">
                       {ticket.title}
                     </Link>
                   </td>

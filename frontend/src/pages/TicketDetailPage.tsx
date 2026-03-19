@@ -2,15 +2,12 @@ import { useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { ticketRef } from '@/lib/refs'
 import { format } from 'date-fns'
 import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Building2, AlertCircle, History, MessageSquare, AlertTriangle } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuthStore } from '@/store/authStore'
 import UserAvatar from '@/components/ui/UserAvatar'
-
-function ticketRef(number: number) {
-  return `INC-${String(number).padStart(5, '0')}`
-}
 
 const priorityColors: Record<string, string> = {
   LOW: 'bg-slate-100 text-slate-600',

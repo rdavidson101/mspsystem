@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { changeRef } from '@/lib/refs'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
@@ -69,7 +70,7 @@ export default function MyChangesPage() {
             </thead>
             <tbody>
               {changes.map((c: any) => (
-                <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/50 cursor-pointer" onClick={() => navigate(`/changes/${c.id}`)}>
+                <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/50 cursor-pointer" onClick={() => navigate('/changes/' + changeRef(c.number))}>
                   <td className="py-3 px-4 font-mono text-xs font-bold text-primary-600">{c.ref}</td>
                   <td className="py-3 px-4 text-sm font-medium text-slate-800">{c.title}</td>
                   <td className="py-3 px-4 text-sm text-slate-600">{c.companyRef?.name || '—'}</td>

@@ -365,6 +365,7 @@ model TicketHistory {
 
 model Project {
   id          String        @id @default(uuid())
+  number      Int           @unique @default(autoincrement())
   name        String
   description String?
   status      ProjectStatus @default(PLANNING)

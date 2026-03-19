@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { projectRef } from '@/lib/refs'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, FolderKanban, ChevronLeft, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
@@ -45,7 +46,7 @@ export default function MyProjectsPage() {
       qc.invalidateQueries({ queryKey: ['projects'] })
       setShowModal(false)
       resetForm()
-      navigate(`/projects/${proj.id}`)
+      navigate('/projects/' + projectRef(proj.number))
     },
   })
 
@@ -112,7 +113,7 @@ export default function MyProjectsPage() {
               return (
                 <Link
                   key={project.id}
-                  to={`/projects/${project.id}`}
+                  to={`/projects/${projectRef(project.number)}`}
                   className="grid grid-cols-[2fr_1fr_1fr_120px_180px_100px] gap-4 px-5 py-4 border-b border-slate-100 last:border-0 hover:bg-primary-50/40 transition-colors items-center"
                 >
                   <div className="min-w-0">

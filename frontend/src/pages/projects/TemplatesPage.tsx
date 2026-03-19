@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { projectRef } from '@/lib/refs'
 import { useNavigate } from 'react-router-dom'
 import { LayoutTemplate, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
@@ -34,7 +35,7 @@ export default function TemplatesPage() {
     onSuccess: (proj) => {
       qc.invalidateQueries({ queryKey: ['projects'] })
       setUseTemplateId(null)
-      navigate(`/projects/${proj.id}`)
+      navigate('/projects/' + projectRef(proj.number))
     },
   })
 

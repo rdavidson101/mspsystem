@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { changeRef } from '@/lib/refs'
 import { ArrowLeft, Save, Send } from 'lucide-react'
 
 // Defined OUTSIDE the component so they are stable references across renders
@@ -66,7 +67,7 @@ export default function ChangeFormPage() {
 
   const saveMutation = useMutation({
     mutationFn: () => isEdit ? api.patch(`/changes/${id}`, form).then(r => r.data) : api.post('/changes', form).then(r => r.data),
-    onSuccess: (data) => navigate(`/changes/${data.id}`),
+    onSuccess: (data) => navigate('/changes/' + changeRef(data.number)),
   })
 
   const saveAndSubmitMutation = useMutation({
@@ -75,7 +76,7 @@ export default function ChangeFormPage() {
       await api.post(`/changes/${data.id}/submit`)
       return data
     },
-    onSuccess: (data) => navigate(`/changes/${data.id}`),
+    onSuccess: (data) => navigate('/changes/' + changeRef(data.number)),
   })
 
   return (

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { ticketRef, changeRef } from '@/lib/refs'
 import { useAuthStore } from '@/store/authStore'
 import {
   ArrowLeft, Plus, ChevronDown, ChevronRight, GripVertical,
@@ -1381,7 +1382,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                     if (results.length === 0) return <div className="px-3 py-3 text-xs text-slate-400">No results</div>
                     return results.slice(0, 8).map((item: any) => {
                       const label = refTab === 'ticket' ? `#${item.number} ${item.title}` : refTab === 'change' ? `CR-${item.number} ${item.title}` : `${item.name}`
-                      const link = refTab === 'ticket' ? `/tickets/${item.id}` : refTab === 'change' ? `/changes/${item.id}` : `/inventory/assets`
+                      const link = refTab === 'ticket' ? `/tickets/${ticketRef(item.number)}` : refTab === 'change' ? `/changes/${changeRef(item.number)}` : `/inventory/assets`
                       const alreadyAdded = references.some(r => r.id === item.id)
                       return (
                         <button key={item.id}
@@ -1754,7 +1755,7 @@ export default function ProjectDetailPage() {
   })
 
   const createSectionMut = useMutation({
-    mutationFn: (data: any) => api.post(`/projects/${id}/sections`, data).then(r => r.data),
+    mutationFn: (data: any) => api.post(`/projects/${project?.id}/sections`, data).then(r => r.data),
     onSuccess: () => { refetch(); setShowNewSection(false); setNewSectionName('') },
   })
 

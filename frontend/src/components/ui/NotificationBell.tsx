@@ -165,9 +165,9 @@ export default function NotificationBell() {
                       <span className="text-[11px] text-slate-400">
                         {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                       </span>
-                      {(n.ticketId || n.link) && (
+                      {n.link && (
                         <Link
-                          to={n.link || `/tickets/${n.ticketId}`}
+                          to={n.link}
                           onClick={(e) => { e.stopPropagation(); if (!n.read) markReadMutation.mutate(n.id); setOpen(false) }}
                           className="text-xs text-primary-600 hover:text-primary-700 font-medium hover:underline"
                         >

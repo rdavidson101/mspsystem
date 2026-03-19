@@ -112,7 +112,16 @@
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose logs backend --tail=30 2>&1\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose restart backend 2>&1 | tail -5\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose restart backend frontend 2>&1 | tail -8\")",
-      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose restart frontend 2>&1 | tail -5\")"
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose restart frontend 2>&1 | tail -5\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose exec backend npx prisma db push --accept-data-loss 2>&1 | tail -4 && docker compose restart backend frontend 2>&1 | tail -6\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose logs backend --tail=40 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose restart backend 2>&1 | tail -4\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose restart frontend 2>&1 | tail -4\")",
+      "Bash(grep -v \"//\")",
+      "Bash(sed -n '303,315p' \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\")",
+      "Bash(sed -n '366,380p' \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\")",
+      "Bash(sed -n '695,710p' \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\")",
+      "Bash(ls \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\frontend\\\\src\\\\lib\"\" 2>/dev/null || echo \"lib dir does not exist \")"
     ]
   }
 }

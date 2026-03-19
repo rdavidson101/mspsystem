@@ -6,9 +6,21 @@ import {
   createSection, updateSection, deleteSection, reorderSections,
   getProjectComments, createProjectComment, deleteProjectComment,
 } from './projects.controller'
+import { prisma } from '../../lib/prisma'
 
 export const projectsRouter = Router()
 projectsRouter.use(authenticate)
+
+projectsRouter.param('id', async (req, res, next, id) => {
+  if (/^PRJ-/i.test(id)) {
+    const num = parseInt(id.slice(4), 10)
+    if (isNaN(num)) return res.status(400).json({ message: 'Invalid project reference' })
+    const project = await prisma.project.findUnique({ where: { number: num }, select: { id: true } })
+    if (!project) return res.status(404).json({ message: 'Project not found' })
+    req.params.id = project.id
+  }
+  next()
+})
 
 projectsRouter.get('/', getProjects)
 projectsRouter.post('/', createProject)

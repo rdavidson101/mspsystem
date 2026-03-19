@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { changeRef } from '@/lib/refs'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
@@ -55,7 +56,7 @@ export default function MyApprovalsPage() {
     return (
       <div className="card p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="cursor-pointer flex-1" onClick={() => navigate(`/changes/${c.id}`)}>
+          <div className="cursor-pointer flex-1" onClick={() => navigate('/changes/' + changeRef(c.number))}>
             <div className="flex items-center gap-2 mb-1">
               <span className="font-mono text-xs font-bold text-primary-600">{c.ref}</span>
               <span className={clsx('badge text-xs', statusColors[c.status])}>{c.status.replace(/_/g, ' ')}</span>

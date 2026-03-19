@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { projectRef } from '@/lib/refs'
 import { Link } from 'react-router-dom'
 import { Plus, FolderKanban, ChevronLeft, ChevronRight, ChevronDown, MessageSquare, Clock, X, Trash2, Check } from 'lucide-react'
 import clsx from 'clsx'
@@ -259,7 +260,7 @@ export default function PortfolioManagerPage() {
                 <div key={project.id} className="border-b border-slate-100 last:border-0">
                   <div className="grid grid-cols-[2fr_1fr_1fr_120px_100px_100px_60px] gap-4 px-5 py-4 hover:bg-slate-50/60 transition-colors items-center">
                     <div className="min-w-0">
-                      <Link to={`/projects/${project.id}`} className="text-sm font-semibold text-slate-900 hover:text-primary-600 transition-colors truncate block">{project.name}</Link>
+                      <Link to={`/projects/${projectRef(project.number)}`} className="text-sm font-semibold text-slate-900 hover:text-primary-600 transition-colors truncate block">{project.name}</Link>
                       {project.description && <p className="text-xs text-slate-400 truncate mt-0.5">{project.description}</p>}
                       {project.endDate && (
                         <p className={clsx('text-[10px] mt-0.5', endOverdue ? 'text-red-500 font-medium' : 'text-slate-400')}>

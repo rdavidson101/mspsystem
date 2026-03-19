@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { projectRef } from '@/lib/refs'
 import { Link } from 'react-router-dom'
 import { Plus, FolderKanban, Users, Calendar, CheckSquare, Trash2, LayoutTemplate } from 'lucide-react'
 import clsx from 'clsx'
@@ -281,7 +282,7 @@ function ProjectCard({ project }: { project: any }) {
   const sectionCount = project._count?.sections || 0
 
   return (
-    <Link to={`/projects/${project.id}`} className="card p-5 hover:shadow-md transition-all group border border-transparent hover:border-primary-200">
+    <Link to={`/projects/${projectRef(project.number)}`} className="card p-5 hover:shadow-md transition-all group border border-transparent hover:border-primary-200">
       <div className="flex items-start justify-between mb-3">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
           <FolderKanban size={20} className="text-white" />

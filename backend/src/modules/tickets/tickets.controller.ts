@@ -4,9 +4,9 @@ import { AuthRequest } from '../../middleware/auth'
 import { AppError } from '../../middleware/errorHandler'
 import { io } from '../../index'
 
-async function createNotification(userId: string, type: string, title: string, body: string, ticketId: string) {
+async function createNotification(userId: string, type: string, title: string, body: string, ticketId: string, link?: string) {
   try {
-    await prisma.notification.create({ data: { userId, type, title, body, ticketId } })
+    await prisma.notification.create({ data: { userId, type, title, body, ticketId, link } })
   } catch (e) {
     console.error('Failed to create notification:', e)
   }
@@ -203,7 +203,8 @@ export async function updateTicket(req: AuthRequest, res: Response, next: NextFu
         'TICKET_ASSIGNED',
         `Ticket assigned to you`,
         `${ticketRef(ticket.number)} – ${ticket.title} has been assigned to you`,
-        ticket.id
+        ticket.id,
+        '/tickets/' + ticketRef(ticket.number)
       )
     }
     io.emit('ticket:updated', ticket)
@@ -244,7 +245,8 @@ export async function addComment(req: AuthRequest, res: Response, next: NextFunc
         'TICKET_UPDATED',
         `New reply on ${ticketRef(ticket.number)}`,
         `${req.user!.email} replied to "${ticket.title}"`,
-        ticket.id
+        ticket.id,
+        '/tickets/' + ticketRef(ticket.number)
       )
     }
     const mentionedUserIds: string[] = Array.isArray(rawMentions) ? rawMentions : []
@@ -255,7 +257,8 @@ export async function addComment(req: AuthRequest, res: Response, next: NextFunc
           'MENTION',
           `You were mentioned in ${ticketRef(ticket!.number)}`,
           `${req.user!.email} mentioned you in "${ticket!.title}"`,
-          req.params.id
+          req.params.id,
+          '/tickets/' + ticketRef(ticket!.number)
         )
       }
     }
