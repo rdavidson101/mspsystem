@@ -64,11 +64,11 @@ const historyFieldLabels: Record<string, string> = {
 
 function applyMacroVariables(content: string, ticket: any, user: any): string {
   const requesterName = ticket.createdBy ? `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}` : 'Customer'
-  const assigneeName = ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : (user ? `${user.firstName} ${user.lastName}` : 'Support Team')
+  const currentUserName = user ? `${user.firstName} ${user.lastName}` : 'Support Team'
   return content
     .replace(/\{\{requester_name\}\}/g, requesterName)
     .replace(/\{\{ticket_ref\}\}/g, ticketRef(ticket.number))
-    .replace(/\{\{assignee_name\}\}/g, assigneeName)
+    .replace(/\{\{current_user\}\}/g, currentUserName)
     .replace(/\{\{company_name\}\}/g, ticket.company?.name || 'your company')
     .replace(/\{\{priority\}\}/g, ticket.priority)
 }
