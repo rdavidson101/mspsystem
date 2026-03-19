@@ -33,7 +33,7 @@ function formatHours(h: number) {
   return `${mins}m`
 }
 
-function ProjectUpdatesPanel({ project, onClose }: { project: any; onClose: () => void }) {
+function ProjectUpdatesModal({ project, onClose }: { project: any; onClose: () => void }) {
   const { user } = useAuthStore()
   const [text, setText] = useState('')
 
@@ -51,38 +51,56 @@ function ProjectUpdatesPanel({ project, onClose }: { project: any; onClose: () =
   })
 
   return (
-    <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-4">
-      <div className="max-w-2xl space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden" style={{ maxHeight: '80vh' }}>
+
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-            <MessageSquare size={12} /> Project Updates
-          </span>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
+          <div>
+            <div className="flex items-center gap-2">
+              <MessageSquare size={16} className="text-primary-500" />
+              <h2 className="font-semibold text-slate-900 text-base">Project Updates</h2>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5 truncate max-w-xs">{project.name}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Comments */}
-        <div className="space-y-3 max-h-48 overflow-y-auto">
+        {/* Comments feed */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {comments.length === 0 && (
-            <p className="text-xs text-slate-400 italic">No updates yet — be the first to post one.</p>
+            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+              <MessageSquare size={32} className="mb-3 opacity-20" />
+              <p className="text-sm font-medium">No updates yet</p>
+              <p className="text-xs mt-1">Be the first to post an update below</p>
+            </div>
           )}
           {comments.map((c: any) => {
             const isOwn = c.user.id === user?.id
             return (
-              <div key={c.id} className="flex gap-2.5">
-                <Avatar name={`${c.user.firstName} ${c.user.lastName}`} avatar={c.user.avatar} size={7} />
+              <div key={c.id} className="flex gap-3">
+                <div className="flex-shrink-0">
+                  <Avatar name={`${c.user.firstName} ${c.user.lastName}`} avatar={c.user.avatar} size={8} />
+                </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xs font-semibold text-slate-800">{c.user.firstName} {c.user.lastName}</span>
-                    <span className="text-[10px] text-slate-400">{formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}</span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold text-slate-800">{c.user.firstName} {c.user.lastName}</span>
+                    <span className="text-xs text-slate-400">{formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}</span>
                     {isOwn && (
-                      <button onClick={() => { if (confirm('Delete this update?')) deleteMut.mutate(c.id) }}
-                        className="ml-auto text-slate-300 hover:text-red-500 transition-colors">
-                        <Trash2 size={11} />
+                      <button
+                        onClick={() => { if (confirm('Delete this update?')) deleteMut.mutate(c.id) }}
+                        className="ml-auto flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors px-1.5 py-0.5 rounded hover:bg-red-50"
+                      >
+                        <Trash2 size={11} /> Delete
                       </button>
                     )}
                   </div>
-                  <div className="bg-white rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-700 whitespace-pre-wrap">{c.content}</div>
+                  <div className="bg-slate-50 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                    {c.content}
+                  </div>
                 </div>
               </div>
             )
@@ -90,23 +108,34 @@ function ProjectUpdatesPanel({ project, onClose }: { project: any; onClose: () =
         </div>
 
         {/* Input */}
-        <div className="flex gap-2">
-          <textarea
-            rows={2}
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder="Post a project update…"
-            className="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-2 resize-none outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
-            onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && text.trim()) addMut.mutate(text.trim()) }}
-          />
-          <button
-            onClick={() => { if (text.trim()) addMut.mutate(text.trim()) }}
-            disabled={!text.trim() || addMut.isPending}
-            className="btn-primary text-sm px-4 self-end disabled:opacity-40"
-          >
-            Post
-          </button>
+        <div className="px-6 py-4 border-t border-slate-200 bg-white flex-shrink-0">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 mt-0.5">
+              <Avatar name={`${user?.firstName} ${user?.lastName}`} size={8} />
+            </div>
+            <div className="flex-1 bg-slate-50 rounded-2xl border border-slate-200 focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100 transition-all">
+              <textarea
+                autoFocus
+                rows={3}
+                value={text}
+                onChange={e => setText(e.target.value)}
+                placeholder="Write a project update…"
+                className="w-full bg-transparent px-4 pt-3 pb-2 text-sm resize-none outline-none text-slate-700 placeholder-slate-400"
+                onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && text.trim()) addMut.mutate(text.trim()) }}
+              />
+              <div className="flex justify-end px-3 pb-2.5">
+                <button
+                  onClick={() => { if (text.trim()) addMut.mutate(text.trim()) }}
+                  disabled={!text.trim() || addMut.isPending}
+                  className="btn-primary text-sm px-5 py-1.5 disabled:opacity-40 rounded-xl"
+                >
+                  Post Update
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
   )
@@ -155,7 +184,7 @@ function StatusDropdown({ project, onUpdate }: { project: any; onUpdate: () => v
 export default function PortfolioManagerPage() {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
-  const [expandedUpdates, setExpandedUpdates] = useState<string | null>(null)
+  const [updatesProject, setUpdatesProject] = useState<any | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [form, setForm] = useState({ name: '', description: '', status: 'PLANNING', companyId: '', startDate: '', endDate: '', budget: '' })
@@ -232,7 +261,6 @@ export default function PortfolioManagerPage() {
             </div>
             {paged.map((project: any) => {
               const endOverdue = project.endDate && new Date(project.endDate) < new Date() && !['COMPLETED','CANCELLED'].includes(project.status)
-              const isExpanded = expandedUpdates === project.id
               return (
                 <div key={project.id} className="border-b border-slate-100 last:border-0">
                   <div className="grid grid-cols-[2fr_1fr_1fr_120px_100px_100px_60px] gap-4 px-5 py-4 hover:bg-slate-50/60 transition-colors items-center">
@@ -270,17 +298,14 @@ export default function PortfolioManagerPage() {
                     </div>
                     <div>
                       <button
-                        onClick={() => setExpandedUpdates(isExpanded ? null : project.id)}
-                        className={clsx('flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors',
-                          isExpanded ? 'bg-primary-100 text-primary-700' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100')}
+                        onClick={() => setUpdatesProject(project)}
+                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                        title="View updates"
                       >
                         <MessageSquare size={13} />
                       </button>
                     </div>
                   </div>
-                  {isExpanded && (
-                    <ProjectUpdatesPanel project={project} onClose={() => setExpandedUpdates(null)} />
-                  )}
                 </div>
               )
             })}
@@ -297,6 +322,11 @@ export default function PortfolioManagerPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Project Updates Modal */}
+      {updatesProject && (
+        <ProjectUpdatesModal project={updatesProject} onClose={() => setUpdatesProject(null)} />
       )}
 
       {/* New Project Modal */}
