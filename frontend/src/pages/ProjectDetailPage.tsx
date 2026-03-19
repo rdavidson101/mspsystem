@@ -23,10 +23,11 @@ import { CSS } from '@dnd-kit/utilities'
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
-  NOT_STARTED:   { label: 'Not Started',   color: 'text-slate-600',  bg: 'bg-slate-100',  dot: 'bg-slate-400'  },
-  WORKING_ON_IT: { label: 'Working On It', color: 'text-orange-700', bg: 'bg-orange-100', dot: 'bg-orange-500' },
-  STUCK:         { label: 'Stuck',         color: 'text-red-700',    bg: 'bg-red-100',    dot: 'bg-red-500'    },
-  DONE:          { label: 'Done',          color: 'text-green-700',  bg: 'bg-green-100',  dot: 'bg-green-500'  },
+  NOT_STARTED:          { label: 'Not Started',          color: 'text-slate-600',  bg: 'bg-slate-100',   dot: 'bg-slate-400'  },
+  WORKING_ON_IT:        { label: 'Working On It',        color: 'text-orange-700', bg: 'bg-orange-100',  dot: 'bg-orange-500' },
+  STUCK:                { label: 'Stuck',                color: 'text-red-700',    bg: 'bg-red-100',     dot: 'bg-red-500'    },
+  DONE:                 { label: 'Done',                 color: 'text-green-700',  bg: 'bg-green-100',   dot: 'bg-green-500'  },
+  SERVICE_NOT_REQUIRED: { label: 'Service Not Required', color: 'text-purple-700', bg: 'bg-purple-100',  dot: 'bg-purple-500' },
 }
 const STATUSES = Object.keys(STATUS_CONFIG)
 const SECTION_COLORS = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6']
@@ -286,13 +287,13 @@ function TaskRow({ task, depth = 0, projectMembers, onOpenComments, onRefresh }:
           ) : (
             <>
               <span
-                className={clsx('text-sm cursor-pointer hover:text-primary-600 block truncate', task.status === 'DONE' && 'line-through text-slate-400')}
+                className={clsx('text-sm cursor-pointer hover:text-primary-600 block truncate', (task.status === 'DONE' || task.status === 'SERVICE_NOT_REQUIRED') && 'line-through text-slate-400')}
                 onDoubleClick={() => setEditingTitle(true)}
                 title={task.title}
               >
                 {task.title}
               </span>
-              {task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE' && (
+              {task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE' && task.status !== 'SERVICE_NOT_REQUIRED' && (
                 <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 mt-0.5">
                   Overdue
                 </span>
@@ -404,7 +405,7 @@ function TaskRow({ task, depth = 0, projectMembers, onOpenComments, onRefresh }:
             onChange={e => updateMut.mutate({ dueDate: e.target.value || null })}
             className={clsx(
               'w-full text-xs border border-transparent hover:border-slate-200 focus:border-primary-300 rounded px-1.5 py-1 outline-none bg-transparent cursor-pointer',
-              task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE'
+              task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE' && task.status !== 'SERVICE_NOT_REQUIRED'
                 ? 'text-red-500 font-medium'
                 : 'text-slate-500'
             )}
@@ -521,7 +522,7 @@ function SectionBlock({ section, projectMembers, onOpenComments, onRefresh, proj
   })
 
   const tasks = section.tasks || []
-  const doneCount = tasks.filter((t: any) => t.status === 'DONE').length
+  const doneCount = tasks.filter((t: any) => t.status === 'DONE' || t.status === 'SERVICE_NOT_REQUIRED').length
 
   return (
     <div className="mb-8">
@@ -982,7 +983,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                   onChange={e => updateMut.mutate({ dueDate: e.target.value || null })}
                   className={clsx(
                     'w-full text-sm border border-slate-200 hover:border-slate-300 focus:border-primary-300 rounded-xl px-2.5 py-2 outline-none bg-white',
-                    task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE'
+                    task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE' && task.status !== 'SERVICE_NOT_REQUIRED'
                       ? 'text-red-500 font-semibold border-red-200' : 'text-slate-700'
                   )}
                 />

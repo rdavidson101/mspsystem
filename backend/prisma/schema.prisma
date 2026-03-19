@@ -50,6 +50,7 @@ enum TaskStatus {
   WORKING_ON_IT
   STUCK
   DONE
+  SERVICE_NOT_REQUIRED
 }
 
 enum TaskPriority {
