@@ -81,7 +81,7 @@ export default function UserAvatar({ user, size = 'md', className = '', showHove
           className="fixed z-[9999] pointer-events-none"
           style={{ top: pos.top, left: pos.left, transform: 'translateX(-50%)' }}
         >
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-3 flex items-center gap-3 min-w-[160px] max-w-[220px]">
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-3 flex items-center gap-3 min-w-[160px]">
             <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ring-2 ring-slate-100">
               {user.avatar ? (
                 <img src={user.avatar} alt={fullName} className="w-full h-full object-cover" />
@@ -92,12 +92,12 @@ export default function UserAvatar({ user, size = 'md', className = '', showHove
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate">{fullName}</p>
+              <p className="text-sm font-semibold text-slate-900 whitespace-nowrap">{fullName}</p>
               {user.jobTitle && (
-                <p className="text-xs text-slate-500 truncate mt-0.5">{user.jobTitle}</p>
+                <p className="text-xs text-slate-500 whitespace-nowrap mt-0.5">{user.jobTitle}</p>
               )}
               {!user.jobTitle && user.role && (
-                <p className="text-xs text-slate-400 truncate mt-0.5 capitalize">{user.role.toLowerCase()}</p>
+                <p className="text-xs text-slate-400 whitespace-nowrap mt-0.5 capitalize">{user.role.toLowerCase()}</p>
               )}
             </div>
           </div>
