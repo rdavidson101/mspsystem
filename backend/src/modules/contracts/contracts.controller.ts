@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express'
 import { prisma } from '../../lib/prisma'
 import { AuthRequest } from '../../middleware/auth'
+import { AppError } from '../../middleware/errorHandler'
 
 export async function getContracts(req: AuthRequest, res: Response, next: NextFunction) {
   try {
@@ -14,6 +15,11 @@ export async function getContracts(req: AuthRequest, res: Response, next: NextFu
 
 export async function createContract(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { companyId } = req.body
+    if (companyId) {
+      const co = await prisma.company.findUnique({ where: { id: companyId } })
+      if (co && !co.isActive) throw new AppError(400, 'This customer is disabled and cannot have new items created.')
+    }
     const contract = await prisma.contract.create({ data: req.body, include: { company: { select: { id: true, name: true } } } })
     res.status(201).json(contract)
   } catch (e) { next(e) }

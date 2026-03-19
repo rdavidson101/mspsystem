@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express'
 import { prisma } from '../../lib/prisma'
 import { AuthRequest } from '../../middleware/auth'
+import { AppError } from '../../middleware/errorHandler'
 
 export async function getInvoices(req: AuthRequest, res: Response, next: NextFunction) {
   try {
@@ -27,6 +28,10 @@ export async function getInvoice(req: AuthRequest, res: Response, next: NextFunc
 export async function createInvoice(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { items, ...data } = req.body
+    if (data.companyId) {
+      const co = await prisma.company.findUnique({ where: { id: data.companyId } })
+      if (co && !co.isActive) throw new AppError(400, 'This customer is disabled and cannot have new items created.')
+    }
     const number = `INV-${Date.now()}`
     const invoice = await prisma.invoice.create({
       data: { ...data, number, items: { create: items || [] } },

@@ -80,6 +80,10 @@ export async function getProject(req: AuthRequest, res: Response, next: NextFunc
 export async function createProject(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { name, description, status, startDate, endDate, budget, companyId, templateId } = req.body
+    if (companyId) {
+      const co = await prisma.company.findUnique({ where: { id: companyId } })
+      if (co && !co.isActive) throw new AppError(400, 'This customer is disabled and cannot have new items created.')
+    }
     const project = await prisma.project.create({
       data: {
         name,

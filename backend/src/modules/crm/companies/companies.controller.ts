@@ -10,6 +10,7 @@ export async function getCompanies(req: AuthRequest, res: Response, next: NextFu
       where: search ? { name: { contains: String(search), mode: 'insensitive' } } : {},
       include: {
         users: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true }, orderBy: { firstName: 'asc' }, take: 8 },
+        accountManager: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } },
         _count: { select: { contacts: true, tickets: true, projects: true, users: true } },
       },
       orderBy: [{ isInternal: 'desc' }, { name: 'asc' }],
@@ -28,6 +29,7 @@ export async function getCompany(req: AuthRequest, res: Response, next: NextFunc
         projects: true,
         contracts: true,
         leads: true,
+        accountManager: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } },
         _count: { select: { contacts: true, tickets: true, projects: true, users: true } },
       },
     })
@@ -49,7 +51,7 @@ export async function createCompany(req: AuthRequest, res: Response, next: NextF
 
 export async function updateCompany(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { name, domain, industry, phone, email, address, city, state, zip, country, website, notes } = req.body
+    const { name, domain, industry, phone, email, address, city, state, zip, country, website, notes, isActive, accountManagerId } = req.body
     const data: any = {}
     if (name !== undefined) data.name = name
     if (domain !== undefined) data.domain = domain || null
@@ -63,10 +65,15 @@ export async function updateCompany(req: AuthRequest, res: Response, next: NextF
     if (country !== undefined) data.country = country || null
     if (website !== undefined) data.website = website || null
     if (notes !== undefined) data.notes = notes || null
+    if (isActive !== undefined) data.isActive = isActive
+    if (accountManagerId !== undefined) data.accountManagerId = accountManagerId || null
     const company = await prisma.company.update({
       where: { id: req.params.id },
       data,
-      include: { _count: { select: { contacts: true, tickets: true, projects: true, users: true } } },
+      include: {
+        accountManager: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } },
+        _count: { select: { contacts: true, tickets: true, projects: true, users: true } },
+      },
     })
     res.json(company)
   } catch (e) { next(e) }

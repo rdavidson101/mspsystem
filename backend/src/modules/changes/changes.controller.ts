@@ -63,6 +63,11 @@ export async function getChange(req: AuthRequest, res: Response, next: NextFunct
 
 export async function createChange(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { companyId } = req.body
+    if (companyId) {
+      const co = await prisma.company.findUnique({ where: { id: companyId } })
+      if (co && !co.isActive) throw new AppError(400, 'This customer is disabled and cannot have new items created.')
+    }
     const change = await prisma.change.create({
       data: { ...sanitizeChangeData(req.body), createdById: req.user!.id },
       include,

@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express'
 import { prisma } from '../../lib/prisma'
 import { AuthRequest } from '../../middleware/auth'
+import { AppError } from '../../middleware/errorHandler'
 import { io } from '../../index'
 
 async function createNotification(userId: string, type: string, title: string, body: string, ticketId: string) {
@@ -85,6 +86,11 @@ export async function getTicket(req: AuthRequest, res: Response, next: NextFunct
 
 export async function createTicket(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { companyId } = req.body
+    if (companyId) {
+      const co = await prisma.company.findUnique({ where: { id: companyId } })
+      if (co && !co.isActive) throw new AppError(400, 'This customer is disabled and cannot have new items created.')
+    }
     const priority = req.body.priority || 'MEDIUM'
     const slaPolicy = await prisma.slaPolicy.findUnique({ where: { priority } })
     const now = new Date()
