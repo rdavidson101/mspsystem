@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs'
 const userSelect = {
   id: true, email: true, firstName: true, lastName: true,
   role: true, userType: true, avatar: true, isActive: true,
-  canApproveChanges: true, phone: true, twoFactorEnabled: true,
+  canApproveChanges: true, phone: true, jobTitle: true, twoFactorEnabled: true,
   createdAt: true, companyId: true,
 }
 
@@ -38,8 +38,9 @@ export async function getUser(req: AuthRequest, res: Response, next: NextFunctio
 
 export async function createUser(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { email, password, firstName, lastName, role, phone, userType } = req.body
+    const { email, password, firstName, lastName, role, phone, jobTitle, userType } = req.body
     const data: any = { email, firstName, lastName, role: role || 'TECHNICIAN', phone, userType: userType || 'INTERNAL' }
+    if (jobTitle !== undefined) data.jobTitle = jobTitle || null
     if (userType !== 'CLIENT') {
       if (!password) throw new AppError(400, 'Password required for internal users')
       data.password = await bcrypt.hash(password, 10)
@@ -61,12 +62,13 @@ export async function createUser(req: AuthRequest, res: Response, next: NextFunc
 
 export async function updateUser(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { password, firstName, lastName, email, phone, role, userType, isActive, canApproveChanges } = req.body
+    const { password, firstName, lastName, email, phone, jobTitle, role, userType, isActive, canApproveChanges } = req.body
     const updateData: any = {}
     if (firstName !== undefined) updateData.firstName = firstName
     if (lastName !== undefined) updateData.lastName = lastName
     if (email !== undefined) updateData.email = email
     if (phone !== undefined) updateData.phone = phone
+    if (jobTitle !== undefined) updateData.jobTitle = jobTitle || null
     if (role !== undefined) updateData.role = role
     if (isActive !== undefined) updateData.isActive = isActive
     if (canApproveChanges !== undefined) updateData.canApproveChanges = canApproveChanges

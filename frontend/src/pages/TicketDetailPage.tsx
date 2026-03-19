@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Building2, AlertCircle, History, MessageSquare, AlertTriangle } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuthStore } from '@/store/authStore'
+import UserAvatar from '@/components/ui/UserAvatar'
 
 function ticketRef(number: number) {
   return `INC-${String(number).padStart(5, '0')}`
@@ -108,14 +109,7 @@ function CommentBubble({ comment }: { comment: any }) {
         : 'bg-slate-50 border-slate-200'
     )}>
       <div className="flex items-center gap-2 mb-2">
-        <div className={clsx(
-          'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0',
-          comment.isInternal ? 'bg-orange-500' : 'bg-primary-600'
-        )}>
-          <span className="text-white text-xs font-semibold">
-            {comment.user.firstName[0]}{comment.user.lastName[0]}
-          </span>
-        </div>
+        <UserAvatar user={comment.user} size="sm" />
         <span className={clsx('text-sm font-medium', comment.isInternal ? 'text-orange-900' : 'text-slate-800')}>
           {comment.user.firstName} {comment.user.lastName}
         </span>
@@ -458,11 +452,7 @@ export default function TicketDetailPage() {
                 <User size={12} /> Reporter
               </label>
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-                  <span className="text-primary-700 text-xs font-semibold">
-                    {ticket.createdBy?.firstName?.[0]}{ticket.createdBy?.lastName?.[0]}
-                  </span>
-                </div>
+                <UserAvatar user={ticket.createdBy} size="sm" />
                 <div>
                   <p className="text-sm font-medium text-slate-800">{ticket.createdBy?.firstName} {ticket.createdBy?.lastName}</p>
                   {ticket.createdBy?.email && <p className="text-xs text-slate-400">{ticket.createdBy.email}</p>}

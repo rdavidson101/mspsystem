@@ -6,6 +6,7 @@ import {
   Pencil, Trash2, X, Users, Ticket, FolderKanban, Star
 } from 'lucide-react'
 import clsx from 'clsx'
+import UserAvatar from '@/components/ui/UserAvatar'
 
 const EMPTY_FORM = {
   name: '', industry: '', phone: '', email: '',
@@ -233,15 +234,10 @@ export default function CustomersPage() {
                 <div className="flex items-center gap-2">
                   <div className="flex -space-x-2">
                     {company.users.slice(0, 5).map((u: any) => (
-                      <div key={u.id} className="w-7 h-7 rounded-full border-2 border-white bg-primary-100 flex items-center justify-center text-[10px] font-bold text-primary-600 overflow-hidden flex-shrink-0" title={`${u.firstName} ${u.lastName}`}>
-                        {u.avatar
-                          ? <img src={u.avatar} alt="" className="w-full h-full object-cover" />
-                          : `${u.firstName[0]}${u.lastName[0]}`
-                        }
-                      </div>
+                      <UserAvatar key={u.id} user={u} size="xs" />
                     ))}
                     {(company._count?.users ?? 0) > 5 && (
-                      <div className="w-7 h-7 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                      <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
                         +{(company._count?.users ?? 0) - 5}
                       </div>
                     )}

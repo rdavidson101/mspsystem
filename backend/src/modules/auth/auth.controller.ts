@@ -95,7 +95,7 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
 
 export async function me(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { id: true, email: true, firstName: true, lastName: true, role: true, avatar: true, phone: true } })
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { id: true, email: true, firstName: true, lastName: true, role: true, avatar: true, phone: true, jobTitle: true } })
     if (!user) throw new AppError(404, 'User not found')
     res.json(user)
   } catch (e) { next(e) }

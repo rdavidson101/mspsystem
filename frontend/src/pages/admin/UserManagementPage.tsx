@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { Plus, Pencil, UserX, CheckCircle2, RotateCcw } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import clsx from 'clsx'
+import UserAvatar from '@/components/ui/UserAvatar'
 
 const roleColors: Record<string, string> = {
   ADMIN: 'bg-red-100 text-red-700',
@@ -12,7 +13,7 @@ const roleColors: Record<string, string> = {
   CLIENT: 'bg-slate-100 text-slate-600',
 }
 
-const emptyInternal = { userType: 'INTERNAL', firstName: '', lastName: '', email: '', password: '', role: 'TECHNICIAN', phone: '' }
+const emptyInternal = { userType: 'INTERNAL', firstName: '', lastName: '', email: '', password: '', role: 'TECHNICIAN', phone: '', jobTitle: '' }
 const emptyClient = { userType: 'CLIENT', firstName: '', lastName: '', email: '', phone: '', companyId: '', role: 'CLIENT' }
 
 export default function UserManagementPage() {
@@ -106,10 +107,11 @@ export default function UserManagementPage() {
               <tr key={u.id} className="border-b border-slate-50 hover:bg-slate-50/50">
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-bold">
-                      {u.firstName[0]}{u.lastName[0]}
+                    <UserAvatar user={u} size="md" showHoverCard={false} />
+                    <div>
+                      <span className="text-sm font-medium text-slate-800">{u.firstName} {u.lastName}</span>
+                      {u.jobTitle && <p className="text-xs text-slate-400 leading-none mt-0.5">{u.jobTitle}</p>}
                     </div>
-                    <span className="text-sm font-medium text-slate-800">{u.firstName} {u.lastName}</span>
                   </div>
                 </td>
                 <td className="py-3 px-4 text-sm text-slate-600">{u.email || '—'}</td>
@@ -215,6 +217,10 @@ export default function UserManagementPage() {
           </div>
           {form.userType === 'INTERNAL' && (
             <>
+              <div>
+                <label className="label">Job Title</label>
+                <input className="input" placeholder="e.g. Senior Technician" value={form.jobTitle || ''} onChange={e => setForm((f: any) => ({ ...f, jobTitle: e.target.value }))} />
+              </div>
               <div>
                 <label className="label">Role</label>
                 <select className="input" value={form.role} onChange={e => setForm((f: any) => ({ ...f, role: e.target.value }))}>

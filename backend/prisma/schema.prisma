@@ -143,6 +143,7 @@ model User {
   twoFactorSecret   String?
   avatar            String?
   phone             String?
+  jobTitle          String?
   isActive          Boolean  @default(true)
   canApproveChanges Boolean  @default(false)
   createdAt         DateTime @default(now())

@@ -6,6 +6,7 @@ import { Plus, FolderKanban, ChevronLeft, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
 import { format } from 'date-fns'
 import Modal from '@/components/ui/Modal'
+import UserAvatar from '@/components/ui/UserAvatar'
 
 const PROJECT_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
   PLANNING:    { label: 'Planning',    color: 'text-indigo-700', bg: 'bg-indigo-50',  dot: 'bg-indigo-500'  },
@@ -16,13 +17,6 @@ const PROJECT_STATUS_CONFIG: Record<string, { label: string; color: string; bg: 
 }
 
 const PAGE_SIZE = 10
-
-function Avatar({ name, avatar, size = 6 }: { name: string; avatar?: string; size?: number }) {
-  const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-  const sz = `w-${size} h-${size}`
-  if (avatar) return <img src={avatar} className={clsx(sz, 'rounded-full object-cover')} alt={name} />
-  return <div className={clsx(sz, 'rounded-full bg-primary-500 flex items-center justify-center text-white text-xs font-bold')}>{initials}</div>
-}
 
 export default function MyProjectsPage() {
   const qc = useQueryClient()
@@ -141,9 +135,7 @@ export default function MyProjectsPage() {
                   <div>
                     <div className="flex -space-x-1.5">
                       {(project.members || []).slice(0, 4).map((m: any) => (
-                        <div key={m.id} title={`${m.user.firstName} ${m.user.lastName}`}>
-                          <Avatar name={`${m.user.firstName} ${m.user.lastName}`} avatar={m.user.avatar} size={6} />
-                        </div>
+                        <UserAvatar key={m.id} user={m.user} size="xs" />
                       ))}
                       {(project.members?.length || 0) > 4 && (
                         <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600">+{project.members.length - 4}</div>

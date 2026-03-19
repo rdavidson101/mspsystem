@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { format, formatDistanceToNow } from 'date-fns'
+import UserAvatar from '@/components/ui/UserAvatar'
 import {
   DndContext, DragEndEvent, DragStartEvent,
   PointerSensor, useSensor, useSensors, closestCenter
@@ -85,17 +86,6 @@ function renderMentions(raw: string) {
   }
   if (last < normalized.length) parts.push(<span key={`t${last}`}>{normalized.slice(last)}</span>)
   return parts
-}
-
-function Avatar({ name, avatar, size = 6 }: { name: string; avatar?: string; size?: number }) {
-  const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0,2).toUpperCase()
-  const sz = `w-${size} h-${size}`
-  if (avatar) return <img src={avatar} className={clsx(sz, 'rounded-full object-cover flex-shrink-0')} alt={name} />
-  return (
-    <div className={clsx(sz, 'rounded-full bg-primary-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0')}>
-      {initials}
-    </div>
-  )
 }
 
 // ── Floating dropdown portal using fixed positioning ──────────────────────────
@@ -321,9 +311,7 @@ function TaskRow({ task, depth = 0, projectMembers, onOpenComments, onRefresh }:
             {assignees.length > 0 ? (
               <div className="flex -space-x-1.5">
                 {assignees.slice(0, 3).map((a: any) => (
-                  <div key={a.user.id} title={`${a.user.firstName} ${a.user.lastName}`}>
-                    <Avatar name={`${a.user.firstName} ${a.user.lastName}`} avatar={a.user.avatar} size={5} />
-                  </div>
+                  <UserAvatar key={a.user.id} user={a.user} size="xs" />
                 ))}
                 {assignees.length > 3 && (
                   <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 text-xs font-medium">
@@ -360,7 +348,7 @@ function TaskRow({ task, depth = 0, projectMembers, onOpenComments, onRefresh }:
                   onClick={() => toggleAssignee(m.user.id)}
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-slate-50"
                 >
-                  <Avatar name={`${m.user.firstName} ${m.user.lastName}`} size={5} />
+                  <UserAvatar user={m.user} size="xs" showHoverCard={false} />
                   <span className="flex-1 text-left">{m.user.firstName} {m.user.lastName}</span>
                   {isAssigned && <Check size={12} className="text-primary-600" />}
                 </button>
@@ -910,9 +898,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                   <>
                     <div className="flex -space-x-2 flex-1">
                       {assignees.slice(0, 5).map((a: any) => (
-                        <div key={a.user.id} title={`${a.user.firstName} ${a.user.lastName}`} className="ring-2 ring-white rounded-full">
-                          <Avatar name={`${a.user.firstName} ${a.user.lastName}`} avatar={a.user.avatar} size={6} />
-                        </div>
+                        <UserAvatar key={a.user.id} user={a.user} size="xs" />
                       ))}
                       {assignees.length > 5 && (
                         <div className="w-6 h-6 rounded-full bg-slate-200 ring-2 ring-white flex items-center justify-center text-slate-600 text-xs font-bold">
@@ -953,7 +939,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                       onClick={() => toggleAssignee(m.user.id)}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-slate-50"
                     >
-                      <Avatar name={`${m.user.firstName} ${m.user.lastName}`} avatar={m.user.avatar} size={6} />
+                      <UserAvatar user={m.user} size="xs" showHoverCard={false} />
                       <span className="flex-1 text-left">{m.user.firstName} {m.user.lastName}</span>
                       <div className={clsx('w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors',
                         isAssigned ? 'bg-primary-500 text-white' : 'border border-slate-300'
@@ -969,7 +955,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                 <div className="mt-2.5 space-y-1.5">
                   {assignees.map((a: any) => (
                     <div key={a.user.id} className="flex items-center gap-2 text-sm text-slate-600">
-                      <Avatar name={`${a.user.firstName} ${a.user.lastName}`} avatar={a.user.avatar} size={5} />
+                      <UserAvatar user={a.user} size="xs" />
                       <span>{a.user.firstName} {a.user.lastName}</span>
                     </div>
                   ))}
@@ -1100,7 +1086,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                     return (
                       <div key={entry.user?.id} className="bg-white rounded-xl border border-slate-100 px-3 py-2.5">
                         <div className="flex items-center gap-2 mb-1.5">
-                          <Avatar name={`${entry.user?.firstName} ${entry.user?.lastName}`} avatar={entry.user?.avatar} size={6} />
+                          <UserAvatar user={entry.user} size="xs" />
                           <div className="flex-1 min-w-0">
                             <span className="text-xs font-medium text-slate-700 truncate block">{entry.user?.firstName} {entry.user?.lastName}</span>
                           </div>
@@ -1178,7 +1164,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
               return (
                 <div key={c.id} className="flex gap-3">
                   <div className="flex-shrink-0">
-                    <Avatar name={`${c.user.firstName} ${c.user.lastName}`} avatar={c.user.avatar} size={8} />
+                    <UserAvatar user={c.user} size="md" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -1292,7 +1278,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                       onMouseDown={e => { e.preventDefault(); selectMention(m) }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-primary-50 transition-colors text-left"
                     >
-                      <Avatar name={`${m.user.firstName} ${m.user.lastName}`} avatar={m.user.avatar} size={7} />
+                      <UserAvatar user={m.user} size="sm" showHoverCard={false} />
                       <div>
                         <p className="text-sm font-medium text-slate-800">{m.user.firstName} {m.user.lastName}</p>
                         <p className="text-xs text-slate-400">{m.user.role}</p>
@@ -1319,7 +1305,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
             )}
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 mt-0.5">
-                <Avatar name={`${user?.firstName} ${user?.lastName}`} size={8} />
+                <UserAvatar user={{ firstName: user?.firstName, lastName: user?.lastName, avatar: user?.avatar }} size="md" />
               </div>
               <div className="flex-1 bg-slate-50 rounded-2xl border border-slate-200 focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100 transition-all">
                 <textarea
@@ -1725,7 +1711,7 @@ function MemberPanel({ project, onClose, onRefresh }: { project: any; onClose: (
             return (
               <div key={u.id} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
                 <div className="flex items-center gap-3">
-                  <Avatar name={`${u.firstName} ${u.lastName}`} avatar={u.avatar} size={8} />
+                  <UserAvatar user={u} size="md" />
                   <div>
                     <p className="text-sm font-medium text-slate-800">{u.firstName} {u.lastName}</p>
                     <p className="text-xs text-slate-400">{u.role}</p>
@@ -1822,9 +1808,7 @@ export default function ProjectDetailPage() {
           </div>
           <div className="flex -space-x-2 items-center">
             {project.members.slice(0, 5).map((m: any) => (
-              <div key={m.id} title={`${m.user.firstName} ${m.user.lastName}`} className="ring-2 ring-white rounded-full">
-                <Avatar name={`${m.user.firstName} ${m.user.lastName}`} avatar={m.user.avatar} size={7} />
-              </div>
+              <UserAvatar key={m.id} user={m.user} size="sm" />
             ))}
           </div>
           <button

@@ -7,6 +7,7 @@ import clsx from 'clsx'
 import { format, formatDistanceToNow } from 'date-fns'
 import { useAuthStore } from '@/store/authStore'
 import Modal from '@/components/ui/Modal'
+import UserAvatar from '@/components/ui/UserAvatar'
 
 const PROJECT_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; dot: string }> = {
   PLANNING:    { label: 'Planning',    color: 'text-indigo-700', bg: 'bg-indigo-50',  border: 'border-indigo-200', dot: 'bg-indigo-500'  },
@@ -16,13 +17,6 @@ const PROJECT_STATUS_CONFIG: Record<string, { label: string; color: string; bg: 
   CANCELLED:   { label: 'Cancelled',   color: 'text-slate-600',  bg: 'bg-slate-100',  border: 'border-slate-200',  dot: 'bg-slate-400'   },
 }
 const PAGE_SIZE = 10
-
-function Avatar({ name, avatar, size = 6 }: { name: string; avatar?: string; size?: number }) {
-  const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-  const sz = `w-${size} h-${size}`
-  if (avatar) return <img src={avatar} className={clsx(sz, 'rounded-full object-cover')} alt={name} />
-  return <div className={clsx(sz, 'rounded-full bg-primary-500 flex items-center justify-center text-white text-xs font-bold')}>{initials}</div>
-}
 
 function formatHours(h: number) {
   if (!h) return '—'
@@ -83,7 +77,7 @@ function ProjectUpdatesModal({ project, onClose }: { project: any; onClose: () =
             return (
               <div key={c.id} className="flex gap-3">
                 <div className="flex-shrink-0">
-                  <Avatar name={`${c.user.firstName} ${c.user.lastName}`} avatar={c.user.avatar} size={8} />
+                  <UserAvatar user={c.user} size="md" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
@@ -111,7 +105,7 @@ function ProjectUpdatesModal({ project, onClose }: { project: any; onClose: () =
         <div className="px-6 py-4 border-t border-slate-200 bg-white flex-shrink-0">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 mt-0.5">
-              <Avatar name={`${user?.firstName} ${user?.lastName}`} size={8} />
+              <UserAvatar user={{ firstName: user?.firstName, lastName: user?.lastName, avatar: user?.avatar }} size="md" />
             </div>
             <div className="flex-1 bg-slate-50 rounded-2xl border border-slate-200 focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100 transition-all">
               <textarea
@@ -282,9 +276,7 @@ export default function PortfolioManagerPage() {
                     <div>
                       <div className="flex -space-x-1.5">
                         {(project.members || []).slice(0, 4).map((m: any) => (
-                          <div key={m.id} title={`${m.user.firstName} ${m.user.lastName}`}>
-                            <Avatar name={`${m.user.firstName} ${m.user.lastName}`} avatar={m.user.avatar} size={6} />
-                          </div>
+                          <UserAvatar key={m.id} user={m.user} size="xs" />
                         ))}
                         {(project.members?.length || 0) > 4 && (
                           <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600">+{project.members.length - 4}</div>
