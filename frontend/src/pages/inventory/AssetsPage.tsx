@@ -4,7 +4,6 @@ import { api } from '@/lib/api'
 import { Plus, Pencil, Trash2, Send, Package } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import clsx from 'clsx'
-import { format } from 'date-fns'
 
 const statusColors: Record<string, string> = {
   IN_STOCK: 'bg-green-100 text-green-700',
@@ -24,8 +23,33 @@ const statusLabels: Record<string, string> = {
   DECOMMISSIONED: 'Decommissioned',
 }
 
-const emptyAsset = { name: '', modelNumber: '', serialNumber: '', status: 'IN_STOCK', manufacturerId: '', companyId: '', purchaseDate: '', purchasePrice: '', warrantyExpiry: '', notes: '' }
+const emptyAsset = {
+  name: '',
+  modelNumber: '',
+  serialNumber: '',
+  status: 'IN_STOCK',
+  manufacturerId: '',
+  companyId: '',
+  purchaseDate: '',
+  purchasePrice: '',
+  warrantyExpiry: '',
+  notes: '',
+  assetTypeId: '',
+  vendorId: '',
+  assigneeType: '',
+  assigneeUserId: '',
+  assigneeContactId: '',
+}
+
 const emptyShipment = { recipientName: '', company: '', addressLine1: '', addressLine2: '', city: '', state: '', zip: '', country: 'UK', purpose: '', notes: '' }
+
+function assigneeLabel(a: any): string {
+  if (!a.assigneeType) return '—'
+  if (a.assigneeType === 'CUSTOMER_SITE') return 'Customer Site'
+  if (a.assigneeType === 'USER' && a.assigneeUser) return a.assigneeUser.name || a.assigneeUser.email
+  if (a.assigneeType === 'CONTACT' && a.assigneeContact) return `${a.assigneeContact.firstName || ''} ${a.assigneeContact.lastName || ''}`.trim()
+  return '—'
+}
 
 export default function AssetsPage() {
   const qc = useQueryClient()
@@ -40,9 +64,29 @@ export default function AssetsPage() {
   const { data: assets = [] } = useQuery({ queryKey: ['assets', statusFilter], queryFn: () => api.get('/inventory/assets', { params: statusFilter ? { status: statusFilter } : {} }).then(r => r.data) })
   const { data: manufacturers = [] } = useQuery({ queryKey: ['manufacturers'], queryFn: () => api.get('/inventory/manufacturers').then(r => r.data) })
   const { data: companies = [] } = useQuery({ queryKey: ['companies'], queryFn: () => api.get('/companies').then(r => r.data) })
+  const { data: assetTypes = [] } = useQuery({ queryKey: ['asset-types'], queryFn: () => api.get('/inventory/asset-types').then(r => r.data) })
+  const { data: vendors = [] } = useQuery({ queryKey: ['vendors'], queryFn: () => api.get('/inventory/vendors').then(r => r.data) })
+  const { data: internalUsers = [] } = useQuery({ queryKey: ['users', 'INTERNAL'], queryFn: () => api.get('/users', { params: { type: 'INTERNAL' } }).then(r => r.data) })
+  const { data: contacts = [] } = useQuery({
+    queryKey: ['contacts'],
+    queryFn: () => api.get('/contacts').then(r => r.data),
+    enabled: assetForm.assigneeType === 'CONTACT',
+  })
 
   const saveMutation = useMutation({
-    mutationFn: (data: any) => editAsset ? api.patch(`/inventory/assets/${editAsset.id}`, data) : api.post('/inventory/assets', data),
+    mutationFn: (data: any) => {
+      const payload = {
+        ...data,
+        assetTypeId: data.assetTypeId || null,
+        vendorId: data.vendorId || null,
+        manufacturerId: data.manufacturerId || null,
+        companyId: data.companyId || null,
+        assigneeType: data.assigneeType || null,
+        assigneeUserId: data.assigneeType === 'USER' ? (data.assigneeUserId || null) : null,
+        assigneeContactId: data.assigneeType === 'CONTACT' ? (data.assigneeContactId || null) : null,
+      }
+      return editAsset ? api.patch(`/inventory/assets/${editAsset.id}`, payload) : api.post('/inventory/assets', payload)
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['assets'] }); setShowAssetModal(false) },
   })
 
@@ -57,10 +101,29 @@ export default function AssetsPage() {
   })
 
   function openCreate() { setEditAsset(null); setAssetForm({ ...emptyAsset }); setShowAssetModal(true) }
-  function openEdit(a: any) { setEditAsset(a); setAssetForm({ ...a, manufacturerId: a.manufacturerId || '', companyId: a.companyId || '', purchaseDate: a.purchaseDate ? a.purchaseDate.slice(0, 10) : '', warrantyExpiry: a.warrantyExpiry ? a.warrantyExpiry.slice(0, 10) : '' }); setShowAssetModal(true) }
+  function openEdit(a: any) {
+    setEditAsset(a)
+    setAssetForm({
+      ...emptyAsset,
+      ...a,
+      manufacturerId: a.manufacturerId || '',
+      companyId: a.companyId || '',
+      purchaseDate: a.purchaseDate ? a.purchaseDate.slice(0, 10) : '',
+      warrantyExpiry: a.warrantyExpiry ? a.warrantyExpiry.slice(0, 10) : '',
+      assetTypeId: a.assetTypeId || '',
+      vendorId: a.vendorId || '',
+      assigneeType: a.assigneeType || '',
+      assigneeUserId: a.assigneeUserId || '',
+      assigneeContactId: a.assigneeContactId || '',
+    })
+    setShowAssetModal(true)
+  }
   function openShip(a: any) { setShipAsset(a); setShowShipModal(true) }
 
   const statusCounts = assets.reduce((acc: any, a: any) => { acc[a.status] = (acc[a.status] || 0) + 1; return acc }, {})
+
+  const setField = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    setAssetForm((f: any) => ({ ...f, [field]: e.target.value }))
 
   return (
     <div className="space-y-5">
@@ -92,10 +155,11 @@ export default function AssetsPage() {
             <tr>
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Asset #</th>
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Name</th>
+              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Type</th>
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Manufacturer</th>
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Model</th>
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Serial</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Assigned To</th>
+              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Assignee</th>
               <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Status</th>
               <th className="py-3 px-4 w-24"></th>
             </tr>
@@ -112,10 +176,11 @@ export default function AssetsPage() {
                     <span className="text-sm font-medium text-slate-800">{a.name}</span>
                   </div>
                 </td>
+                <td className="py-3 px-4 text-sm text-slate-600">{a.assetType?.name || '—'}</td>
                 <td className="py-3 px-4 text-sm text-slate-600">{a.manufacturer?.name || '—'}</td>
                 <td className="py-3 px-4 text-sm text-slate-600">{a.modelNumber || '—'}</td>
                 <td className="py-3 px-4 text-xs font-mono text-slate-500">{a.serialNumber || '—'}</td>
-                <td className="py-3 px-4 text-sm text-slate-600">{a.company?.name || '—'}</td>
+                <td className="py-3 px-4 text-sm text-slate-600">{assigneeLabel(a)}</td>
                 <td className="py-3 px-4">
                   <span className={clsx('badge text-xs', statusColors[a.status])}>{statusLabels[a.status]}</span>
                 </td>
@@ -137,7 +202,7 @@ export default function AssetsPage() {
               </tr>
             ))}
             {assets.length === 0 && (
-              <tr><td colSpan={8} className="text-center py-12 text-sm text-slate-400">No assets found</td></tr>
+              <tr><td colSpan={9} className="text-center py-12 text-sm text-slate-400">No assets found</td></tr>
             )}
           </tbody>
         </table>
@@ -148,51 +213,97 @@ export default function AssetsPage() {
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2">
             <label className="label">Asset Name *</label>
-            <input className="input" value={assetForm.name} onChange={e => setAssetForm((f: any) => ({ ...f, name: e.target.value }))} placeholder="e.g. MacBook Pro 14-inch" />
+            <input className="input" value={assetForm.name} onChange={setField('name')} placeholder="e.g. MacBook Pro 14-inch" />
+          </div>
+          <div>
+            <label className="label">Asset Type</label>
+            <select className="input" value={assetForm.assetTypeId} onChange={setField('assetTypeId')}>
+              <option value="">Select type</option>
+              {assetTypes.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
           </div>
           <div>
             <label className="label">Manufacturer</label>
-            <select className="input" value={assetForm.manufacturerId} onChange={e => setAssetForm((f: any) => ({ ...f, manufacturerId: e.target.value }))}>
+            <select className="input" value={assetForm.manufacturerId} onChange={setField('manufacturerId')}>
               <option value="">Select manufacturer</option>
               {manufacturers.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           </div>
           <div>
+            <label className="label">Vendor</label>
+            <select className="input" value={assetForm.vendorId} onChange={setField('vendorId')}>
+              <option value="">Select vendor</option>
+              {vendors.map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}
+            </select>
+          </div>
+          <div>
             <label className="label">Model Number</label>
-            <input className="input" value={assetForm.modelNumber} onChange={e => setAssetForm((f: any) => ({ ...f, modelNumber: e.target.value }))} />
+            <input className="input" value={assetForm.modelNumber} onChange={setField('modelNumber')} />
           </div>
           <div>
             <label className="label">Serial Number</label>
-            <input className="input" value={assetForm.serialNumber} onChange={e => setAssetForm((f: any) => ({ ...f, serialNumber: e.target.value }))} />
+            <input className="input" value={assetForm.serialNumber} onChange={setField('serialNumber')} />
           </div>
           <div>
             <label className="label">Status</label>
-            <select className="input" value={assetForm.status} onChange={e => setAssetForm((f: any) => ({ ...f, status: e.target.value }))}>
+            <select className="input" value={assetForm.status} onChange={setField('status')}>
               {Object.entries(statusLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <div>
             <label className="label">Assigned Client</label>
-            <select className="input" value={assetForm.companyId} onChange={e => setAssetForm((f: any) => ({ ...f, companyId: e.target.value }))}>
+            <select className="input" value={assetForm.companyId} onChange={setField('companyId')}>
               <option value="">Unassigned</option>
               {companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
+          {/* Assignee type */}
+          <div className={assetForm.assigneeType && assetForm.assigneeType !== 'CUSTOMER_SITE' ? '' : 'col-span-2'}>
+            <label className="label">Assignee Type</label>
+            <select className="input" value={assetForm.assigneeType} onChange={e => setAssetForm((f: any) => ({ ...f, assigneeType: e.target.value, assigneeUserId: '', assigneeContactId: '' }))}>
+              <option value="">None</option>
+              <option value="USER">MSP Staff</option>
+              <option value="CONTACT">Customer Contact</option>
+              <option value="CUSTOMER_SITE">Customer Site</option>
+            </select>
+          </div>
+          {assetForm.assigneeType === 'USER' && (
+            <div>
+              <label className="label">Staff Member</label>
+              <select className="input" value={assetForm.assigneeUserId} onChange={setField('assigneeUserId')}>
+                <option value="">Select user</option>
+                {internalUsers.map((u: any) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
+              </select>
+            </div>
+          )}
+          {assetForm.assigneeType === 'CONTACT' && (
+            <div>
+              <label className="label">Contact</label>
+              <select className="input" value={assetForm.assigneeContactId} onChange={setField('assigneeContactId')}>
+                <option value="">Select contact</option>
+                {contacts.map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {[c.firstName, c.lastName].filter(Boolean).join(' ') || c.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="label">Purchase Date</label>
-            <input className="input" type="date" value={assetForm.purchaseDate} onChange={e => setAssetForm((f: any) => ({ ...f, purchaseDate: e.target.value }))} />
+            <input className="input" type="date" value={assetForm.purchaseDate} onChange={setField('purchaseDate')} />
           </div>
           <div>
             <label className="label">Purchase Price (£)</label>
-            <input className="input" type="number" step="0.01" value={assetForm.purchasePrice} onChange={e => setAssetForm((f: any) => ({ ...f, purchasePrice: e.target.value }))} />
+            <input className="input" type="number" step="0.01" value={assetForm.purchasePrice} onChange={setField('purchasePrice')} />
           </div>
           <div>
             <label className="label">Warranty Expiry</label>
-            <input className="input" type="date" value={assetForm.warrantyExpiry} onChange={e => setAssetForm((f: any) => ({ ...f, warrantyExpiry: e.target.value }))} />
+            <input className="input" type="date" value={assetForm.warrantyExpiry} onChange={setField('warrantyExpiry')} />
           </div>
           <div className="col-span-2">
             <label className="label">Notes</label>
-            <textarea className="input resize-none" rows={2} value={assetForm.notes} onChange={e => setAssetForm((f: any) => ({ ...f, notes: e.target.value }))} />
+            <textarea className="input resize-none" rows={2} value={assetForm.notes} onChange={setField('notes')} />
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-5">

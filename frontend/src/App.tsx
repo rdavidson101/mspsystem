@@ -22,6 +22,10 @@ import MacrosPage from '@/pages/MacrosPage'
 import MyTicketsPage from '@/pages/MyTicketsPage'
 import TriagePage from '@/pages/TriagePage'
 import AssetsPage from '@/pages/inventory/AssetsPage'
+import AssetTypesPage from '@/pages/inventory/AssetTypesPage'
+import ManufacturersPage from '@/pages/inventory/ManufacturersPage'
+import VendorsPage from '@/pages/inventory/VendorsPage'
+import LicensesPage from '@/pages/inventory/LicensesPage'
 import ShipmentsPage from '@/pages/inventory/ShipmentsPage'
 import ProfilePage from '@/pages/ProfilePage'
 import AdminLayout from '@/pages/admin/AdminLayout'
@@ -78,6 +82,10 @@ export default function App() {
           <Route path="my-tickets" element={<MyTicketsPage />} />
           <Route path="triage" element={<TriagePage />} />
           <Route path="inventory/assets" element={<AssetsPage />} />
+          <Route path="inventory/asset-types" element={<AssetTypesPage />} />
+          <Route path="inventory/manufacturers" element={<ManufacturersPage />} />
+          <Route path="inventory/vendors" element={<VendorsPage />} />
+          <Route path="inventory/licenses" element={<LicensesPage />} />
           <Route path="inventory/shipments" element={<ShipmentsPage />} />
           <Route path="changes" element={<ChangesPage />} />
           <Route path="changes/new" element={<ChangeFormPage />} />

@@ -2,7 +2,8 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Users, TrendingUp, Receipt, FileText,
   FolderKanban, Ticket, Clock,
-  ChevronDown, Building2, Shield, Package, GitMerge
+  ChevronDown, Building2, Shield, Package, GitMerge,
+  Tag, Factory, ShoppingBag, Key, Send
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
@@ -48,6 +49,10 @@ const allNav: NavItemDef[] = [
   {
     label: 'Inventory', icon: Package, children: [
       { label: 'Assets', href: '/inventory/assets' },
+      { label: 'Asset Types', href: '/inventory/asset-types' },
+      { label: 'Manufacturers', href: '/inventory/manufacturers' },
+      { label: 'Vendors', href: '/inventory/vendors' },
+      { label: 'Licenses', href: '/inventory/licenses' },
       { label: 'Shipments', href: '/inventory/shipments' },
     ]
   },

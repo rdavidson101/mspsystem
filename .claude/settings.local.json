@@ -121,7 +121,15 @@
       "Bash(sed -n '303,315p' \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\")",
       "Bash(sed -n '366,380p' \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\")",
       "Bash(sed -n '695,710p' \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\")",
-      "Bash(ls \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\frontend\\\\src\\\\lib\"\" 2>/dev/null || echo \"lib dir does not exist \")"
+      "Bash(ls \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\frontend\\\\src\\\\lib\"\" 2>/dev/null || echo \"lib dir does not exist \")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose exec -T backend npx prisma db push --accept-data-loss 2>&1 | tail -6\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose exec -T backend npx prisma db push --accept-data-loss 2>&1 | head -20\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker volume prune -f 2>&1 && docker image prune -f 2>&1 && docker builder prune -f 2>&1 && df -h / 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose up -d 2>&1 | tail -8 && sleep 5 && docker compose exec -T backend npx prisma db push --accept-data-loss 2>&1 | tail -8\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker compose logs backend --tail=10 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose logs backend --tail=10 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose logs backend --tail=20 2>&1\")",
+      "Bash(ls \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\frontend\\\\src\\\\pages\\\\inventory\"\" 2>/dev/null || ls \"C:UsersRyanDocumentsMSP Systemfrontendsrcpages\"\")"
     ]
   }
 }
