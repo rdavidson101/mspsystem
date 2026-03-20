@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Plus, Pencil, Trash2, Send, Package } from 'lucide-react'
+import { Plus, Edit2, Trash2, Send, Package } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import clsx from 'clsx'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+
+const PAGE_SIZE = 10
 
 const statusColors: Record<string, string> = {
   IN_STOCK: 'bg-green-100 text-green-700',
@@ -55,6 +57,7 @@ function assigneeLabel(a: any): string {
 export default function AssetsPage() {
   const qc = useQueryClient()
   const [statusFilter, setStatusFilter] = useState('')
+  const [page, setPage] = useState(0)
   const [showAssetModal, setShowAssetModal] = useState(false)
   const [showShipModal, setShowShipModal] = useState(false)
   const [editAsset, setEditAsset] = useState<any>(null)
@@ -122,6 +125,8 @@ export default function AssetsPage() {
   function openShip(a: any) { setShipAsset(a); setShowShipModal(true) }
 
   const statusCounts = assets.reduce((acc: any, a: any) => { acc[a.status] = (acc[a.status] || 0) + 1; return acc }, {})
+  const totalPages = Math.ceil(assets.length / PAGE_SIZE)
+  const pagedAssets = assets.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   const setField = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setAssetForm((f: any) => ({ ...f, [field]: e.target.value }))
@@ -131,7 +136,7 @@ export default function AssetsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Assets</h1>
-          <p className="text-sm text-slate-500">{assets.length} total assets</p>
+          <p className="text-sm text-slate-500 mt-0.5">{assets.length} asset{assets.length !== 1 ? 's' : ''}</p>
         </div>
         <button onClick={openCreate} className="btn-primary flex items-center gap-2 text-sm">
           <Plus size={16} /> Add Asset
@@ -151,23 +156,23 @@ export default function AssetsPage() {
       </div>
 
       <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Asset #</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Name</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Type</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Manufacturer</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Model</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Serial</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Assignee</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500">Status</th>
-              <th className="py-3 px-4 w-24"></th>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50">
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Asset #</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Name</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Type</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Manufacturer</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Model</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Serial</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Assignee</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Status</th>
+              <th className="px-4 py-3 w-24"></th>
             </tr>
           </thead>
-          <tbody>
-            {assets.map((a: any) => (
-              <tr key={a.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+          <tbody className="divide-y divide-slate-100">
+            {pagedAssets.map((a: any) => (
+              <tr key={a.id} className="hover:bg-slate-50 transition-colors">
                 <td className="py-3 px-4 font-mono text-xs font-semibold text-primary-600">{a.ref}</td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
@@ -188,14 +193,14 @@ export default function AssetsPage() {
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-1 justify-end">
                     {(a.status === 'IN_STOCK' || a.status === 'DEPLOYED') && (
-                      <button onClick={() => openShip(a)} className="p-1.5 hover:bg-amber-50 rounded text-slate-400 hover:text-amber-500" title="Send for shipping">
+                      <button onClick={() => openShip(a)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Send for shipping">
                         <Send size={14} />
                       </button>
                     )}
-                    <button onClick={() => openEdit(a)} className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600">
-                      <Pencil size={14} />
+                    <button onClick={() => openEdit(a)} className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
+                      <Edit2 size={14} />
                     </button>
-                    <button onClick={() => deleteMutation.mutate(a.id)} className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-500">
+                    <button onClick={() => { if (confirm('Delete this asset?')) deleteMutation.mutate(a.id) }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -203,10 +208,23 @@ export default function AssetsPage() {
               </tr>
             ))}
             {assets.length === 0 && (
-              <tr><td colSpan={9} className="text-center py-12 text-sm text-slate-400">No assets found</td></tr>
+              <tr>
+                <td colSpan={9} className="px-4 py-16 text-center text-sm text-slate-400">No assets yet</td>
+              </tr>
             )}
           </tbody>
         </table>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+            <span className="text-xs text-slate-500">
+              Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, assets.length)} of {assets.length}
+            </span>
+            <div className="flex gap-1">
+              <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="px-3 py-1 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50">Previous</button>
+              <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="px-3 py-1 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50">Next</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Asset Modal */}
@@ -321,10 +339,10 @@ export default function AssetsPage() {
             <textarea className="input resize-none" rows={2} value={assetForm.notes} onChange={setField('notes')} />
           </div>
         </div>
-        <div className="flex justify-end gap-3 mt-5">
-          <button onClick={() => setShowAssetModal(false)} className="btn-secondary text-sm">Cancel</button>
-          <button onClick={() => saveMutation.mutate(assetForm)} disabled={!assetForm.name || saveMutation.isPending} className="btn-primary text-sm disabled:opacity-50">
-            {saveMutation.isPending ? 'Saving…' : 'Save Asset'}
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" onClick={() => setShowAssetModal(false)} className="btn-secondary">Cancel</button>
+          <button onClick={() => saveMutation.mutate(assetForm)} disabled={!assetForm.name || saveMutation.isPending} className="btn-primary disabled:opacity-50">
+            {saveMutation.isPending ? 'Saving…' : editAsset ? 'Save Changes' : 'Add Asset'}
           </button>
         </div>
       </Modal>
@@ -377,12 +395,12 @@ export default function AssetsPage() {
             <textarea className="input resize-none" rows={2} value={shipForm.notes} onChange={e => setShipForm((f: any) => ({ ...f, notes: e.target.value }))} />
           </div>
         </div>
-        <div className="flex justify-end gap-3 mt-5">
-          <button onClick={() => setShowShipModal(false)} className="btn-secondary text-sm">Cancel</button>
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" onClick={() => setShowShipModal(false)} className="btn-secondary">Cancel</button>
           <button
             onClick={() => shipMutation.mutate(shipForm)}
             disabled={!shipForm.recipientName || !shipForm.addressLine1 || !shipForm.city || !shipForm.purpose || shipMutation.isPending}
-            className="btn-primary text-sm flex items-center gap-2 disabled:opacity-50"
+            className="btn-primary flex items-center gap-2 disabled:opacity-50"
           >
             <Send size={14} /> {shipMutation.isPending ? 'Creating…' : 'Create Shipment Request'}
           </button>

@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Plus, Pencil, Trash2, Tag } from 'lucide-react'
+import { Plus, Edit2, Trash2, Tag } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+
+const PAGE_SIZE = 10
 
 export default function AssetTypesPage() {
   const qc = useQueryClient()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState({ name: '', description: '' })
+  const [page, setPage] = useState(0)
 
   const { data: types = [] } = useQuery({ queryKey: ['asset-types'], queryFn: () => api.get('/inventory/asset-types').then(r => r.data) })
 
@@ -25,34 +28,39 @@ export default function AssetTypesPage() {
   function openEdit(t: any) { setEditing(t); setForm({ name: t.name, description: t.description || '' }); setShowModal(true) }
   function closeModal() { setShowModal(false); setEditing(null) }
 
+  const totalPages = Math.ceil(types.length / PAGE_SIZE)
+  const pagedTypes = types.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Asset Types</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Define categories for your assets</p>
+          <p className="text-sm text-slate-500 mt-0.5">{types.length} type{types.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={openAdd} className="btn-primary flex items-center gap-2 text-sm">
+        <button onClick={openAdd} className="btn-primary flex items-center gap-2">
           <Plus size={16} /> Add Type
         </button>
       </div>
 
       <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Name</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Description</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Assets</th>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50">
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Name</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Description</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Assets</th>
               <th className="w-20" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {types.length === 0 && (
-              <tr><td colSpan={4} className="text-center py-12 text-slate-400 text-sm">No asset types yet</td></tr>
+              <tr>
+                <td colSpan={4} className="px-4 py-16 text-center text-sm text-slate-400">No asset types yet</td>
+              </tr>
             )}
-            {types.map((t: any) => (
-              <tr key={t.id} className="hover:bg-slate-50">
+            {pagedTypes.map((t: any) => (
+              <tr key={t.id} className="hover:bg-slate-50 transition-colors">
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 bg-primary-100 rounded-lg flex items-center justify-center">
@@ -65,14 +73,25 @@ export default function AssetTypesPage() {
                 <td className="py-3 px-4 text-sm text-slate-600">{t._count?.assets ?? 0}</td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-1 justify-end">
-                    <button onClick={() => openEdit(t)} className="p-1.5 hover:bg-primary-50 hover:text-primary-600 rounded text-slate-400 transition-colors"><Pencil size={14} /></button>
-                    <button onClick={() => { if (confirm('Delete this asset type?')) deleteMutation.mutate(t.id) }} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-slate-400 transition-colors"><Trash2 size={14} /></button>
+                    <button onClick={() => openEdit(t)} className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"><Edit2 size={14} /></button>
+                    <button onClick={() => { if (confirm('Delete this asset type?')) deleteMutation.mutate(t.id) }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+            <span className="text-xs text-slate-500">
+              Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, types.length)} of {types.length}
+            </span>
+            <div className="flex gap-1">
+              <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="px-3 py-1 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50">Previous</button>
+              <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="px-3 py-1 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50">Next</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Modal open={showModal} onClose={closeModal} title={editing ? 'Edit Asset Type' : 'Add Asset Type'}>
@@ -85,9 +104,11 @@ export default function AssetTypesPage() {
             <label className="label">Description</label>
             <textarea className="input" rows={2} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={closeModal} className="btn-secondary text-sm">Cancel</button>
-            <button type="submit" className="btn-primary text-sm">Save</button>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={closeModal} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={saveMutation.isPending} className="btn-primary disabled:opacity-50">
+              {saveMutation.isPending ? 'Saving…' : editing ? 'Save Changes' : 'Add Type'}
+            </button>
           </div>
         </form>
       </Modal>

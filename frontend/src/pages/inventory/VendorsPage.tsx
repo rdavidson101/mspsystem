@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Plus, Pencil, Trash2, ShoppingBag } from 'lucide-react'
+import { Plus, Edit2, Trash2, ShoppingBag } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+
+const PAGE_SIZE = 10
 
 const emptyForm = { name: '', contactName: '', email: '', phone: '', website: '', notes: '', isActive: true }
 
@@ -11,6 +13,7 @@ export default function VendorsPage() {
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState<any>(emptyForm)
+  const [page, setPage] = useState(0)
 
   const { data: vendors = [] } = useQuery({
     queryKey: ['vendors'],
@@ -46,37 +49,42 @@ export default function VendorsPage() {
   }
   function closeModal() { setShowModal(false); setEditing(null) }
 
+  const totalPages = Math.ceil(vendors.length / PAGE_SIZE)
+  const pagedVendors = vendors.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Vendors</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Manage your suppliers and vendors</p>
+          <p className="text-sm text-slate-500 mt-0.5">{vendors.length} vendor{vendors.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={openAdd} className="btn-primary flex items-center gap-2 text-sm">
+        <button onClick={openAdd} className="btn-primary flex items-center gap-2">
           <Plus size={16} /> Add Vendor
         </button>
       </div>
 
       <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Name</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Contact</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Email</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Phone</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Assets</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Licenses</th>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50">
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Name</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Contact</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Email</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Phone</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Assets</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Licenses</th>
               <th className="w-20" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {vendors.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-12 text-slate-400 text-sm">No vendors yet</td></tr>
+              <tr>
+                <td colSpan={7} className="px-4 py-16 text-center text-sm text-slate-400">No vendors yet</td>
+              </tr>
             )}
-            {vendors.map((v: any) => (
-              <tr key={v.id} className="hover:bg-slate-50">
+            {pagedVendors.map((v: any) => (
+              <tr key={v.id} className="hover:bg-slate-50 transition-colors">
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 bg-primary-100 rounded-lg flex items-center justify-center">
@@ -85,7 +93,7 @@ export default function VendorsPage() {
                     <div>
                       <span className="font-medium text-slate-900 text-sm">{v.name}</span>
                       {!v.isActive && (
-                        <span className="ml-2 text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Inactive</span>
+                        <span className="ml-2 badge text-xs bg-slate-100 text-slate-600">Inactive</span>
                       )}
                     </div>
                   </div>
@@ -97,10 +105,10 @@ export default function VendorsPage() {
                 <td className="py-3 px-4 text-sm text-slate-600">{v._count?.licenses ?? 0}</td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-1 justify-end">
-                    <button onClick={() => openEdit(v)} className="p-1.5 hover:bg-primary-50 hover:text-primary-600 rounded text-slate-400 transition-colors"><Pencil size={14} /></button>
+                    <button onClick={() => openEdit(v)} className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"><Edit2 size={14} /></button>
                     <button
                       onClick={() => { if (confirm('Delete this vendor?')) deleteMutation.mutate(v.id) }}
-                      className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-slate-400 transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -110,6 +118,17 @@ export default function VendorsPage() {
             ))}
           </tbody>
         </table>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+            <span className="text-xs text-slate-500">
+              Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, vendors.length)} of {vendors.length}
+            </span>
+            <div className="flex gap-1">
+              <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="px-3 py-1 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50">Previous</button>
+              <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="px-3 py-1 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50">Next</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Modal open={showModal} onClose={closeModal} title={editing ? 'Edit Vendor' : 'Add Vendor'} size="lg">
@@ -150,10 +169,10 @@ export default function VendorsPage() {
             />
             <label htmlFor="vendor-active" className="text-sm text-slate-700">Active</label>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={closeModal} className="btn-secondary text-sm">Cancel</button>
-            <button type="submit" disabled={saveMutation.isPending} className="btn-primary text-sm disabled:opacity-50">
-              {saveMutation.isPending ? 'Saving…' : 'Save'}
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={closeModal} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={saveMutation.isPending} className="btn-primary disabled:opacity-50">
+              {saveMutation.isPending ? 'Saving…' : editing ? 'Save Changes' : 'Add Vendor'}
             </button>
           </div>
         </form>

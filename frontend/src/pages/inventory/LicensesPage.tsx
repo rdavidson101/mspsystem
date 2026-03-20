@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Plus, Pencil, Trash2, Key } from 'lucide-react'
+import { Plus, Edit2, Trash2, Key } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+
+const PAGE_SIZE = 10
 import clsx from 'clsx'
 import { format, isAfter, isBefore, addDays } from 'date-fns'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
@@ -62,6 +64,7 @@ export default function LicensesPage() {
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState<any>(emptyForm)
+  const [page, setPage] = useState(0)
 
   const { data: licenses = [] } = useQuery({
     queryKey: ['licenses'],
@@ -124,37 +127,42 @@ export default function LicensesPage() {
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((f: any) => ({ ...f, [field]: e.target.value }))
 
+  const totalPages = Math.ceil(licenses.length / PAGE_SIZE)
+  const pagedLicenses = licenses.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Licenses</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Track software licenses and subscriptions</p>
+          <p className="text-sm text-slate-500 mt-0.5">{licenses.length} license{licenses.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={openAdd} className="btn-primary flex items-center gap-2 text-sm">
+        <button onClick={openAdd} className="btn-primary flex items-center gap-2">
           <Plus size={16} /> Add License
         </button>
       </div>
 
       <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Name</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Vendor</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Customer</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Seats</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Expires</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase tracking-wide">Cost</th>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50">
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Name</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Vendor</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Customer</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Seats</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Expires</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-600">Cost</th>
               <th className="w-20" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {licenses.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-12 text-slate-400 text-sm">No licenses yet</td></tr>
+              <tr>
+                <td colSpan={7} className="px-4 py-16 text-center text-sm text-slate-400">No licenses yet</td>
+              </tr>
             )}
-            {licenses.map((l: any) => (
-              <tr key={l.id} className={clsx('hover:bg-opacity-80 transition-colors', expiryClass(l.expiresAt) || 'hover:bg-slate-50')}>
+            {pagedLicenses.map((l: any) => (
+              <tr key={l.id} className={clsx('transition-colors', expiryClass(l.expiresAt) || 'hover:bg-slate-50')}>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -180,10 +188,10 @@ export default function LicensesPage() {
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-1 justify-end">
-                    <button onClick={() => openEdit(l)} className="p-1.5 hover:bg-primary-50 hover:text-primary-600 rounded text-slate-400 transition-colors"><Pencil size={14} /></button>
+                    <button onClick={() => openEdit(l)} className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"><Edit2 size={14} /></button>
                     <button
                       onClick={() => { if (confirm('Delete this license?')) deleteMutation.mutate(l.id) }}
-                      className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded text-slate-400 transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -193,6 +201,17 @@ export default function LicensesPage() {
             ))}
           </tbody>
         </table>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+            <span className="text-xs text-slate-500">
+              Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, licenses.length)} of {licenses.length}
+            </span>
+            <div className="flex gap-1">
+              <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="px-3 py-1 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50">Previous</button>
+              <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)} className="px-3 py-1 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50">Next</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Modal open={showModal} onClose={closeModal} title={editing ? 'Edit License' : 'Add License'} size="lg">
@@ -253,10 +272,10 @@ export default function LicensesPage() {
             <label className="label">Notes</label>
             <textarea className="input" rows={2} value={form.notes} onChange={set('notes')} />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={closeModal} className="btn-secondary text-sm">Cancel</button>
-            <button type="submit" disabled={saveMutation.isPending} className="btn-primary text-sm disabled:opacity-50">
-              {saveMutation.isPending ? 'Saving…' : 'Save'}
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={closeModal} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={saveMutation.isPending} className="btn-primary disabled:opacity-50">
+              {saveMutation.isPending ? 'Saving…' : editing ? 'Save Changes' : 'Add License'}
             </button>
           </div>
         </form>
