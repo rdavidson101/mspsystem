@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Bell, Ticket, CheckCheck, X, Trash2, AtSign, GitPullRequest } from 'lucide-react'
+import { Bell, Ticket, X, Trash2, AtSign, GitPullRequest } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import clsx from 'clsx'
@@ -39,11 +39,6 @@ export default function NotificationBell() {
     refetchInterval: open ? 10000 : false,
   })
 
-  const markReadMutation = useMutation({
-    mutationFn: (id: string) => api.patch(`/notifications/${id}/read`),
-    onSuccess: () => invalidateAll(qc),
-  })
-
   const markAllMutation = useMutation({
     mutationFn: () => api.patch('/notifications/read-all'),
     onSuccess: () => invalidateAll(qc),
@@ -59,6 +54,7 @@ export default function NotificationBell() {
     onSuccess: () => invalidateAll(qc),
   })
 
+  // Close on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -67,9 +63,13 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  // Mark all as read the moment the panel opens
   useEffect(() => {
-    if (open) qc.invalidateQueries({ queryKey: ['notifications', 'count'] })
-  }, [open, qc])
+    if (open) {
+      if ((countData?.count || 0) > 0) markAllMutation.mutate()
+      qc.invalidateQueries({ queryKey: ['notifications', 'count'] })
+    }
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const unread = countData?.count || 0
   const hasRead = notifications.some((n: any) => n.read)
@@ -94,27 +94,12 @@ export default function NotificationBell() {
 
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-slate-900 text-sm">Notifications</h3>
-              {unread > 0 && (
-                <span className="bg-red-100 text-red-600 text-[11px] font-bold px-2 py-0.5 rounded-full">{unread} unread</span>
-              )}
-            </div>
+            <h3 className="font-semibold text-slate-900 text-sm">Notifications</h3>
             <div className="flex items-center gap-1">
-              {unread > 0 && (
-                <button
-                  onClick={() => markAllMutation.mutate()}
-                  title="Mark all as read"
-                  className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 font-medium px-2 py-1 rounded hover:bg-primary-50 transition-colors"
-                >
-                  <CheckCheck size={13} />
-                  Mark all read
-                </button>
-              )}
               {hasRead && (
                 <button
                   onClick={() => clearReadMutation.mutate()}
-                  title="Clear read notifications"
+                  title="Clear all notifications"
                   className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                 >
                   <Trash2 size={13} />
@@ -144,10 +129,9 @@ export default function NotificationBell() {
                 <div
                   key={n.id}
                   className={clsx(
-                    'group relative flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors cursor-default',
+                    'group relative flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors',
                     !n.read && 'bg-blue-50/40'
                   )}
-                  onClick={() => { if (!n.read) markReadMutation.mutate(n.id) }}
                 >
                   {/* Unread indicator strip */}
                   {!n.read && (
@@ -168,7 +152,7 @@ export default function NotificationBell() {
                       {n.link && (
                         <Link
                           to={n.link}
-                          onClick={(e) => { e.stopPropagation(); if (!n.read) markReadMutation.mutate(n.id); setOpen(false) }}
+                          onClick={() => setOpen(false)}
                           className="text-xs text-primary-600 hover:text-primary-700 font-medium hover:underline"
                         >
                           View →
@@ -177,7 +161,7 @@ export default function NotificationBell() {
                     </div>
                   </div>
 
-                  {/* Delete — appears on hover */}
+                  {/* Dismiss — appears on hover */}
                   <button
                     onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(n.id) }}
                     title="Dismiss"
