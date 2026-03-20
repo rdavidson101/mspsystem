@@ -1,10 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { ticketRef } from '@/lib/refs'
 import { format } from 'date-fns'
-import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Building2, AlertCircle, History, MessageSquare, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Building2, AlertCircle, History, MessageSquare, AlertTriangle, AtSign } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuthStore } from '@/store/authStore'
 import UserAvatar from '@/components/ui/UserAvatar'
@@ -98,23 +98,31 @@ function HistoryEntry({ entry }: { entry: any }) {
   )
 }
 
-function renderWithMentions(content: string) {
-  // Match @FirstName LastName or @SingleWord patterns
-  const regex = /@([A-Za-z'-]+(?:\s+[A-Za-z'-]+)?)/g
-  const parts: React.ReactNode[] = []
-  let lastIndex = 0
-  let match: RegExpExecArray | null
-  while ((match = regex.exec(content)) !== null) {
-    if (match.index > lastIndex) parts.push(content.slice(lastIndex, match.index))
-    parts.push(
-      <span key={match.index} className="inline-flex items-center text-primary-700 font-medium bg-primary-50 px-1 rounded">
-        @{match[1]}
-      </span>
-    )
-    lastIndex = regex.lastIndex
+function detectMention(value: string, cursor: number): { start: number; search: string } | null {
+  const before = value.slice(0, cursor)
+  for (let i = cursor - 1; i >= 0; i--) {
+    const ch = before[i]
+    if (ch === '\n' || ch === ' ') return null
+    if (ch === '@') {
+      const prev = before[i - 1]
+      if (i === 0 || /\s/.test(prev)) return { start: i, search: before.slice(i + 1) }
+      return null
+    }
   }
-  if (lastIndex < content.length) parts.push(content.slice(lastIndex))
-  return parts.length > 1 ? parts : content
+  return null
+}
+
+function renderWithMentions(raw: string) {
+  const parts: React.ReactNode[] = []
+  const re = /@([A-Za-z]+(?:\s[A-Za-z]+)?)/g
+  let last = 0; let m: RegExpExecArray | null
+  while ((m = re.exec(raw)) !== null) {
+    if (m.index > last) parts.push(<span key={last}>{raw.slice(last, m.index)}</span>)
+    parts.push(<span key={m.index} className="text-primary-700 font-semibold bg-primary-50 px-0.5 rounded">{m[0]}</span>)
+    last = m.index + m[0].length
+  }
+  if (last < raw.length) parts.push(<span key={`t${last}`}>{raw.slice(last)}</span>)
+  return parts
 }
 
 function CommentBubble({ comment }: { comment: any }) {
@@ -152,10 +160,11 @@ export default function TicketDetailPage() {
   const [comment, setComment] = useState('')
   const [isInternal, setIsInternal] = useState(false)
   const [activeTab, setActiveTab] = useState<'updates' | 'history'>('updates')
-  const [mentionSearch, setMentionSearch] = useState('')
-  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
+  const [mention, setMention] = useState<{ start: number; search: string; top: number; left: number; width: number } | null>(null)
+  const [mentionedIds, setMentionedIds] = useState<Set<string>>(new Set())
   const [showMacroPicker, setShowMacroPicker] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const mentionPickerRef = useRef<HTMLDivElement>(null)
   const [triageForm, setTriageForm] = useState<{ priority: string; categoryId: string; assignedToId: string }>({
     priority: '',
     categoryId: '',
@@ -177,7 +186,7 @@ export default function TicketDetailPage() {
   })
   const commentMutation = useMutation({
     mutationFn: (data: any) => api.post(`/tickets/${id}/comments`, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ticket', id] }); setComment(''); setMentionedUserIds([]) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ticket', id] }); setComment(''); setMentionedIds(new Set()) },
   })
 
   function insertMacro(macro: any) {
@@ -187,33 +196,44 @@ export default function TicketDetailPage() {
     setTimeout(() => textareaRef.current?.focus(), 50)
   }
 
+  // Close mention picker on outside click
+  useEffect(() => {
+    if (!mention) return
+    function handler(e: MouseEvent) {
+      if (mentionPickerRef.current && !mentionPickerRef.current.contains(e.target as Node)) setMention(null)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [mention])
+
   function handleCommentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const val = e.target.value
     setComment(val)
-    const words = val.split(/\s/)
-    const lastWord = words[words.length - 1]
-    if (lastWord.startsWith('@') && lastWord.length > 1) {
-      setMentionSearch(lastWord.slice(1).toLowerCase())
+    const cursor = e.target.selectionStart ?? val.length
+    const detected = detectMention(val, cursor)
+    if (detected && textareaRef.current) {
+      const rect = textareaRef.current.getBoundingClientRect()
+      setMention({ ...detected, top: rect.top, left: rect.left, width: rect.width })
     } else {
-      setMentionSearch('')
+      setMention(null)
     }
   }
 
-  function insertMention(u: any) {
-    const words = comment.split(/\s/)
-    words[words.length - 1] = `@${u.firstName} ${u.lastName} `
-    setComment(words.join(' '))
-    if (!mentionedUserIds.includes(u.id)) {
-      setMentionedUserIds(ids => [...ids, u.id])
-    }
-    setMentionSearch('')
-    setTimeout(() => textareaRef.current?.focus(), 50)
+  function selectMention(u: any) {
+    if (!mention) return
+    const displayName = `${u.firstName} ${u.lastName}`
+    const before = comment.slice(0, mention.start)
+    const after = comment.slice(mention.start + 1 + mention.search.length)
+    setComment(`${before}@${displayName} ${after}`)
+    setMentionedIds(ids => new Set([...ids, u.id]))
+    setMention(null)
+    setTimeout(() => textareaRef.current?.focus(), 0)
   }
 
-  const filteredMentions = mentionSearch
+  const filteredMentions = mention
     ? (internalUsers as any[]).filter((u: any) =>
-        `${u.firstName} ${u.lastName}`.toLowerCase().includes(mentionSearch)
-      ).slice(0, 6)
+        `${u.firstName} ${u.lastName}`.toLowerCase().includes(mention.search.toLowerCase())
+      ).slice(0, 5)
     : []
 
   if (!ticket) return (
@@ -396,21 +416,36 @@ export default function TicketDetailPage() {
                   </div>
                 )}
                 <div className="relative">
-                  {mentionSearch && filteredMentions.length > 0 && (
-                    <div
-                      onMouseDown={e => e.preventDefault()}
-                      className="absolute bottom-full mb-1 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-20 overflow-hidden max-h-48 overflow-y-auto"
-                    >
-                      {filteredMentions.map((u: any) => (
-                        <button key={u.id} type="button" onClick={() => insertMention(u)}
-                          className="flex items-center gap-2 w-full px-3 py-2 hover:bg-slate-50 text-left">
-                          <UserAvatar user={u} size="xs" showHoverCard={false} />
-                          <span className="text-sm text-slate-800">{u.firstName} {u.lastName}</span>
-                          {u.jobTitle && <span className="text-xs text-slate-400">{u.jobTitle}</span>}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {mention && filteredMentions.length > 0 && (() => {
+                    const pickerH = Math.min(filteredMentions.length, 5) * 52 + 40
+                    const spaceAbove = mention.top
+                    const top = spaceAbove > pickerH + 8 ? mention.top - pickerH - 8 : mention.top + 8
+                    return (
+                      <div
+                        ref={mentionPickerRef}
+                        style={{ position: 'fixed', top, left: mention.left, width: mention.width, zIndex: 9999 }}
+                        className="bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
+                      >
+                        <div className="px-3 py-1.5 border-b border-slate-100 flex items-center gap-1.5 bg-slate-50">
+                          <AtSign size={11} className="text-primary-500" />
+                          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Mention a team member</span>
+                        </div>
+                        {filteredMentions.map((u: any) => (
+                          <button
+                            key={u.id}
+                            onMouseDown={e => { e.preventDefault(); selectMention(u) }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-primary-50 transition-colors text-left"
+                          >
+                            <UserAvatar user={u} size="sm" showHoverCard={false} />
+                            <div>
+                              <p className="text-sm font-medium text-slate-800">{u.firstName} {u.lastName}</p>
+                              <p className="text-xs text-slate-400">{u.jobTitle || u.role}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )
+                  })()}
                   <textarea
                     ref={textareaRef}
                     value={comment}
@@ -476,7 +511,7 @@ export default function TicketDetailPage() {
                   </div>
 
                   <button
-                    onClick={() => commentMutation.mutate({ content: comment, isInternal, mentionedUserIds })}
+                    onClick={() => commentMutation.mutate({ content: comment, isInternal, mentionedUserIds: [...mentionedIds] })}
                     disabled={!comment.trim() || commentMutation.isPending}
                     className={clsx(
                       'flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50',
