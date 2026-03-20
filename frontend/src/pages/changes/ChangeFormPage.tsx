@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { changeRef } from '@/lib/refs'
 import { ArrowLeft, Save, Send } from 'lucide-react'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 // Defined OUTSIDE the component so they are stable references across renders
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -110,10 +111,13 @@ export default function ChangeFormPage() {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Customer">
-            <select className="input" value={form.companyId} onChange={f('companyId')}>
-              <option value="">Select customer</option>
-              {companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <SearchableSelect
+              value={form.companyId}
+              onChange={val => setForm((prev: any) => ({ ...prev, companyId: val }))}
+              options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
+              placeholder="Select customer"
+              emptyLabel="None"
+            />
           </Field>
           <Field label="Scope of Change" required>
             <input className="input" value={form.scope} onChange={f('scope')} placeholder="What systems/services are affected?" />
@@ -145,10 +149,13 @@ export default function ChangeFormPage() {
       <Section title="Approvers">
         <div className="grid grid-cols-2 gap-4">
           <Field label="Internal Change Approver" required>
-            <select className="input" value={form.internalApproverId} onChange={f('internalApproverId')}>
-              <option value="">Select approver</option>
-              {approvers.map((u: any) => <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>)}
-            </select>
+            <SearchableSelect
+              value={form.internalApproverId}
+              onChange={val => setForm((prev: any) => ({ ...prev, internalApproverId: val }))}
+              options={approvers.map((u: any) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
+              placeholder="Select approver"
+              emptyLabel="None"
+            />
             {approvers.length === 0 && (
               <p className="text-xs text-amber-600 mt-1">No approvers configured. Set change approval rights in Administration → User Management.</p>
             )}

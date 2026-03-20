@@ -5,6 +5,7 @@ import { Plus, FileText } from 'lucide-react'
 import clsx from 'clsx'
 import { format } from 'date-fns'
 import Modal from '@/components/ui/Modal'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const statusColors: Record<string, string> = {
   DRAFT: 'bg-slate-100 text-slate-600',
@@ -92,7 +93,16 @@ export default function ContractsPage() {
           <div><label className="label">Contract Name</label><input className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></div>
           <div><label className="label">Description</label><textarea className="input h-16 resize-none" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="label">Company</label><select className="input" value={form.companyId} onChange={e => setForm(f => ({ ...f, companyId: e.target.value }))} required><option value="">Select company</option>{companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+            <div>
+              <label className="label">Company</label>
+              <SearchableSelect
+                value={form.companyId}
+                onChange={val => setForm(f => ({ ...f, companyId: val }))}
+                options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
+                placeholder="Select company"
+                emptyLabel="None"
+              />
+            </div>
             <div><label className="label">Value ($)</label><input type="number" className="input" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} required /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">

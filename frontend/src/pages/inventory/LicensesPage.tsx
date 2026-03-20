@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, Key } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import clsx from 'clsx'
 import { format, isAfter, isBefore, addDays } from 'date-fns'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const emptyForm = {
   name: '',
@@ -229,17 +230,23 @@ export default function LicensesPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Vendor</label>
-              <select className="input" value={form.vendorId} onChange={set('vendorId')}>
-                <option value="">None</option>
-                {vendors.map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}
-              </select>
+              <SearchableSelect
+                value={form.vendorId}
+                onChange={val => setForm((f: any) => ({ ...f, vendorId: val }))}
+                options={vendors.map((v: any) => ({ value: v.id, label: v.name }))}
+                placeholder="None"
+                emptyLabel="None"
+              />
             </div>
             <div>
               <label className="label">Customer</label>
-              <select className="input" value={form.companyId} onChange={set('companyId')}>
-                <option value="">None</option>
-                {companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <SearchableSelect
+                value={form.companyId}
+                onChange={val => setForm((f: any) => ({ ...f, companyId: val }))}
+                options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
+                placeholder="None"
+                emptyLabel="None"
+              />
             </div>
           </div>
           <div>

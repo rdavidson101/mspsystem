@@ -5,6 +5,7 @@ import { Tag, Clock, Plus, Pencil, Trash2, Users, X } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import clsx from 'clsx'
 import UserAvatar from '@/components/ui/UserAvatar'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const PRESET_COLORS = ['#3b82f6','#f97316','#8b5cf6','#06b6d4','#ef4444','#10b981','#f59e0b','#ec4899','#6366f1','#14b8a6']
 
@@ -339,12 +340,14 @@ function TeamsTab() {
 
             {addMemberTeamId === team.id ? (
               <div className="flex gap-2 mt-2">
-                <select value={memberUserId} onChange={e => setMemberUserId(e.target.value)} className="input text-sm flex-1">
-                  <option value="">Select user…</option>
-                  {(internalUsers as any[]).filter((u: any) => !team.members.some((m: any) => m.userId === u.id)).map((u: any) => (
-                    <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={memberUserId}
+                  onChange={val => setMemberUserId(val)}
+                  options={(internalUsers as any[]).filter((u: any) => !team.members.some((m: any) => m.userId === u.id)).map((u: any) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
+                  placeholder="Select user…"
+                  emptyLabel="None"
+                  className="flex-1"
+                />
                 <button disabled={!memberUserId} onClick={() => addMemberMutation.mutate({ teamId: team.id, userId: memberUserId })} className="btn-primary text-sm py-1.5 disabled:opacity-50">Add</button>
                 <button onClick={() => setAddMemberTeamId(null)} className="btn-secondary text-sm py-1.5">Cancel</button>
               </div>

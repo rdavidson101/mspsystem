@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { Plus, TrendingUp, DollarSign } from 'lucide-react'
 import clsx from 'clsx'
 import Modal from '@/components/ui/Modal'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const stages = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST']
 const stageColors: Record<string, string> = {
@@ -114,7 +115,16 @@ export default function LeadsPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">Source</label><input className="input" value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} placeholder="Website, Referral..." /></div>
-            <div><label className="label">Company</label><select className="input" value={form.companyId} onChange={e => setForm(f => ({ ...f, companyId: e.target.value }))}><option value="">None</option>{companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+            <div>
+              <label className="label">Company</label>
+              <SearchableSelect
+                value={form.companyId}
+                onChange={val => setForm(f => ({ ...f, companyId: val }))}
+                options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
+                placeholder="None"
+                emptyLabel="None"
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancel</button>

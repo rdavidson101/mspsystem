@@ -8,6 +8,7 @@ import clsx from 'clsx'
 import Modal from '@/components/ui/Modal'
 import { useAuthStore } from '@/store/authStore'
 import { format } from 'date-fns'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   PLANNING: { label: 'Planning', color: 'bg-slate-100 text-slate-600' },
@@ -244,10 +245,13 @@ export default function ProjectsPage() {
             </div>
             <div>
               <label className="label">Company</label>
-              <select className="input" value={form.companyId} onChange={e => setForm(f => ({ ...f, companyId: e.target.value }))}>
-                <option value="">None</option>
-                {companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <SearchableSelect
+                value={form.companyId}
+                onChange={val => setForm(f => ({ ...f, companyId: val }))}
+                options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
+                placeholder="None"
+                emptyLabel="None"
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

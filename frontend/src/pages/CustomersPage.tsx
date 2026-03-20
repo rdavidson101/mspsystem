@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import UserAvatar from '@/components/ui/UserAvatar'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const PAGE_SIZE = 9
 
@@ -83,29 +84,23 @@ function CustomerModal({ initial, onClose, onSave, title, users, teams }: {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5">Account Manager</label>
-              <select
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 bg-white"
+              <SearchableSelect
                 value={form.accountManagerId || ''}
-                onChange={f('accountManagerId')}
-              >
-                <option value="">None</option>
-                {users.map((u: any) => (
-                  <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
-                ))}
-              </select>
+                onChange={val => setForm(prev => ({ ...prev, accountManagerId: val }))}
+                options={users.map((u: any) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
+                placeholder="None"
+                emptyLabel="None"
+              />
             </div>
             <div>
               <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5">Service Team</label>
-              <select
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 bg-white"
+              <SearchableSelect
                 value={form.serviceTeamId || ''}
-                onChange={f('serviceTeamId')}
-              >
-                <option value="">None</option>
-                {teams.map((t: any) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
+                onChange={val => setForm(prev => ({ ...prev, serviceTeamId: val }))}
+                options={teams.map((t: any) => ({ value: t.id, label: t.name }))}
+                placeholder="None"
+                emptyLabel="None"
+              />
             </div>
           </div>
         </div>

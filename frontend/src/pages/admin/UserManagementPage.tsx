@@ -5,6 +5,7 @@ import { Plus, Pencil, UserX, CheckCircle2, RotateCcw } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import clsx from 'clsx'
 import UserAvatar from '@/components/ui/UserAvatar'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const roleColors: Record<string, string> = {
   ADMIN: 'bg-red-100 text-red-700',
@@ -242,10 +243,13 @@ export default function UserManagementPage() {
           {form.userType === 'CLIENT' && (
             <div>
               <label className="label">Company</label>
-              <select className="input" value={form.companyId || ''} onChange={e => setForm((f: any) => ({ ...f, companyId: e.target.value }))}>
-                <option value="">Select company</option>
-                {companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <SearchableSelect
+                value={form.companyId || ''}
+                onChange={val => setForm((f: any) => ({ ...f, companyId: val }))}
+                options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
+                placeholder="Select company"
+                emptyLabel="None"
+              />
             </div>
           )}
           <div className="flex justify-end gap-3 pt-2">

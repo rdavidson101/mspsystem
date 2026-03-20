@@ -8,6 +8,7 @@ import clsx from 'clsx'
 import { format } from 'date-fns'
 import Modal from '@/components/ui/Modal'
 import { useAuthStore } from '@/store/authStore'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const priorityColors: Record<string, string> = {
   LOW: 'bg-slate-100 text-slate-600',
@@ -273,26 +274,35 @@ export default function TicketsPage() {
             </div>
             <div>
               <label className="label">Category</label>
-              <select className="input" value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}>
-                <option value="">Select category</option>
-                {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <SearchableSelect
+                value={form.categoryId}
+                onChange={val => setForm(f => ({ ...f, categoryId: val }))}
+                options={categories.map((c: any) => ({ value: c.id, label: c.name }))}
+                placeholder="Select category"
+                emptyLabel="No category"
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Company</label>
-              <select className="input" value={form.companyId} onChange={e => setForm(f => ({ ...f, companyId: e.target.value }))}>
-                <option value="">None</option>
-                {companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <SearchableSelect
+                value={form.companyId}
+                onChange={val => setForm(f => ({ ...f, companyId: val }))}
+                options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
+                placeholder="None"
+                emptyLabel="None"
+              />
             </div>
             <div>
               <label className="label">Assign To</label>
-              <select className="input" value={form.assignedToId} onChange={e => setForm(f => ({ ...f, assignedToId: e.target.value }))}>
-                <option value="">Unassigned</option>
-                {users.map((u: any) => <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>)}
-              </select>
+              <SearchableSelect
+                value={form.assignedToId}
+                onChange={val => setForm(f => ({ ...f, assignedToId: val }))}
+                options={users.map((u: any) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
+                placeholder="Unassigned"
+                emptyLabel="Unassigned"
+              />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">

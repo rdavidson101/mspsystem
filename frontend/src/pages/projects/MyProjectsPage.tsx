@@ -8,6 +8,7 @@ import clsx from 'clsx'
 import { format } from 'date-fns'
 import Modal from '@/components/ui/Modal'
 import UserAvatar from '@/components/ui/UserAvatar'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const PROJECT_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
   PLANNING:    { label: 'Planning',    color: 'text-indigo-700', bg: 'bg-indigo-50',  dot: 'bg-indigo-500'  },
@@ -214,10 +215,13 @@ export default function MyProjectsPage() {
             </div>
             <div>
               <label className="label">Company</label>
-              <select className="input" value={form.companyId} onChange={e => setForm(f => ({ ...f, companyId: e.target.value }))}>
-                <option value="">None</option>
-                {companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <SearchableSelect
+                value={form.companyId}
+                onChange={val => setForm(f => ({ ...f, companyId: val }))}
+                options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
+                placeholder="None"
+                emptyLabel="None"
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

@@ -129,7 +129,9 @@
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"docker compose logs backend --tail=10 2>&1\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose logs backend --tail=10 2>&1\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose logs backend --tail=20 2>&1\")",
-      "Bash(ls \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\frontend\\\\src\\\\pages\\\\inventory\"\" 2>/dev/null || ls \"C:UsersRyanDocumentsMSP Systemfrontendsrcpages\"\")"
+      "Bash(ls \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\frontend\\\\src\\\\pages\\\\inventory\"\" 2>/dev/null || ls \"C:UsersRyanDocumentsMSP Systemfrontendsrcpages\"\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && sleep 5 && docker compose exec -T backend npx prisma db push --accept-data-loss 2>&1 | tail -5\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose logs backend --tail=5 2>&1\")"
     ]
   }
 }

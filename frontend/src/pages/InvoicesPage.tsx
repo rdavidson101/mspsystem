@@ -5,6 +5,7 @@ import { Plus, Receipt } from 'lucide-react'
 import clsx from 'clsx'
 import { format } from 'date-fns'
 import Modal from '@/components/ui/Modal'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const statusColors: Record<string, string> = {
   DRAFT: 'bg-slate-100 text-slate-600',
@@ -112,7 +113,16 @@ export default function InvoicesPage() {
       <Modal open={showModal} onClose={() => setShowModal(false)} title="New Invoice" size="lg">
         <form onSubmit={e => { e.preventDefault(); createMutation.mutate({ companyId: form.companyId, dueDate: form.dueDate, notes: form.notes, subtotal, tax: subtotal * tax / 100, total, items: form.items.map(i => ({ description: i.description, quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), total: Number(i.quantity) * Number(i.unitPrice) })) }) }} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="label">Company</label><select className="input" value={form.companyId} onChange={e => setForm(f => ({ ...f, companyId: e.target.value }))} required><option value="">Select company</option>{companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+            <div>
+              <label className="label">Company</label>
+              <SearchableSelect
+                value={form.companyId}
+                onChange={val => setForm(f => ({ ...f, companyId: val }))}
+                options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
+                placeholder="Select company"
+                emptyLabel="None"
+              />
+            </div>
             <div><label className="label">Due Date</label><input type="date" className="input" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} required /></div>
           </div>
           <div>

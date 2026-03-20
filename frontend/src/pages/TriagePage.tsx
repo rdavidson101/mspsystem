@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { AlertTriangle } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuthStore } from '@/store/authStore'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const priorityColors: Record<string, string> = {
   LOW: 'bg-slate-100 text-slate-600',
@@ -40,10 +41,14 @@ export default function TriagePage() {
           <p className="text-sm text-slate-500">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''} awaiting triage</p>
         </div>
         <div className="flex items-center gap-3">
-          <select value={teamFilter} onChange={e => setTeamFilter(e.target.value)} className="input text-sm w-auto">
-            <option value="">All Teams</option>
-            {(teams as any[]).map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
+          <SearchableSelect
+            value={teamFilter}
+            onChange={val => setTeamFilter(val)}
+            options={(teams as any[]).map((t: any) => ({ value: t.id, label: t.name }))}
+            placeholder="All Teams"
+            emptyLabel="All Teams"
+            className="w-48"
+          />
         </div>
       </div>
 

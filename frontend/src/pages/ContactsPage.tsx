@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { Plus, Search, Users, Mail, Phone } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 export default function ContactsPage() {
   const qc = useQueryClient()
@@ -92,10 +93,13 @@ export default function ContactsPage() {
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">Title</label><input className="input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. IT Manager" /></div>
             <div><label className="label">Company</label>
-              <select className="input" value={form.companyId} onChange={e => setForm(f => ({ ...f, companyId: e.target.value }))}>
-                <option value="">None</option>
-                {companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <SearchableSelect
+                value={form.companyId}
+                onChange={val => setForm(f => ({ ...f, companyId: val }))}
+                options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
+                placeholder="None"
+                emptyLabel="None"
+              />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">

@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { Search, X } from 'lucide-react'
 import { format } from 'date-fns'
 import clsx from 'clsx'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const priorityColors: Record<string, string> = {
   LOW: 'bg-slate-100 text-slate-600',
@@ -103,10 +104,13 @@ export default function TicketSearchPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5">Customer</label>
-            <select value={filters.companyId} onChange={f('companyId')} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-400">
-              <option value="">Any customer</option>
-              {companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <SearchableSelect
+              value={filters.companyId}
+              onChange={val => setFilters(prev => ({ ...prev, companyId: val }))}
+              options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
+              placeholder="Any customer"
+              emptyLabel="Any customer"
+            />
           </div>
           <div>
             <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5">Status</label>
@@ -122,17 +126,23 @@ export default function TicketSearchPage() {
           </div>
           <div>
             <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5">Reporter</label>
-            <select value={filters.createdById} onChange={f('createdById')} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-400">
-              <option value="">Any reporter</option>
-              {users.map((u: any) => <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>)}
-            </select>
+            <SearchableSelect
+              value={filters.createdById}
+              onChange={val => setFilters(prev => ({ ...prev, createdById: val }))}
+              options={users.map((u: any) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
+              placeholder="Any reporter"
+              emptyLabel="Any reporter"
+            />
           </div>
           <div>
             <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-1.5">Assigned To</label>
-            <select value={filters.assignedToId} onChange={f('assignedToId')} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary-400">
-              <option value="">Anyone</option>
-              {internalUsers.map((u: any) => <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>)}
-            </select>
+            <SearchableSelect
+              value={filters.assignedToId}
+              onChange={val => setFilters(prev => ({ ...prev, assignedToId: val }))}
+              options={internalUsers.map((u: any) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
+              placeholder="Anyone"
+              emptyLabel="Anyone"
+            />
           </div>
         </div>
 

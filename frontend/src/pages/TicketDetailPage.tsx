@@ -8,6 +8,7 @@ import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Buil
 import clsx from 'clsx'
 import { useAuthStore } from '@/store/authStore'
 import UserAvatar from '@/components/ui/UserAvatar'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const priorityColors: Record<string, string> = {
   LOW: 'bg-slate-100 text-slate-600',
@@ -257,25 +258,23 @@ export default function TicketDetailPage() {
             </div>
             <div>
               <label className="text-xs font-semibold text-violet-700 mb-1.5 block">Category</label>
-              <select
-                className="input text-sm bg-white"
+              <SearchableSelect
                 value={triageForm.categoryId || ticket.categoryId || ''}
-                onChange={e => setTriageForm(f => ({ ...f, categoryId: e.target.value }))}
-              >
-                <option value="">Select category</option>
-                {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+                onChange={val => setTriageForm(f => ({ ...f, categoryId: val }))}
+                options={categories.map((c: any) => ({ value: c.id, label: c.name }))}
+                placeholder="Select category"
+                emptyLabel="No category"
+              />
             </div>
             <div>
               <label className="text-xs font-semibold text-violet-700 mb-1.5 block">Assign To</label>
-              <select
-                className="input text-sm bg-white"
+              <SearchableSelect
                 value={triageForm.assignedToId || ticket.assignedToId || ''}
-                onChange={e => setTriageForm(f => ({ ...f, assignedToId: e.target.value }))}
-              >
-                <option value="">Unassigned</option>
-                {users.map((u: any) => <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>)}
-              </select>
+                onChange={val => setTriageForm(f => ({ ...f, assignedToId: val }))}
+                options={users.map((u: any) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
+                placeholder="Unassigned"
+                emptyLabel="Unassigned"
+              />
             </div>
           </div>
           <button
@@ -546,31 +545,25 @@ export default function TicketDetailPage() {
               <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-1.5">
                 <Tag size={12} /> Category
               </label>
-              <select
+              <SearchableSelect
                 value={ticket.categoryId || ''}
-                onChange={e => updateMutation.mutate({ categoryId: e.target.value || null })}
-                className="input text-sm"
-              >
-                <option value="">No category</option>
-                {categories.map((c: any) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                onChange={val => updateMutation.mutate({ categoryId: val || null })}
+                options={categories.map((c: any) => ({ value: c.id, label: c.name }))}
+                placeholder="No category"
+                emptyLabel="No category"
+              />
             </div>
 
             {/* Assigned To */}
             <div>
               <label className="text-xs font-medium text-slate-500 mb-1.5 block">Assigned To</label>
-              <select
+              <SearchableSelect
                 value={ticket.assignedToId || ''}
-                onChange={e => updateMutation.mutate({ assignedToId: e.target.value || null })}
-                className="input text-sm"
-              >
-                <option value="">Unassigned</option>
-                {users.map((u: any) => (
-                  <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
-                ))}
-              </select>
+                onChange={val => updateMutation.mutate({ assignedToId: val || null })}
+                options={users.map((u: any) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
+                placeholder="Unassigned"
+                emptyLabel="Unassigned"
+              />
             </div>
 
             {/* Company */}

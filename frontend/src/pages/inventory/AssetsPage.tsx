@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { Plus, Pencil, Trash2, Send, Package } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import clsx from 'clsx'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 const statusColors: Record<string, string> = {
   IN_STOCK: 'bg-green-100 text-green-700',
@@ -217,24 +218,33 @@ export default function AssetsPage() {
           </div>
           <div>
             <label className="label">Asset Type</label>
-            <select className="input" value={assetForm.assetTypeId} onChange={setField('assetTypeId')}>
-              <option value="">Select type</option>
-              {assetTypes.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            <SearchableSelect
+              value={assetForm.assetTypeId}
+              onChange={val => setAssetForm((f: any) => ({ ...f, assetTypeId: val }))}
+              options={assetTypes.map((t: any) => ({ value: t.id, label: t.name }))}
+              placeholder="Select type"
+              emptyLabel="None"
+            />
           </div>
           <div>
             <label className="label">Manufacturer</label>
-            <select className="input" value={assetForm.manufacturerId} onChange={setField('manufacturerId')}>
-              <option value="">Select manufacturer</option>
-              {manufacturers.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
+            <SearchableSelect
+              value={assetForm.manufacturerId}
+              onChange={val => setAssetForm((f: any) => ({ ...f, manufacturerId: val }))}
+              options={manufacturers.map((m: any) => ({ value: m.id, label: m.name }))}
+              placeholder="Select manufacturer"
+              emptyLabel="None"
+            />
           </div>
           <div>
             <label className="label">Vendor</label>
-            <select className="input" value={assetForm.vendorId} onChange={setField('vendorId')}>
-              <option value="">Select vendor</option>
-              {vendors.map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
+            <SearchableSelect
+              value={assetForm.vendorId}
+              onChange={val => setAssetForm((f: any) => ({ ...f, vendorId: val }))}
+              options={vendors.map((v: any) => ({ value: v.id, label: v.name }))}
+              placeholder="Select vendor"
+              emptyLabel="None"
+            />
           </div>
           <div>
             <label className="label">Model Number</label>
@@ -252,10 +262,13 @@ export default function AssetsPage() {
           </div>
           <div>
             <label className="label">Assigned Client</label>
-            <select className="input" value={assetForm.companyId} onChange={setField('companyId')}>
-              <option value="">Unassigned</option>
-              {companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <SearchableSelect
+              value={assetForm.companyId}
+              onChange={val => setAssetForm((f: any) => ({ ...f, companyId: val }))}
+              options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
+              placeholder="Unassigned"
+              emptyLabel="Unassigned"
+            />
           </div>
           {/* Assignee type */}
           <div className={assetForm.assigneeType && assetForm.assigneeType !== 'CUSTOMER_SITE' ? '' : 'col-span-2'}>
@@ -270,23 +283,25 @@ export default function AssetsPage() {
           {assetForm.assigneeType === 'USER' && (
             <div>
               <label className="label">Staff Member</label>
-              <select className="input" value={assetForm.assigneeUserId} onChange={setField('assigneeUserId')}>
-                <option value="">Select user</option>
-                {internalUsers.map((u: any) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
-              </select>
+              <SearchableSelect
+                value={assetForm.assigneeUserId}
+                onChange={val => setAssetForm((f: any) => ({ ...f, assigneeUserId: val }))}
+                options={internalUsers.map((u: any) => ({ value: u.id, label: u.name || u.email }))}
+                placeholder="Select user"
+                emptyLabel="None"
+              />
             </div>
           )}
           {assetForm.assigneeType === 'CONTACT' && (
             <div>
               <label className="label">Contact</label>
-              <select className="input" value={assetForm.assigneeContactId} onChange={setField('assigneeContactId')}>
-                <option value="">Select contact</option>
-                {contacts.map((c: any) => (
-                  <option key={c.id} value={c.id}>
-                    {[c.firstName, c.lastName].filter(Boolean).join(' ') || c.email}
-                  </option>
-                ))}
-              </select>
+              <SearchableSelect
+                value={assetForm.assigneeContactId}
+                onChange={val => setAssetForm((f: any) => ({ ...f, assigneeContactId: val }))}
+                options={contacts.map((c: any) => ({ value: c.id, label: [c.firstName, c.lastName].filter(Boolean).join(' ') || c.email }))}
+                placeholder="Select contact"
+                emptyLabel="None"
+              />
             </div>
           )}
           <div>
