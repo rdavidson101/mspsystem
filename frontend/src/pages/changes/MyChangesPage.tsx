@@ -1,10 +1,11 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { changeRef } from '@/lib/refs'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
-import { Plus, AlertTriangle } from 'lucide-react'
+import { Plus, AlertTriangle, Search } from 'lucide-react'
 import clsx from 'clsx'
 
 const statusColors: Record<string, string> = {
@@ -26,15 +27,40 @@ const riskColors: Record<string, string> = {
   CRITICAL: 'text-red-600',
 }
 
+const STATUS_OPTIONS = [
+  'DRAFT',
+  'SUBMITTED',
+  'INTERNAL_REVIEW',
+  'CUSTOMER_REVIEW',
+  'APPROVED',
+  'REJECTED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+]
+
+function toTitleCase(s: string) {
+  return s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+}
+
 export default function MyChangesPage() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [riskFilter, setRiskFilter] = useState('')
 
   const { data: changes = [] } = useQuery({
     queryKey: ['changes', 'my-changes', user?.id],
     queryFn: () => api.get('/changes', { params: { createdById: user?.id } }).then(r => r.data),
     enabled: !!user?.id,
   })
+
+  const filtered = (changes as any[]).filter(c =>
+    (!search || c.title.toLowerCase().includes(search.toLowerCase()) || changeRef(c.number).includes(search.toUpperCase())) &&
+    (!statusFilter || c.status === statusFilter) &&
+    (!riskFilter || c.risk === riskFilter)
+  )
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -46,6 +72,24 @@ export default function MyChangesPage() {
         <button onClick={() => navigate('/changes/new')} className="btn-primary flex items-center gap-2 text-sm">
           <Plus size={16} /> Raise RFC
         </button>
+      </div>
+
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" className="input pl-9 text-sm w-full" />
+        </div>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input text-sm w-auto">
+          <option value="">All statuses</option>
+          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{toTitleCase(s)}</option>)}
+        </select>
+        <select value={riskFilter} onChange={e => setRiskFilter(e.target.value)} className="input text-sm w-auto">
+          <option value="">All risks</option>
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="CRITICAL">Critical</option>
+        </select>
       </div>
 
       {changes.length === 0 ? (
@@ -69,7 +113,7 @@ export default function MyChangesPage() {
               </tr>
             </thead>
             <tbody>
-              {changes.map((c: any) => (
+              {filtered.map((c: any) => (
                 <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/50 cursor-pointer" onClick={() => navigate('/changes/' + changeRef(c.number))}>
                   <td className="py-3 px-4 font-mono text-xs font-bold text-primary-600">{c.ref}</td>
                   <td className="py-3 px-4 text-sm font-medium text-slate-800">{c.title}</td>

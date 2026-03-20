@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Plus, Receipt } from 'lucide-react'
+import { Plus, Receipt, Search } from 'lucide-react'
 import clsx from 'clsx'
 import { format } from 'date-fns'
 import Modal from '@/components/ui/Modal'
@@ -18,6 +18,7 @@ const statusColors: Record<string, string> = {
 export default function InvoicesPage() {
   const qc = useQueryClient()
   const [statusFilter, setStatusFilter] = useState('')
+  const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ companyId: '', dueDate: '', notes: '', tax: '0', items: [{ description: '', quantity: '1', unitPrice: '' }] })
 
@@ -48,6 +49,10 @@ export default function InvoicesPage() {
   const totalPaid = invoices.filter((i: any) => i.status === 'PAID').reduce((s: number, i: any) => s + i.total, 0)
   const totalPending = invoices.filter((i: any) => ['SENT', 'OVERDUE'].includes(i.status)).reduce((s: number, i: any) => s + i.total, 0)
 
+  const filteredInvoices = invoices.filter((invoice: any) =>
+    (!search || invoice.number.toString().includes(search) || invoice.company?.name?.toLowerCase().includes(search.toLowerCase()))
+  )
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -64,6 +69,13 @@ export default function InvoicesPage() {
         <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Total Paid</p><p className="text-2xl font-bold text-green-600">${totalPaid.toLocaleString()}</p></div>
         <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Pending</p><p className="text-2xl font-bold text-orange-500">${totalPending.toLocaleString()}</p></div>
         <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Overdue</p><p className="text-2xl font-bold text-red-500">{invoices.filter((i: any) => i.status === 'OVERDUE').length}</p></div>
+      </div>
+
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" className="input pl-9 text-sm w-full" />
+        </div>
       </div>
 
       <div className="flex gap-2">
@@ -87,7 +99,7 @@ export default function InvoicesPage() {
             </tr>
           </thead>
           <tbody>
-            {invoices.map((invoice: any) => (
+            {filteredInvoices.map((invoice: any) => (
               <tr key={invoice.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                 <td className="py-3 px-4 text-sm font-mono font-medium text-primary-600">{invoice.number}</td>
                 <td className="py-3 px-4 text-sm text-slate-700">{invoice.company?.name}</td>
@@ -105,7 +117,7 @@ export default function InvoicesPage() {
                 </td>
               </tr>
             ))}
-            {invoices.length === 0 && <tr><td colSpan={6} className="py-12 text-center text-slate-400"><Receipt size={32} className="mx-auto mb-2 opacity-30" />No invoices yet</td></tr>}
+            {filteredInvoices.length === 0 && <tr><td colSpan={6} className="py-12 text-center text-slate-400"><Receipt size={32} className="mx-auto mb-2 opacity-30" />{invoices.length === 0 ? 'No invoices yet' : 'No invoices match your search'}</td></tr>}
           </tbody>
         </table>
       </div>

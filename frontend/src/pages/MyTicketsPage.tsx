@@ -54,6 +54,7 @@ export default function MyTicketsPage() {
   const { user } = useAuthStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [priorityFilter, setPriorityFilter] = useState('')
 
   const { data: tickets = [] } = useQuery({
     queryKey: ['my-tickets', statusFilter, search],
@@ -66,6 +67,8 @@ export default function MyTicketsPage() {
     }).then(r => r.data),
     enabled: !!user?.id,
   })
+
+  const filteredTickets = tickets.filter((t: any) => !priorityFilter || t.priority === priorityFilter)
 
   const statusCounts: Record<string, number> = tickets.reduce((acc: any, t: any) => {
     acc[t.status] = (acc[t.status] || 0) + 1
@@ -106,15 +109,28 @@ export default function MyTicketsPage() {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 max-w-xs">
-        <Search size={15} className="text-slate-400" />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search tickets..."
-          className="text-sm outline-none flex-1 text-slate-700"
-        />
+      {/* Search + Priority filter */}
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search…"
+            className="input pl-9 text-sm w-full"
+          />
+        </div>
+        <select
+          value={priorityFilter}
+          onChange={e => setPriorityFilter(e.target.value)}
+          className="input text-sm max-w-[160px]"
+        >
+          <option value="">All priorities</option>
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="CRITICAL">Critical</option>
+        </select>
       </div>
 
       {/* Table */}
@@ -133,7 +149,7 @@ export default function MyTicketsPage() {
             </tr>
           </thead>
           <tbody>
-            {tickets.map((ticket: any) => (
+            {filteredTickets.map((ticket: any) => (
               <tr key={ticket.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                 <td className="py-3 px-4">
                   <Link to={`/tickets/${ticketRef(ticket.number)}`} className="text-xs font-mono font-semibold text-primary-600 hover:text-primary-700">
@@ -181,7 +197,7 @@ export default function MyTicketsPage() {
                 <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap">{format(new Date(ticket.createdAt), 'MMM d, yyyy')}</td>
               </tr>
             ))}
-            {tickets.length === 0 && (
+            {filteredTickets.length === 0 && (
               <tr><td colSpan={8} className="py-12 text-center text-slate-400">
                 <Ticket size={32} className="mx-auto mb-2 opacity-30" />
                 No tickets assigned to you

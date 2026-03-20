@@ -1,18 +1,26 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Plus, Zap, Pencil, Trash2, X } from 'lucide-react'
+import { Plus, Zap, Pencil, Trash2, X, Search } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 
 const VARIABLES = ['{{requester_name}}', '{{ticket_ref}}', '{{current_user}}', '{{company_name}}', '{{priority}}']
 
 export default function MacrosPage() {
   const qc = useQueryClient()
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState({ name: '', content: '', isGlobal: true })
 
-  const { data: macros = [] } = useQuery({ queryKey: ['macros'], queryFn: () => api.get('/macros').then(r => r.data) })
+  const { data: rawMacros = [] } = useQuery({ queryKey: ['macros'], queryFn: () => api.get('/macros').then(r => r.data) })
+
+  const macros = rawMacros.filter((m: any) => {
+    const matchesSearch = !search || m.name.toLowerCase().includes(search.toLowerCase()) || m.content.toLowerCase().includes(search.toLowerCase())
+    const matchesType = !typeFilter || (typeFilter === 'global' ? m.isGlobal : !m.isGlobal)
+    return matchesSearch && matchesType
+  })
 
   const createMutation = useMutation({
     mutationFn: (data: any) => editing ? api.put(`/macros/${editing.id}`, data) : api.post('/macros', data),
@@ -40,6 +48,23 @@ export default function MacrosPage() {
         <button onClick={openCreate} className="btn-primary flex items-center gap-2">
           <Plus size={16} /> New Macro
         </button>
+      </div>
+
+      {/* Search / filter */}
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" className="input pl-9 text-sm w-full" />
+        </div>
+        <select
+          value={typeFilter}
+          onChange={e => setTypeFilter(e.target.value)}
+          className="input text-sm max-w-[160px]"
+        >
+          <option value="">All types</option>
+          <option value="global">Global</option>
+          <option value="personal">Personal</option>
+        </select>
       </div>
 
       {/* Variable reference */}

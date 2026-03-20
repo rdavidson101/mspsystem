@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Plus, TrendingUp, DollarSign } from 'lucide-react'
+import { Plus, TrendingUp, DollarSign, Search } from 'lucide-react'
 import clsx from 'clsx'
 import Modal from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
@@ -20,6 +20,7 @@ const stageColors: Record<string, string> = {
 export default function LeadsPage() {
   const qc = useQueryClient()
   const [stageFilter, setStageFilter] = useState('')
+  const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ title: '', value: '', status: 'NEW', source: '', companyId: '' })
 
@@ -38,7 +39,10 @@ export default function LeadsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leads'] }),
   })
 
-  const filtered = stageFilter ? leads.filter((l: any) => l.status === stageFilter) : leads
+  const filtered = leads.filter((l: any) =>
+    (!stageFilter || l.status === stageFilter) &&
+    (!search || l.title?.toLowerCase().includes(search.toLowerCase()) || l.company?.name?.toLowerCase().includes(search.toLowerCase()))
+  )
   const totalValue = leads.filter((l: any) => l.status === 'WON').reduce((s: number, l: any) => s + (l.value || 0), 0)
   const pipelineValue = leads.filter((l: any) => !['WON', 'LOST'].includes(l.status)).reduce((s: number, l: any) => s + (l.value || 0), 0)
 
@@ -66,6 +70,13 @@ export default function LeadsPage() {
         <div className="card p-4">
           <p className="text-xs text-slate-500 mb-1">Active Leads</p>
           <p className="text-2xl font-bold text-primary-600">{leads.filter((l: any) => !['WON', 'LOST'].includes(l.status)).length}</p>
+        </div>
+      </div>
+
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" className="input pl-9 text-sm w-full" />
         </div>
       </div>
 

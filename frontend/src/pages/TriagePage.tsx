@@ -19,6 +19,7 @@ const priorityColors: Record<string, string> = {
 export default function TriagePage() {
   const { user } = useAuthStore()
   const [teamFilter, setTeamFilter] = useState<string>(() => '')
+  const [priorityFilter, setPriorityFilter] = useState('')
 
   const { data: teams = [] } = useQuery({ queryKey: ['teams'], queryFn: () => api.get('/teams').then(r => r.data) })
   const { data: myTeams = [] } = useQuery({ queryKey: ['my-teams'], queryFn: () => api.get('/auth/me/teams').then(r => r.data) })
@@ -33,6 +34,8 @@ export default function TriagePage() {
     refetchInterval: 30000,
   })
 
+  const filtered = (tickets as any[]).filter(t => !priorityFilter || t.priority === priorityFilter)
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -41,6 +44,13 @@ export default function TriagePage() {
           <p className="text-sm text-slate-500">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''} awaiting triage</p>
         </div>
         <div className="flex items-center gap-3">
+          <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} className="input text-sm w-auto">
+            <option value="">All priorities</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="CRITICAL">Critical</option>
+          </select>
           <SearchableSelect
             value={teamFilter}
             onChange={val => setTeamFilter(val)}
@@ -52,7 +62,7 @@ export default function TriagePage() {
         </div>
       </div>
 
-      {tickets.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="card p-16 flex flex-col items-center justify-center text-center">
           <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-4">
             <AlertTriangle size={24} className="text-green-600" />
@@ -75,7 +85,7 @@ export default function TriagePage() {
               </tr>
             </thead>
             <tbody>
-              {tickets.map((ticket: any) => (
+              {filtered.map((ticket: any) => (
                 <tr key={ticket.id} className="border-b border-slate-50 hover:bg-violet-50/40 transition-colors">
                   <td className="py-3 px-4">
                     <Link to={`/tickets/${ticketRef(ticket.number)}`} className="text-xs font-mono font-semibold text-primary-600 hover:text-primary-700">

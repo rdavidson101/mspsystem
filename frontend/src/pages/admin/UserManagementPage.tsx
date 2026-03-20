@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Plus, Pencil, UserX, CheckCircle2, RotateCcw } from 'lucide-react'
+import { Plus, Pencil, UserX, CheckCircle2, RotateCcw, Search } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import clsx from 'clsx'
 import UserAvatar from '@/components/ui/UserAvatar'
@@ -20,6 +20,8 @@ const emptyClient = { userType: 'CLIENT', firstName: '', lastName: '', email: ''
 export default function UserManagementPage() {
   const qc = useQueryClient()
   const [tab, setTab] = useState<'INTERNAL' | 'CLIENT'>('INTERNAL')
+  const [search, setSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editUser, setEditUser] = useState<any>(null)
   const [form, setForm] = useState<any>(emptyInternal)
@@ -27,7 +29,17 @@ export default function UserManagementPage() {
   const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: () => api.get('/users').then(r => r.data) })
   const { data: companies = [] } = useQuery({ queryKey: ['companies'], queryFn: () => api.get('/companies').then(r => r.data) })
 
-  const filtered = users.filter((u: any) => (u.userType || 'INTERNAL') === tab)
+  const filtered = users.filter((u: any) => {
+    if ((u.userType || 'INTERNAL') !== tab) return false
+    if (search) {
+      const q = search.toLowerCase()
+      const nameMatch = `${u.firstName} ${u.lastName}`.toLowerCase().includes(q)
+      const emailMatch = u.email?.toLowerCase().includes(q)
+      if (!nameMatch && !emailMatch) return false
+    }
+    if (tab === 'INTERNAL' && roleFilter && u.role !== roleFilter) return false
+    return true
+  })
 
   const saveMutation = useMutation({
     mutationFn: (data: any) => editUser
@@ -75,7 +87,7 @@ export default function UserManagementPage() {
         {(['INTERNAL', 'CLIENT'] as const).map(t => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => { setTab(t); setSearch(''); setRoleFilter('') }}
             className={clsx('px-4 py-1.5 rounded-md text-sm font-medium transition-colors',
               tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             )}
@@ -86,6 +98,21 @@ export default function UserManagementPage() {
             </span>
           </button>
         ))}
+      </div>
+
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" className="input pl-9 text-sm w-full" />
+        </div>
+        {tab === 'INTERNAL' && (
+          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="input text-sm w-auto">
+            <option value="">All roles</option>
+            <option value="ADMIN">Admin</option>
+            <option value="MANAGER">Manager</option>
+            <option value="TECHNICIAN">Technician</option>
+          </select>
+        )}
       </div>
 
       <div className="card overflow-hidden">

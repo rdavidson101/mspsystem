@@ -8,14 +8,23 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 export default function ContactsPage() {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
+  const [companyFilter, setCompanyFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', title: '', companyId: '' })
 
-  const { data: contacts = [] } = useQuery({
-    queryKey: ['contacts', search],
-    queryFn: () => api.get('/contacts', { params: { search: search || undefined } }).then(r => r.data),
+  const { data: rawContacts = [] } = useQuery({
+    queryKey: ['contacts'],
+    queryFn: () => api.get('/contacts').then(r => r.data),
   })
   const { data: companies = [] } = useQuery({ queryKey: ['companies'], queryFn: () => api.get('/companies').then(r => r.data) })
+
+  const uniqueCompanies = [...new Set(rawContacts.map((c: any) => c.company?.name).filter(Boolean))].sort() as string[]
+  const contacts = rawContacts.filter((c: any) => {
+    const fullName = `${c.firstName} ${c.lastName}`.toLowerCase()
+    const matchesSearch = !search || fullName.includes(search.toLowerCase()) || (c.email || '').toLowerCase().includes(search.toLowerCase())
+    const matchesCompany = !companyFilter || c.company?.name === companyFilter
+    return matchesSearch && matchesCompany
+  })
 
   const createMutation = useMutation({
     mutationFn: (data: any) => api.post('/contacts', data),
@@ -34,9 +43,21 @@ export default function ContactsPage() {
         </button>
       </div>
 
-      <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 max-w-sm">
-        <Search size={15} className="text-slate-400" />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search contacts..." className="text-sm outline-none flex-1" />
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" className="input pl-9 text-sm w-full" />
+        </div>
+        <select
+          value={companyFilter}
+          onChange={e => setCompanyFilter(e.target.value)}
+          className="input text-sm max-w-[200px]"
+        >
+          <option value="">All companies</option>
+          {uniqueCompanies.map(name => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
       </div>
 
       <div className="card overflow-hidden">

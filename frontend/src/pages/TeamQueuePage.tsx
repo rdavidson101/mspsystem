@@ -27,6 +27,7 @@ const PAGE_SIZE = 20
 export default function TeamQueuePage() {
   const { id } = useParams<{ id: string }>()
   const [statusFilter, setStatusFilter] = useState('active')
+  const [priorityFilter, setPriorityFilter] = useState('')
   const [page, setPage] = useState(0)
 
   const { data: team } = useQuery({
@@ -45,8 +46,9 @@ export default function TeamQueuePage() {
     refetchInterval: 30000,
   })
 
-  const totalPages = Math.ceil(tickets.length / PAGE_SIZE)
-  const paginated = tickets.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const filtered = (tickets as any[]).filter(t => !priorityFilter || t.priority === priorityFilter)
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -60,27 +62,36 @@ export default function TeamQueuePage() {
             {team?.members?.length || 0} members · {tickets.length} ticket{tickets.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {[
-            { key: 'active', label: 'Active' },
-            { key: '', label: 'All' },
-            { key: 'AWAITING_TRIAGE', label: 'Triage' },
-            { key: 'OPEN', label: 'Open' },
-            { key: 'IN_PROGRESS', label: 'In Progress' },
-            { key: 'RESOLVED', label: 'Resolved' },
-            { key: 'CLOSED', label: 'Closed' },
-          ].map(s => (
-            <button key={s.key} onClick={() => { setStatusFilter(s.key); setPage(0) }}
-              className={clsx('px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-                statusFilter === s.key ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-              )}>
-              {s.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-3 flex-wrap">
+          <select value={priorityFilter} onChange={e => { setPriorityFilter(e.target.value); setPage(0) }} className="input text-sm w-auto">
+            <option value="">All priorities</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="CRITICAL">Critical</option>
+          </select>
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { key: 'active', label: 'Active' },
+              { key: '', label: 'All' },
+              { key: 'AWAITING_TRIAGE', label: 'Triage' },
+              { key: 'OPEN', label: 'Open' },
+              { key: 'IN_PROGRESS', label: 'In Progress' },
+              { key: 'RESOLVED', label: 'Resolved' },
+              { key: 'CLOSED', label: 'Closed' },
+            ].map(s => (
+              <button key={s.key} onClick={() => { setStatusFilter(s.key); setPage(0) }}
+                className={clsx('px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                  statusFilter === s.key ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                )}>
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {tickets.length === 0 && !isFetching ? (
+      {filtered.length === 0 && !isFetching ? (
         <div className="card p-14 text-center text-slate-400">
           <Users size={36} className="mx-auto mb-2 opacity-20" />
           <p className="font-medium">No tickets in this queue</p>

@@ -4,7 +4,7 @@ import { changeRef } from '@/lib/refs'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
-import { CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, AlertTriangle, Search } from 'lucide-react'
 import clsx from 'clsx'
 import { useState } from 'react'
 
@@ -33,6 +33,8 @@ export default function MyApprovalsPage() {
   const qc = useQueryClient()
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [showAction, setShowAction] = useState<Record<string, 'approve' | 'reject' | null>>({})
+  const [search, setSearch] = useState('')
+  const [riskFilter, setRiskFilter] = useState('')
 
   const { data: changes = [] } = useQuery({
     queryKey: ['changes', 'my-approvals', user?.id],
@@ -46,8 +48,12 @@ export default function MyApprovalsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['changes', 'my-approvals'] }) },
   })
 
-  const pending = changes.filter((c: any) => c.status === 'SUBMITTED')
-  const completed = changes.filter((c: any) => c.status !== 'SUBMITTED')
+  const matchesFilter = (c: any) =>
+    (!search || c.title.toLowerCase().includes(search.toLowerCase()) || changeRef(c.number).includes(search.toUpperCase())) &&
+    (!riskFilter || c.risk === riskFilter)
+
+  const pending = changes.filter((c: any) => c.status === 'SUBMITTED' && matchesFilter(c))
+  const completed = changes.filter((c: any) => c.status !== 'SUBMITTED' && matchesFilter(c))
 
   const ChangeRow = ({ c }: { c: any }) => {
     const isPending = c.status === 'SUBMITTED'
@@ -143,6 +149,20 @@ export default function MyApprovalsPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">My Approvals</h1>
         <p className="text-sm text-slate-500">{pending.length} pending · {completed.length} completed</p>
+      </div>
+
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" className="input pl-9 text-sm w-full" />
+        </div>
+        <select value={riskFilter} onChange={e => setRiskFilter(e.target.value)} className="input text-sm w-auto">
+          <option value="">All risks</option>
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="CRITICAL">Critical</option>
+        </select>
       </div>
 
       {pending.length > 0 && (

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { changeRef } from '@/lib/refs'
-import { Plus, AlertTriangle } from 'lucide-react'
+import { Plus, AlertTriangle, Search } from 'lucide-react'
 import { format } from 'date-fns'
 import clsx from 'clsx'
 import { useNavigate } from 'react-router-dom'
@@ -41,6 +41,9 @@ const riskColors: Record<string, string> = {
 export default function ChangesPage() {
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('')
+  const [search, setSearch] = useState('')
+  const [riskFilter, setRiskFilter] = useState('')
+
   const { data: changes = [] } = useQuery({
     queryKey: ['changes', statusFilter],
     queryFn: () => api.get('/changes', { params: statusFilter ? { status: statusFilter } : {} }).then(r => r.data),
@@ -49,6 +52,11 @@ export default function ChangesPage() {
   const counts = changes.reduce((acc: any, c: any) => { acc[c.status] = (acc[c.status] || 0) + 1; return acc }, {})
   const activeStatuses = ['SUBMITTED', 'INTERNAL_REVIEW', 'CUSTOMER_REVIEW']
   const pendingApproval = changes.filter((c: any) => activeStatuses.includes(c.status)).length
+
+  const filtered = (changes as any[]).filter(c =>
+    (!search || c.title.toLowerCase().includes(search.toLowerCase()) || changeRef(c.number).includes(search.toUpperCase())) &&
+    (!riskFilter || c.risk === riskFilter)
+  )
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -74,6 +82,20 @@ export default function ChangesPage() {
         ))}
       </div>
 
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" className="input pl-9 text-sm w-full" />
+        </div>
+        <select value={riskFilter} onChange={e => setRiskFilter(e.target.value)} className="input text-sm w-auto">
+          <option value="">All risks</option>
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="CRITICAL">Critical</option>
+        </select>
+      </div>
+
       <div className="card overflow-hidden">
         <table className="w-full">
           <thead className="bg-slate-50 border-b border-slate-100">
@@ -88,7 +110,7 @@ export default function ChangesPage() {
             </tr>
           </thead>
           <tbody>
-            {changes.map((c: any) => (
+            {filtered.map((c: any) => (
               <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => navigate('/changes/' + changeRef(c.number))}>
                 <td className="py-3 px-4">
                   <span className="font-mono text-xs font-semibold text-primary-600">{c.ref}</span>
@@ -114,7 +136,7 @@ export default function ChangesPage() {
                 </td>
               </tr>
             ))}
-            {changes.length === 0 && (
+            {filtered.length === 0 && (
               <tr><td colSpan={7} className="text-center py-12 text-sm text-slate-400">No changes found</td></tr>
             )}
           </tbody>

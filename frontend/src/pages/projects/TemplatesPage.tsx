@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { projectRef } from '@/lib/refs'
 import { useNavigate } from 'react-router-dom'
-import { LayoutTemplate, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { LayoutTemplate, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import clsx from 'clsx'
 import { format } from 'date-fns'
 import Modal from '@/components/ui/Modal'
@@ -13,6 +13,7 @@ const PAGE_SIZE = 10
 export default function TemplatesPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
+  const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [useTemplateId, setUseTemplateId] = useState<string | null>(null)
   const [form, setForm] = useState({ name: '', description: '', status: 'PLANNING', companyId: '', startDate: '', endDate: '', budget: '' })
@@ -51,8 +52,9 @@ export default function TemplatesPage() {
     })
   }
 
-  const totalPages = Math.max(1, Math.ceil(templates.length / PAGE_SIZE))
-  const paged = templates.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const filtered = templates.filter((t: any) => !search || t.name.toLowerCase().includes(search.toLowerCase()))
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const selectedTemplate = templates.find((t: any) => t.id === useTemplateId)
 
   return (
@@ -60,7 +62,7 @@ export default function TemplatesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Templates</h1>
-          <p className="text-sm text-slate-500">{templates.length} template{templates.length !== 1 ? 's' : ''}</p>
+          <p className="text-sm text-slate-500">{filtered.length} template{filtered.length !== 1 ? 's' : ''}</p>
         </div>
       </div>
 
@@ -74,6 +76,13 @@ export default function TemplatesPage() {
         </div>
       ) : (
         <>
+          <div className="flex gap-3 flex-wrap items-center">
+            <div className="relative flex-1 max-w-xs">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Search…" className="input pl-9 text-sm w-full" />
+            </div>
+          </div>
+
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="grid grid-cols-[2fr_80px_80px_1fr_100px_120px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
               <div>Template</div>

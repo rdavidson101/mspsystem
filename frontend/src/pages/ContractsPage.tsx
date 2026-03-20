@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Plus, FileText } from 'lucide-react'
+import { Plus, FileText, Search } from 'lucide-react'
 import clsx from 'clsx'
 import { format } from 'date-fns'
 import Modal from '@/components/ui/Modal'
@@ -18,6 +18,9 @@ export default function ContractsPage() {
   const qc = useQueryClient()
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ name: '', description: '', status: 'DRAFT', companyId: '', value: '', startDate: '', endDate: '', billingCycle: 'Monthly' })
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [billingFilter, setBillingFilter] = useState('')
 
   const { data: contracts = [] } = useQuery({ queryKey: ['contracts'], queryFn: () => api.get('/contracts').then(r => r.data) })
   const { data: companies = [] } = useQuery({ queryKey: ['companies'], queryFn: () => api.get('/companies').then(r => r.data) })
@@ -32,6 +35,12 @@ export default function ContractsPage() {
   })
 
   const totalValue = contracts.filter((c: any) => c.status === 'ACTIVE').reduce((s: number, c: any) => s + c.value, 0)
+
+  const filteredContracts = contracts.filter((c: any) =>
+    (!search || c.name.toLowerCase().includes(search.toLowerCase()) || c.company?.name?.toLowerCase().includes(search.toLowerCase())) &&
+    (!statusFilter || c.status === statusFilter) &&
+    (!billingFilter || c.billingCycle === billingFilter)
+  )
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -51,6 +60,27 @@ export default function ContractsPage() {
         <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Expiring Soon</p><p className="text-2xl font-bold text-orange-500">{contracts.filter((c: any) => c.status === 'ACTIVE' && new Date(c.endDate) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).length}</p></div>
       </div>
 
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" className="input pl-9 text-sm w-full" />
+        </div>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input text-sm w-auto">
+          <option value="">All statuses</option>
+          <option value="DRAFT">Draft</option>
+          <option value="ACTIVE">Active</option>
+          <option value="EXPIRED">Expired</option>
+          <option value="CANCELLED">Cancelled</option>
+        </select>
+        <select value={billingFilter} onChange={e => setBillingFilter(e.target.value)} className="input text-sm w-auto">
+          <option value="">All billing cycles</option>
+          <option value="Monthly">Monthly</option>
+          <option value="Quarterly">Quarterly</option>
+          <option value="Annual">Annual</option>
+          <option value="One-time">One-time</option>
+        </select>
+      </div>
+
       <div className="card overflow-hidden">
         <table className="w-full">
           <thead className="bg-slate-50 border-b border-slate-100">
@@ -65,7 +95,7 @@ export default function ContractsPage() {
             </tr>
           </thead>
           <tbody>
-            {contracts.map((contract: any) => (
+            {filteredContracts.map((contract: any) => (
               <tr key={contract.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                 <td className="py-3 px-4"><p className="text-sm font-medium text-slate-800">{contract.name}</p><p className="text-xs text-slate-400">{contract.description}</p></td>
                 <td className="py-3 px-4 text-sm text-slate-600">{contract.company?.name}</td>
@@ -83,7 +113,7 @@ export default function ContractsPage() {
                 </td>
               </tr>
             ))}
-            {contracts.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-slate-400"><FileText size={32} className="mx-auto mb-2 opacity-30" />No contracts yet</td></tr>}
+            {filteredContracts.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-slate-400"><FileText size={32} className="mx-auto mb-2 opacity-30" />{contracts.length === 0 ? 'No contracts yet' : 'No contracts match your filters'}</td></tr>}
           </tbody>
         </table>
       </div>

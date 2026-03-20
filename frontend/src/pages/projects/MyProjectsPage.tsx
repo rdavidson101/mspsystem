@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { projectRef } from '@/lib/refs'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, FolderKanban, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, FolderKanban, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import clsx from 'clsx'
 import { format } from 'date-fns'
 import Modal from '@/components/ui/Modal'
@@ -24,6 +24,8 @@ export default function MyProjectsPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [form, setForm] = useState({ name: '', description: '', status: 'PLANNING', companyId: '', startDate: '', endDate: '', budget: '' })
@@ -68,8 +70,12 @@ export default function MyProjectsPage() {
     })
   }
 
-  const totalPages = Math.max(1, Math.ceil(projects.length / PAGE_SIZE))
-  const paged = projects.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const filtered = projects.filter((p: any) =>
+    (!search || p.name.toLowerCase().includes(search.toLowerCase())) &&
+    (!statusFilter || p.status === statusFilter)
+  )
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -84,17 +90,37 @@ export default function MyProjectsPage() {
         </button>
       </div>
 
+      {/* Filter bar */}
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Search…" className="input pl-9 text-sm w-full" />
+        </div>
+        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }} className="input text-sm w-auto">
+          <option value="">All Statuses</option>
+          <option value="PLANNING">Planning</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="ON_HOLD">On Hold</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="CANCELLED">Cancelled</option>
+        </select>
+      </div>
+
       {/* List */}
       {isLoading ? (
         <div className="text-center py-16 text-slate-400">Loading…</div>
-      ) : projects.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="card p-16 text-center text-slate-400">
           <FolderKanban size={48} className="mx-auto mb-3 opacity-20" />
-          <p className="font-medium">No projects assigned to you</p>
-          <p className="text-sm mt-1">Create a project or ask to be added to one</p>
-          <button onClick={() => setShowModal(true)} className="btn-primary mt-4 text-sm inline-flex items-center gap-2">
-            <Plus size={14} /> New Project
-          </button>
+          <p className="font-medium">{projects.length === 0 ? 'No projects assigned to you' : 'No projects match your filters'}</p>
+          {projects.length === 0 && (
+            <>
+              <p className="text-sm mt-1">Create a project or ask to be added to one</p>
+              <button onClick={() => setShowModal(true)} className="btn-primary mt-4 text-sm inline-flex items-center gap-2">
+                <Plus size={14} /> New Project
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -163,7 +189,7 @@ export default function MyProjectsPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-500">
-                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, projects.length)} of {projects.length}
+                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
               </span>
               <div className="flex items-center gap-2">
                 <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Plus, Edit2, Trash2, Key } from 'lucide-react'
+import { Plus, Edit2, Trash2, Key, Search } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 
 const PAGE_SIZE = 10
@@ -65,6 +65,9 @@ export default function LicensesPage() {
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState<any>(emptyForm)
   const [page, setPage] = useState(0)
+  const [search, setSearch] = useState('')
+  const [vendorFilter, setVendorFilter] = useState('')
+  const [expiryFilter, setExpiryFilter] = useState('')
 
   const { data: licenses = [] } = useQuery({
     queryKey: ['licenses'],
@@ -127,8 +130,19 @@ export default function LicensesPage() {
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((f: any) => ({ ...f, [field]: e.target.value }))
 
-  const totalPages = Math.ceil(licenses.length / PAGE_SIZE)
-  const pagedLicenses = licenses.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const vendorOptions = [...new Set(licenses.map((l: any) => l.vendor?.name).filter(Boolean))].sort() as string[]
+  const now = new Date()
+  const soon = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+  const filtered = licenses.filter((l: any) => {
+    if (search && !l.name.toLowerCase().includes(search.toLowerCase()) && !(l.vendor?.name || '').toLowerCase().includes(search.toLowerCase())) return false
+    if (vendorFilter && l.vendor?.name !== vendorFilter) return false
+    if (expiryFilter === 'expired' && !(l.expiresAt && new Date(l.expiresAt) < now)) return false
+    if (expiryFilter === 'soon' && !(l.expiresAt && new Date(l.expiresAt) >= now && new Date(l.expiresAt) <= soon)) return false
+    if (expiryFilter === 'active' && !(!l.expiresAt || new Date(l.expiresAt) > soon)) return false
+    return true
+  })
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const pagedLicenses = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -140,6 +154,26 @@ export default function LicensesPage() {
         <button onClick={openAdd} className="btn-primary flex items-center gap-2">
           <Plus size={16} /> Add License
         </button>
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(0) }} placeholder="Search…" className="input pl-9 text-sm w-full" />
+        </div>
+        <select value={vendorFilter} onChange={e => { setVendorFilter(e.target.value); setPage(0) }} className="input text-sm w-auto">
+          <option value="">All Vendors</option>
+          {vendorOptions.map(name => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+        <select value={expiryFilter} onChange={e => { setExpiryFilter(e.target.value); setPage(0) }} className="input text-sm w-auto">
+          <option value="">All Expiry</option>
+          <option value="expired">Expired</option>
+          <option value="soon">Expiring Soon</option>
+          <option value="active">Active</option>
+        </select>
       </div>
 
       <div className="card overflow-hidden">
@@ -156,9 +190,11 @@ export default function LicensesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {licenses.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-16 text-center text-sm text-slate-400">No licenses yet</td>
+                <td colSpan={7} className="px-4 py-16 text-center text-sm text-slate-400">
+                  {licenses.length === 0 ? 'No licenses yet' : 'No licenses match your filters'}
+                </td>
               </tr>
             )}
             {pagedLicenses.map((l: any) => (
@@ -204,7 +240,7 @@ export default function LicensesPage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
             <span className="text-xs text-slate-500">
-              Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, licenses.length)} of {licenses.length}
+              Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
             </span>
             <div className="flex gap-1">
               <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="px-3 py-1 text-sm border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-50">Previous</button>
