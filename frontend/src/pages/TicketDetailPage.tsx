@@ -98,6 +98,25 @@ function HistoryEntry({ entry }: { entry: any }) {
   )
 }
 
+function renderWithMentions(content: string) {
+  // Match @FirstName LastName or @SingleWord patterns
+  const regex = /@([A-Za-z'-]+(?:\s+[A-Za-z'-]+)?)/g
+  const parts: React.ReactNode[] = []
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(content)) !== null) {
+    if (match.index > lastIndex) parts.push(content.slice(lastIndex, match.index))
+    parts.push(
+      <span key={match.index} className="inline-flex items-center text-primary-700 font-medium bg-primary-50 px-1 rounded">
+        @{match[1]}
+      </span>
+    )
+    lastIndex = regex.lastIndex
+  }
+  if (lastIndex < content.length) parts.push(content.slice(lastIndex))
+  return parts.length > 1 ? parts : content
+}
+
 function CommentBubble({ comment }: { comment: any }) {
   return (
     <div className={clsx(
@@ -119,7 +138,7 @@ function CommentBubble({ comment }: { comment: any }) {
         <span className="text-xs text-slate-400 ml-auto">{format(new Date(comment.createdAt), 'MMM d, yyyy h:mm a')}</span>
       </div>
       <p className={clsx('text-sm whitespace-pre-wrap', comment.isInternal ? 'text-orange-800' : 'text-slate-700')}>
-        {comment.content}
+        {renderWithMentions(comment.content)}
       </p>
     </div>
   )
@@ -378,7 +397,10 @@ export default function TicketDetailPage() {
                 )}
                 <div className="relative">
                   {mentionSearch && filteredMentions.length > 0 && (
-                    <div className="absolute bottom-full mb-1 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-20 overflow-hidden max-h-48 overflow-y-auto">
+                    <div
+                      onMouseDown={e => e.preventDefault()}
+                      className="absolute bottom-full mb-1 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-20 overflow-hidden max-h-48 overflow-y-auto"
+                    >
                       {filteredMentions.map((u: any) => (
                         <button key={u.id} type="button" onClick={() => insertMention(u)}
                           className="flex items-center gap-2 w-full px-3 py-2 hover:bg-slate-50 text-left">
