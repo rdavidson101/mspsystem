@@ -125,7 +125,7 @@ export default function LicensesPage() {
     setForm((f: any) => ({ ...f, [field]: e.target.value }))
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Licenses</h1>

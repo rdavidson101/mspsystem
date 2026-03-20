@@ -84,7 +84,7 @@ export default function TicketSearchPage() {
   const activeFiltersCount = Object.values(filters).filter(Boolean).length
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Ticket Search</h1>
         <p className="text-sm text-slate-500">Search tickets by multiple parameters at once</p>

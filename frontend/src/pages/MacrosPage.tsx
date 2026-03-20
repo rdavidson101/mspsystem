@@ -29,7 +29,7 @@ export default function MacrosPage() {
   function insertVar(v: string) { setForm(f => ({ ...f, content: f.content + v })) }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">

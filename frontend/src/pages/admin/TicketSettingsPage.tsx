@@ -97,7 +97,7 @@ export default function TicketSettingsPage() {
   ]
 
   return (
-    <div className="space-y-5">
+    <div className="max-w-7xl mx-auto space-y-6">
       <div>
         <h1 className="text-xl font-bold text-slate-900">Ticket Settings</h1>
         <p className="text-sm text-slate-500">Manage ticket categories and SLA policies.</p>

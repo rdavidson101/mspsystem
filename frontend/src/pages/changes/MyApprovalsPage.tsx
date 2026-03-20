@@ -139,7 +139,7 @@ export default function MyApprovalsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="max-w-7xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">My Approvals</h1>
         <p className="text-sm text-slate-500">{pending.length} pending · {completed.length} completed</p>
