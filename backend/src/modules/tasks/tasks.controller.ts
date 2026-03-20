@@ -176,16 +176,20 @@ export async function createTaskComment(req: AuthRequest, res: Response, next: N
     if (mentionedUserIds.size > 0) {
       const task = await prisma.task.findUnique({
         where: { id: req.params.id },
-        select: { title: true, projectId: true },
+        select: { title: true, projectId: true, project: { select: { number: true } } },
       })
       const mentioner = `${(req.user as any).firstName || ''} ${(req.user as any).lastName || ''}`.trim() || 'Someone'
+      const projRef = task?.project?.number != null
+        ? `PRJ-${String(task.project.number).padStart(5, '0')}`
+        : null
+      const link = projRef ? `/projects/${projRef}?task=${req.params.id}` : null
       await prisma.notification.createMany({
         data: Array.from(mentionedUserIds).map(uid => ({
           userId: uid,
           type: 'TASK_MENTION',
           title: `${mentioner} mentioned you`,
           body: `You were mentioned in a comment on "${task?.title || 'a task'}"`,
-          link: task?.projectId ? `/projects/${task.projectId}` : null,
+          link,
         })),
       })
     }

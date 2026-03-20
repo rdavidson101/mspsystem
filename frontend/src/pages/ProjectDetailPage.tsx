@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { ticketRef, changeRef } from '@/lib/refs'
@@ -1740,6 +1740,7 @@ function MemberPanel({ project, onClose, onRefresh }: { project: any; onClose: (
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const [commentTask, setCommentTask] = useState<any>(null)
@@ -1753,6 +1754,20 @@ export default function ProjectDetailPage() {
     queryKey: ['project', id],
     queryFn: () => api.get(`/projects/${id}`).then(r => r.data),
   })
+
+  // Auto-open task from notification link (?task=UUID)
+  useEffect(() => {
+    const taskId = searchParams.get('task')
+    if (!taskId || !project) return
+    for (const section of (project.sections || [])) {
+      const task = (section.tasks || []).find((t: any) => t.id === taskId)
+      if (task) {
+        setCommentTask(task)
+        setSearchParams({}, { replace: true })
+        break
+      }
+    }
+  }, [project, searchParams, setSearchParams])
 
   const createSectionMut = useMutation({
     mutationFn: (data: any) => api.post(`/projects/${project?.id}/sections`, data).then(r => r.data),
