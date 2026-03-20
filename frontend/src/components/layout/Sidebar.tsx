@@ -33,6 +33,7 @@ const allNav: NavItemDef[] = [
   { label: 'Customers', href: '/customers', icon: Building2 },
   {
     label: 'Sales', icon: TrendingUp, children: [
+      { label: 'Products', href: '/products' },
       { label: 'Leads', href: '/leads' },
       { label: 'Contracts', href: '/contracts' },
       { label: 'Invoices', href: '/invoices' },

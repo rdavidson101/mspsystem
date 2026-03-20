@@ -874,3 +874,19 @@ model ServiceTeamMember {
   @@unique([teamId, userId])
   @@map("service_team_members")
 }
+
+model Product {
+  id          String   @id @default(uuid())
+  sku         String   @unique
+  name        String
+  description String?
+  category    String?
+  price       Float?
+  cost        Float?
+  unit        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("products")
+}

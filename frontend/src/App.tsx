@@ -41,6 +41,7 @@ import MyApprovalsPage from '@/pages/changes/MyApprovalsPage'
 import MyChangesPage from '@/pages/changes/MyChangesPage'
 import TicketSearchPage from '@/pages/TicketSearchPage'
 import TeamQueuePage from '@/pages/TeamQueuePage'
+import ProductsPage from '@/pages/sales/ProductsPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="projects/templates" element={<TemplatesPage />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />
           <Route path="tasks" element={<TasksPage />} />
+          <Route path="products" element={<ProductsPage />} />
           <Route path="contracts" element={<ContractsPage />} />
           <Route path="invoices" element={<InvoicesPage />} />
           <Route path="expenses" element={<ExpensesPage />} />
