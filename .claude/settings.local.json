@@ -131,7 +131,9 @@
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose logs backend --tail=20 2>&1\")",
       "Bash(ls \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\frontend\\\\src\\\\pages\\\\inventory\"\" 2>/dev/null || ls \"C:UsersRyanDocumentsMSP Systemfrontendsrcpages\"\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && sleep 5 && docker compose exec -T backend npx prisma db push --accept-data-loss 2>&1 | tail -5\")",
-      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose logs backend --tail=5 2>&1\")"
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose logs backend --tail=5 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose exec -T postgres psql -U msp_user -d msp_db -c \"\"SELECT t.number, t.title, t.\"\"\"serviceTeamId\"\"\", c.name as company, st.name as team FROM tickets t LEFT JOIN companies c ON t.\"\"\"companyId\"\"\" = c.id LEFT JOIN service_teams st ON t.\"\"\"serviceTeamId\"\"\" = st.id ORDER BY t.number DESC LIMIT 10;\"\" 2>&1\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose exec -T postgres psql -U msp_user -d msp_db -c \"\"SELECT c.name, c.\"\"\"serviceTeamId\"\"\", st.name as team FROM companies c LEFT JOIN service_teams st ON c.\"\"\"serviceTeamId\"\"\" = st.id;\"\" 2>&1\")"
     ]
   }
 }

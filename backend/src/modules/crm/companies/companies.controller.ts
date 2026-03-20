@@ -77,6 +77,18 @@ export async function updateCompany(req: AuthRequest, res: Response, next: NextF
         _count: { select: { contacts: true, tickets: true, projects: true, users: true } },
       },
     })
+
+    // Propagate service team change to all open tickets for this company
+    if (serviceTeamId !== undefined) {
+      await prisma.ticket.updateMany({
+        where: {
+          companyId: req.params.id,
+          status: { not: 'CLOSED' },
+        },
+        data: { serviceTeamId: serviceTeamId || null },
+      })
+    }
+
     res.json(company)
   } catch (e) { next(e) }
 }
