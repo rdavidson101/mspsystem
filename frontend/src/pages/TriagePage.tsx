@@ -92,7 +92,12 @@ export default function TriagePage() {
                   </td>
                   <td className="py-3 px-4 text-sm text-slate-600">{ticket.company?.name || '—'}</td>
                   <td className="py-3 px-4">
-                    <span className={clsx('badge text-xs', priorityColors[ticket.priority])}>{ticket.priority}</span>
+                    <div className="flex flex-wrap gap-1">
+                      <span className={clsx('badge text-xs', priorityColors[ticket.priority])}>{ticket.priority}</span>
+                      {ticket.serviceTeam && (
+                        <span className="badge text-xs bg-indigo-50 text-indigo-700 border border-indigo-100">{ticket.serviceTeam.name}</span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4">
                     {ticket.category ? (

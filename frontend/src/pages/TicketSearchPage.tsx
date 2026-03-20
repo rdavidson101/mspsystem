@@ -226,7 +226,12 @@ export default function TicketSearchPage() {
                         <span className={clsx('badge text-xs', statusColors[ticket.status])}>{ticket.status.replace(/_/g, ' ')}</span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className={clsx('badge text-xs', priorityColors[ticket.priority])}>{ticket.priority}</span>
+                        <div className="flex flex-wrap gap-1">
+                          <span className={clsx('badge text-xs', priorityColors[ticket.priority])}>{ticket.priority}</span>
+                          {ticket.serviceTeam && (
+                            <span className="badge text-xs bg-indigo-50 text-indigo-700 border border-indigo-100">{ticket.serviceTeam.name}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-sm text-slate-600 whitespace-nowrap">
                         {ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : <span className="text-slate-400">Unassigned</span>}

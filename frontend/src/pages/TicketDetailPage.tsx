@@ -523,6 +523,16 @@ export default function TicketDetailPage() {
               </select>
             </div>
 
+            {/* Service Team */}
+            {ticket.serviceTeam && (
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-1.5">
+                  Service Team
+                </label>
+                <span className="badge text-xs bg-indigo-50 text-indigo-700 border border-indigo-100">{ticket.serviceTeam.name}</span>
+              </div>
+            )}
+
             {/* SLA Status */}
             {(() => {
               const sla = getSlaInfo(ticket)
