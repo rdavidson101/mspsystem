@@ -279,7 +279,12 @@ export default function TicketDetailPage() {
           </div>
           <h1 className="text-xl font-bold text-slate-900 mt-2">{ticket.title}</h1>
           <p className="text-sm text-slate-400 mt-0.5">
-            Opened by <span className="text-slate-600 font-medium">{ticket.createdBy?.firstName} {ticket.createdBy?.lastName}</span>
+            Opened by <span className="text-slate-600 font-medium">
+              {(() => {
+                const r = ticket.createdBy ?? ticket.contact
+                return r ? `${r.firstName ?? ''} ${r.lastName ?? ''}`.trim() : 'Unknown'
+              })()}
+            </span>
             {' · '}{format(new Date(ticket.createdAt), 'MMM d, yyyy h:mm a')}
           </p>
         </div>
@@ -555,14 +560,21 @@ export default function TicketDetailPage() {
               <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-1.5">
                 <User size={12} /> Reporter
               </label>
-              <div className="flex items-center gap-2">
-                <UserAvatar user={ticket.createdBy} size="sm" />
-                <div>
-                  <p className="text-sm font-medium text-slate-800">{ticket.createdBy?.firstName} {ticket.createdBy?.lastName}</p>
-                  {ticket.createdBy?.email && <p className="text-xs text-slate-400">{ticket.createdBy.email}</p>}
-                  {ticket.createdBy?.phone && <p className="text-xs text-slate-400">{ticket.createdBy.phone}</p>}
-                </div>
-              </div>
+              {(() => {
+                const reporter = ticket.createdBy ?? ticket.contact
+                return (
+                  <div className="flex items-center gap-2">
+                    <UserAvatar user={reporter} size="sm" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">
+                        {reporter ? `${reporter.firstName ?? ''} ${reporter.lastName ?? ''}`.trim() : 'Unknown'}
+                      </p>
+                      {reporter?.email && <p className="text-xs text-slate-400">{reporter.email}</p>}
+                      {reporter?.phone && <p className="text-xs text-slate-400">{reporter.phone}</p>}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Status */}

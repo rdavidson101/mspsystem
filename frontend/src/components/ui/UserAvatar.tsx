@@ -43,6 +43,9 @@ export default function UserAvatar({ user, size = 'md', className = '', showHove
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const ref = useRef<HTMLDivElement>(null)
   const { outer, text } = SIZE_MAP[size]
+  if (!user) {
+    return <div className={`${outer} rounded-full bg-slate-200 flex items-center justify-center ${text} font-bold text-slate-400 ${className}`}>?</div>
+  }
   const initials = getInitials(user.firstName, user.lastName)
   const colorClass = getColor((user.firstName ?? '') + (user.lastName ?? ''))
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Unknown'

@@ -15,7 +15,7 @@ async function createNotification(userId: string, type: string, title: string, b
 
 const TICKET_INCLUDE = {
   company: { select: { id: true, name: true } },
-  contact: { select: { id: true, firstName: true, lastName: true, title: true } },
+  contact: { select: { id: true, firstName: true, lastName: true, title: true, email: true, phone: true } },
   category: { select: { id: true, name: true, color: true } },
   assignedTo: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
   createdBy: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
