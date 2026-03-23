@@ -8,8 +8,8 @@ import clsx from 'clsx'
 export default function LoginPage() {
   const navigate = useNavigate()
   const { setAuth } = useAuthStore()
-  const [email, setEmail] = useState('admin@msp.local')
-  const [password, setPassword] = useState('admin123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -217,7 +217,7 @@ export default function LoginPage() {
                   className="input"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="admin@msp.local"
+                  placeholder="Email address"
                   required
                 />
               </div>
@@ -250,11 +250,6 @@ export default function LoginPage() {
               </button>
             </form>
           )}
-          <div className="mt-4 p-3 bg-slate-50 rounded-lg">
-            <p className="text-xs text-slate-500 text-center">
-              Default: <strong>admin@msp.local</strong> / <strong>admin123</strong>
-            </p>
-          </div>
         </div>
       </div>
     </div>
