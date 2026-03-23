@@ -123,14 +123,21 @@ export async function handleMailgunWebhook(req: Request, res: Response) {
 async function handleTicketReply(token: string, senderEmail: string, senderName: string, body: string, res: Response) {
   const payload = verifyEmailToken(token)
   if (!payload || !payload.startsWith('ticket:')) {
+    console.log(`Ticket reply skipped: invalid token "${token.slice(0, 20)}..."`)
     return res.status(200).json({ skipped: true })
   }
   const ticketId = payload.slice('ticket:'.length)
 
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } })
-  if (!ticket) return res.status(200).json({ skipped: true })
+  if (!ticket) {
+    console.log(`Ticket reply skipped: ticket ${ticketId} not found`)
+    return res.status(200).json({ skipped: true })
+  }
 
-  if (!body) return res.status(200).json({ skipped: true })
+  if (!body) {
+    console.log(`Ticket reply skipped: empty body for ticket ${ticketId}`)
+    return res.status(200).json({ skipped: true })
+  }
 
   // Find user by email (internal staff replying)
   const user = await prisma.user.findFirst({ where: { email: senderEmail } })
