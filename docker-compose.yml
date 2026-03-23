@@ -34,6 +34,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 4000
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5000}
+      MAILGUN_WEBHOOK_SECRET: ${MAILGUN_WEBHOOK_SECRET:-mailgun-webhook-secret-change-in-production}
     volumes:
       - ./backend:/app
       - /app/node_modules

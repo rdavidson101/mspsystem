@@ -134,7 +134,28 @@
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose logs backend --tail=5 2>&1\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose exec -T postgres psql -U msp_user -d msp_db -c \"\"SELECT t.number, t.title, t.\"\"\"serviceTeamId\"\"\", c.name as company, st.name as team FROM tickets t LEFT JOIN companies c ON t.\"\"\"companyId\"\"\" = c.id LEFT JOIN service_teams st ON t.\"\"\"serviceTeamId\"\"\" = st.id ORDER BY t.number DESC LIMIT 10;\"\" 2>&1\")",
       "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && docker compose exec -T postgres psql -U msp_user -d msp_db -c \"\"SELECT c.name, c.\"\"\"serviceTeamId\"\"\", st.name as team FROM companies c LEFT JOIN service_teams st ON c.\"\"\"serviceTeamId\"\"\" = st.id;\"\" 2>&1\")",
-      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose exec -T backend npx prisma db push --accept-data-loss 2>&1 | tail -5 && docker compose restart backend frontend 2>&1 | tail -6\")"
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && git pull && docker compose exec -T backend npx prisma db push --accept-data-loss 2>&1 | tail -5 && docker compose restart backend frontend 2>&1 | tail -6\")",
+      "Bash(command -v npm)",
+      "Read(//c/Program Files/**)",
+      "Read(//c//**)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\")",
+      "Bash(npm --version)",
+      "Bash(export PATH=\"$PATH:/c/Users/Ryan/AppData/Roaming/npm\")",
+      "Bash(cmd.exe /c \"npm --version\")",
+      "Bash(powershell.exe -Command \"npm --version\")",
+      "Bash(cmd.exe /c \"cd \"\"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\"\" && npm install mailgun.js form-data 2>&1\")",
+      "Bash(powershell.exe -Command \"Set-Location ''C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend''; npm install mailgun.js form-data\")",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Read(//c/ProgramData/**)",
+      "Read(//c/inetpub/**)",
+      "Bash(powershell.exe -Command \"docker exec msp_backend npx prisma db push --accept-data-loss 2>&1\")",
+      "Bash(powershell.exe -Command \"Get-Process docker* -ErrorAction SilentlyContinue | Select-Object Name, Path\")",
+      "Bash(powershell.exe -Command \"Get-NetTCPConnection -LocalPort 4000 -State Listen -ErrorAction SilentlyContinue; Get-NetTCPConnection -LocalPort 5432 -State Listen -ErrorAction SilentlyContinue\")",
+      "Bash(powershell.exe -Command \"Test-NetConnection -ComputerName localhost -Port 5432 -InformationLevel Quiet -ErrorAction SilentlyContinue\")",
+      "Bash(powershell.exe -Command \"Test-NetConnection -ComputerName localhost -Port 4000 -InformationLevel Quiet -ErrorAction SilentlyContinue\")",
+      "Bash(npx tsc:*)",
+      "Bash(sed -n '342,365p' \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\")",
+      "Bash(sed -n '472,490p' \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\")"
     ]
   }
 }

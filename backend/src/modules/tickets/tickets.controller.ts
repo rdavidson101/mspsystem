@@ -3,6 +3,7 @@ import { prisma } from '../../lib/prisma'
 import { AuthRequest } from '../../middleware/auth'
 import { AppError } from '../../middleware/errorHandler'
 import { io } from '../../index'
+import { sendTicketUpdate, sendTicketConfirmation } from '../email/email.service'
 
 async function createNotification(userId: string, type: string, title: string, body: string, ticketId: string, link?: string) {
   try {
@@ -129,6 +130,16 @@ export async function createTicket(req: AuthRequest, res: Response, next: NextFu
       { field: 'status', oldValue: null, newValue: 'AWAITING_TRIAGE' },
       { field: 'priority', oldValue: null, newValue: ticket.priority },
     ])
+
+    // Send confirmation email to reporter if they have a contact with email
+    const reporterContact = await prisma.contact.findFirst({
+      where: { email: req.user!.email },
+      select: { email: true },
+    })
+    if (reporterContact?.email) {
+      sendTicketConfirmation(ticket, reporterContact.email).catch(err => console.error('Email error:', err))
+    }
+
     io.emit('ticket:created', ticket)
     res.status(201).json(ticket)
   } catch (e) { next(e) }
@@ -233,7 +244,10 @@ export async function getComments(req: AuthRequest, res: Response, next: NextFun
 
 export async function addComment(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id }, select: { id: true, number: true, title: true, assignedToId: true } })
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, number: true, title: true, assignedToId: true, companyId: true, createdById: true }
+    })
     const { content, isInternal, mentionedUserIds: rawMentions } = req.body
     const comment = await prisma.ticketComment.create({
       data: { content, isInternal: isInternal ?? false, ticketId: req.params.id, userId: req.user!.id },
@@ -262,6 +276,21 @@ export async function addComment(req: AuthRequest, res: Response, next: NextFunc
         )
       }
     }
+
+    // Send email notification to the ticket reporter (fire and forget)
+    if (ticket && ticket.companyId && !isInternal) {
+      const reporter = ticket.createdById
+        ? await prisma.user.findUnique({
+            where: { id: ticket.createdById },
+            select: { email: true, firstName: true, lastName: true },
+          })
+        : null
+      if (reporter?.email && reporter.email !== req.user!.email) {
+        const authorName = `${(req.user as any).firstName || ''} ${(req.user as any).lastName || ''}`.trim() || 'Support Team'
+        sendTicketUpdate(ticket, content, reporter.email, authorName).catch(err => console.error('Email error:', err))
+      }
+    }
+
     io.emit('ticket:comment', comment)
     res.status(201).json(comment)
   } catch (e) { next(e) }

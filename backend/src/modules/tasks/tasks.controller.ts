@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express'
 import { prisma } from '../../lib/prisma'
 import { AuthRequest } from '../../middleware/auth'
 import { AppError } from '../../middleware/errorHandler'
+import { getTaskCcAddress } from '../email/email.service'
 
 const taskInclude = {
   assignees: { include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } } },
@@ -54,7 +55,8 @@ export async function getTask(req: AuthRequest, res: Response, next: NextFunctio
     })
     if (!task) throw new AppError(404, 'Task not found')
     const totalHours = await getTaskTotalTime(task.id)
-    res.json({ ...task, totalHours })
+    const emailCcAddress = await getTaskCcAddress(task.id, req.user!.id)
+    res.json({ ...task, totalHours, emailCcAddress })
   } catch (e) { next(e) }
 }
 

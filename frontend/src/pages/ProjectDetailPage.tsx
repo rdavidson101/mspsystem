@@ -8,7 +8,7 @@ import {
   ArrowLeft, Plus, ChevronDown, ChevronRight, GripVertical,
   Play, Pause, LayoutList, Trash2, UserPlus, X, Check,
   FolderKanban, Clock, Timer, Search, AtSign, Settings,
-  CheckCircle2, Calendar, DollarSign, AlertTriangle
+  CheckCircle2, Calendar, DollarSign, AlertTriangle, Mail, Copy
 } from 'lucide-react'
 import clsx from 'clsx'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -641,6 +641,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   const [logHours, setLogHours] = useState('')
   const [logDesc, setLogDesc] = useState('')
   const [logDate, setLogDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [ccCopied, setCcCopied] = useState(false)
   const statusRef = useRef<HTMLButtonElement>(null)
   const assigneeRef = useRef<HTMLButtonElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -1140,6 +1141,28 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                 </div>
               )}
             </div>
+
+            {/* CC email address */}
+            {task.emailCcAddress && (
+              <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-xs font-medium text-slate-600 mb-1.5 flex items-center gap-1.5">
+                  <Mail size={12} className="text-slate-400" />
+                  CC this address to post updates via email
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs text-slate-700 bg-white border border-slate-200 rounded px-2 py-1 flex-1 truncate font-mono">
+                    {task.emailCcAddress}
+                  </code>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(task.emailCcAddress!); setCcCopied(true); setTimeout(() => setCcCopied(false), 2000) }}
+                    className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                    title="Copy to clipboard"
+                  >
+                    {ccCopied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1171,6 +1194,11 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-semibold text-slate-800">{c.user.firstName} {c.user.lastName}</span>
+                      {(() => { try { const p = JSON.parse(c.content); return p.source === 'email'; } catch { return false; } })() && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded-full ml-1">
+                          <Mail size={9} /> via email
+                        </span>
+                      )}
                       <span className="text-xs text-slate-400">{formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}</span>
                       {isOwn && (
                         <button

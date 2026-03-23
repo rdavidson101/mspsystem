@@ -30,6 +30,7 @@ import { templatesRouter } from './modules/templates/templates.router'
 import { settingsRouter } from './modules/settings/settings.router'
 import { teamsRouter } from './modules/teams/teams.router'
 import { productsRouter } from './modules/products/products.router'
+import { emailRouter } from './modules/email/email.router'
 import { errorHandler } from './middleware/errorHandler'
 
 const app = express()
@@ -73,6 +74,7 @@ app.use('/api/templates', templatesRouter)
 app.use('/api/settings', settingsRouter)
 app.use('/api/teams', teamsRouter)
 app.use('/api/products', productsRouter)
+app.use('/api/webhooks', emailRouter)
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }))
 app.use(errorHandler)

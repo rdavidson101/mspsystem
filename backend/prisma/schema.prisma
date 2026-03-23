@@ -325,8 +325,9 @@ model Ticket {
   contact         Contact?        @relation(fields: [contactId], references: [id])
   assignedToId    String?
   assignedTo      User?           @relation("AssignedTechnician", fields: [assignedToId], references: [id])
-  createdById     String
-  createdBy       User            @relation("TicketCreator", fields: [createdById], references: [id])
+  createdById     String?
+  createdBy       User?           @relation("TicketCreator", fields: [createdById], references: [id])
+  source          String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -342,10 +343,14 @@ model TicketComment {
   id         String   @id @default(uuid())
   content    String
   isInternal Boolean  @default(false)
+  isEmail    Boolean  @default(false)
+  fromEmail  String?
+  fromName   String?
+  type       String   @default("REPLY")
   ticketId   String
   ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -471,6 +476,8 @@ model TaskComment {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   content   String
+  isEmail   Boolean  @default(false)
+  fromEmail String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

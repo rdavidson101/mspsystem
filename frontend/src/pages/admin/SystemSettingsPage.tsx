@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Building2, Save, Check, Star, Shield, Globe, Clock, AlertTriangle, DollarSign } from 'lucide-react'
+import { Building2, Save, Check, Star, Shield, Globe, Clock, AlertTriangle, DollarSign, Mail, Eye, EyeOff, Info } from 'lucide-react'
 import clsx from 'clsx'
 
 const CURRENCIES = [
@@ -84,6 +84,16 @@ export default function SystemSettingsPage() {
   const [maintenanceMode, setMaintenanceMode] = useState(false)
   const [sessionDays, setSessionDays] = useState('7')
 
+  // Mailgun state
+  const [mailgunEnabled, setMailgunEnabled] = useState(false)
+  const [mailgunApiKey, setMailgunApiKey] = useState('')
+  const [mailgunDomain, setMailgunDomain] = useState('')
+  const [mailgunSupportEmail, setMailgunSupportEmail] = useState('')
+  const [mailgunUpdatesDomain, setMailgunUpdatesDomain] = useState('')
+  const [mailgunWebhookKey, setMailgunWebhookKey] = useState('')
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [showWebhookKey, setShowWebhookKey] = useState(false)
+
   useEffect(() => {
     if (settings.mspName) setMspName(settings.mspName)
     if (settings.currency) setCurrency(settings.currency)
@@ -91,6 +101,13 @@ export default function SystemSettingsPage() {
     setEnforceMfa(settings.enforceMfa === 'true')
     setMaintenanceMode(settings.maintenanceMode === 'true')
     if (settings.sessionDays) setSessionDays(settings.sessionDays)
+    // Mailgun
+    setMailgunEnabled(settings.mailgunEnabled === 'true')
+    if (settings.mailgunApiKey) setMailgunApiKey(settings.mailgunApiKey)
+    if (settings.mailgunDomain) setMailgunDomain(settings.mailgunDomain)
+    if (settings.mailgunSupportEmail) setMailgunSupportEmail(settings.mailgunSupportEmail)
+    if (settings.mailgunUpdatesDomain) setMailgunUpdatesDomain(settings.mailgunUpdatesDomain)
+    if (settings.mailgunWebhookKey) setMailgunWebhookKey(settings.mailgunWebhookKey)
   }, [settings])
 
   const saveMut = useMutation({
@@ -290,6 +307,143 @@ export default function SystemSettingsPage() {
           </div>
         </Section>
       </div>
+
+      {/* Row 4 — Email Integration (full width) */}
+      <Section icon={Mail} title="Email Integration" description="Configure Mailgun for inbound ticket creation and outbound notifications.">
+        {/* Info box */}
+        <div className="mb-5 flex gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+          <Info size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
+          <div className="text-xs text-blue-800 leading-relaxed space-y-1">
+            <p>Point your support address MX record at Mailgun for inbound ticket creation.</p>
+            <p>Set the updates domain MX to Mailgun and configure a wildcard route:</p>
+            <code className="block bg-blue-100 rounded px-2 py-1 font-mono text-[11px] mt-1 text-blue-900 whitespace-pre-wrap">
+              {`match_recipient(".*@{updatesDomain}") → POST https://yourserver.com/api/webhooks/mailgun`}
+            </code>
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          {/* Mailgun Enabled */}
+          <div className="flex items-center justify-between gap-4 py-1">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Mailgun Enabled</p>
+              <p className="text-xs text-slate-500 mt-0.5">Enable sending and receiving email via Mailgun.</p>
+            </div>
+            <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+              <button
+                onClick={() => {
+                  const newVal = !mailgunEnabled
+                  setMailgunEnabled(newVal)
+                  saveMut.mutate({ mailgunEnabled: String(newVal) })
+                }}
+                className={clsx(
+                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                  mailgunEnabled ? 'bg-primary-600' : 'bg-slate-200'
+                )}
+              >
+                <span className={clsx('inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform', mailgunEnabled ? 'translate-x-6' : 'translate-x-1')} />
+              </button>
+              <span className={clsx('text-xs font-semibold', mailgunEnabled ? 'text-primary-600' : 'text-slate-400')}>
+                {mailgunEnabled ? 'On' : 'Off'}
+              </span>
+            </div>
+          </div>
+
+          {/* API Key */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">API Key</label>
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <input
+                  type={showApiKey ? 'text' : 'password'}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 pr-10"
+                  value={mailgunApiKey}
+                  onChange={e => setMailgunApiKey(e.target.value)}
+                  placeholder="key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <SaveButton settingKey="mailgunApiKey" value={mailgunApiKey} />
+            </div>
+          </div>
+
+          {/* Sending Domain */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Sending Domain</label>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                value={mailgunDomain}
+                onChange={e => setMailgunDomain(e.target.value)}
+                placeholder="mail.yourdomain.com"
+              />
+              <SaveButton settingKey="mailgunDomain" value={mailgunDomain} />
+            </div>
+          </div>
+
+          {/* Support Email */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Support Email</label>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                value={mailgunSupportEmail}
+                onChange={e => setMailgunSupportEmail(e.target.value)}
+                placeholder="support@yourdomain.com"
+              />
+              <SaveButton settingKey="mailgunSupportEmail" value={mailgunSupportEmail} />
+            </div>
+          </div>
+
+          {/* Updates Domain */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Updates Domain</label>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                value={mailgunUpdatesDomain}
+                onChange={e => setMailgunUpdatesDomain(e.target.value)}
+                placeholder="updates.yourdomain.com"
+              />
+              <SaveButton settingKey="mailgunUpdatesDomain" value={mailgunUpdatesDomain} />
+            </div>
+            <p className="text-xs text-slate-400">Inbound replies are sent to this domain</p>
+          </div>
+
+          {/* Webhook Signing Key */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Webhook Signing Key</label>
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <input
+                  type={showWebhookKey ? 'text' : 'password'}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 pr-10"
+                  value={mailgunWebhookKey}
+                  onChange={e => setMailgunWebhookKey(e.target.value)}
+                  placeholder="••••••••••••••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowWebhookKey(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showWebhookKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <SaveButton settingKey="mailgunWebhookKey" value={mailgunWebhookKey} />
+            </div>
+          </div>
+        </div>
+      </Section>
     </div>
   )
 }

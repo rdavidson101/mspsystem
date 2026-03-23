@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { ticketRef } from '@/lib/refs'
 import { format } from 'date-fns'
-import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Building2, AlertCircle, History, MessageSquare, AlertTriangle, AtSign } from 'lucide-react'
+import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Building2, AlertCircle, History, MessageSquare, AlertTriangle, AtSign, Mail } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuthStore } from '@/store/authStore'
 import UserAvatar from '@/components/ui/UserAvatar'
@@ -126,6 +126,10 @@ function renderWithMentions(raw: string) {
 }
 
 function CommentBubble({ comment }: { comment: any }) {
+  const authorName = comment.user
+    ? `${comment.user.firstName} ${comment.user.lastName}`
+    : comment.fromName || comment.fromEmail || 'External'
+
   return (
     <div className={clsx(
       'rounded-lg p-4 border-l-4',
@@ -134,10 +138,21 @@ function CommentBubble({ comment }: { comment: any }) {
         : 'bg-slate-50 border-slate-200'
     )}>
       <div className="flex items-center gap-2 mb-2">
-        <UserAvatar user={comment.user} size="sm" />
+        {comment.user ? (
+          <UserAvatar user={comment.user} size="sm" />
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+            <Mail size={13} className="text-slate-500" />
+          </div>
+        )}
         <span className={clsx('text-sm font-medium', comment.isInternal ? 'text-orange-900' : 'text-slate-800')}>
-          {comment.user.firstName} {comment.user.lastName}
+          {authorName}
         </span>
+        {comment.isEmail && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded-full ml-1">
+            <Mail size={9} /> via email
+          </span>
+        )}
         {comment.isInternal && (
           <span className="flex items-center gap-1 text-xs font-semibold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
             <Lock size={10} /> Internal Note
