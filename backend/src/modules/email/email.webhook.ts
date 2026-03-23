@@ -245,7 +245,10 @@ async function handleNewTicket(senderEmail: string, senderName: string, subject:
   }
 
   // For internal users, create ticket under MSP company
-  const mspCompany = internalUser ? await prisma.company.findFirst({ where: { isInternal: true } }) : null
+  const mspCompany = internalUser ? await prisma.company.findFirst({
+    where: { isInternal: true },
+    select: { id: true, serviceTeamId: true }
+  }) : null
 
   const ticket = await prisma.ticket.create({
     data: {
@@ -255,7 +258,7 @@ async function handleNewTicket(senderEmail: string, senderName: string, subject:
       priority: 'MEDIUM',
       companyId: contact?.companyId ?? mspCompany?.id ?? undefined,
       contactId: contact?.id ?? undefined,
-      serviceTeamId: contact?.company?.serviceTeamId ?? undefined,
+      serviceTeamId: contact?.company?.serviceTeamId ?? mspCompany?.serviceTeamId ?? undefined,
       source: 'EMAIL',
       ...(internalUser ? { createdById: internalUser.id } : {}),
     }

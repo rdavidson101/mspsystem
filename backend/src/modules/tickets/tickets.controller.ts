@@ -218,7 +218,17 @@ export async function updateTicket(req: AuthRequest, res: Response, next: NextFu
     if (priority !== undefined && ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(priority)) data.priority = priority
     if (status !== undefined) data.status = status
     if (categoryId !== undefined) data.categoryId = categoryId || null
-    if (companyId !== undefined) data.companyId = companyId || null
+    if (companyId !== undefined) {
+      data.companyId = companyId || null
+      // Auto-update service team when company changes (unless explicitly overridden in same request)
+      if (companyId && serviceTeamId === undefined) {
+        const co = await prisma.company.findUnique({ where: { id: companyId }, select: { serviceTeamId: true } })
+        if (co?.serviceTeamId) data.serviceTeamId = co.serviceTeamId
+        else data.serviceTeamId = null
+      } else if (!companyId && serviceTeamId === undefined) {
+        data.serviceTeamId = null
+      }
+    }
     if (assignedToId !== undefined) data.assignedToId = assignedToId || null
     if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null
     if (tags !== undefined) data.tags = Array.isArray(tags) ? tags : []
