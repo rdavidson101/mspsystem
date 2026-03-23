@@ -38,7 +38,7 @@ export async function getUser(req: AuthRequest, res: Response, next: NextFunctio
 
 export async function createUser(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { email, password, firstName, lastName, role, phone, jobTitle, userType } = req.body
+    const { email, password, firstName, lastName, role, phone, jobTitle, userType, companyId } = req.body
     const data: any = { email, firstName, lastName, role: role || 'TECHNICIAN', phone, userType: userType || 'INTERNAL' }
     if (jobTitle !== undefined) data.jobTitle = jobTitle || null
     if (userType !== 'CLIENT') {
@@ -50,6 +50,11 @@ export async function createUser(req: AuthRequest, res: Response, next: NextFunc
     if (data.userType === 'INTERNAL') {
       const mspCompany = await prisma.company.findFirst({ where: { isInternal: true } })
       if (mspCompany) data.companyId = mspCompany.id
+    }
+
+    // Associate CLIENT users with their company
+    if (data.userType === 'CLIENT' && companyId) {
+      data.companyId = companyId
     }
 
     const user = await prisma.user.create({

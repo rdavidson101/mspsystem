@@ -223,13 +223,18 @@ async function handleNewTicket(senderEmail: string, senderName: string, subject:
     include: { company: { select: { id: true, isActive: true, serviceTeamId: true } } }
   })
 
-  if (!contact) {
+  // If no contact found, check if sender is an internal user
+  const internalUser = !contact ? await prisma.user.findFirst({
+    where: { email: senderEmail, userType: 'INTERNAL' }
+  }) : null
+
+  if (!contact && !internalUser) {
     // Unknown sender — reject silently (strict mode)
     console.log(`Rejected email from unknown sender: ${senderEmail}`)
     return res.status(200).json({ skipped: true })
   }
 
-  if (contact.company && !contact.company.isActive) {
+  if (contact?.company && !contact.company.isActive) {
     return res.status(200).json({ skipped: true })
   }
 
@@ -239,15 +244,19 @@ async function handleNewTicket(senderEmail: string, senderName: string, subject:
     return res.status(200).json({ skipped: true })
   }
 
+  // For internal users, create ticket under MSP company
+  const mspCompany = internalUser ? await prisma.company.findFirst({ where: { isInternal: true } }) : null
+
   const ticket = await prisma.ticket.create({
     data: {
       title: subject.replace(/^(Re:|Fwd?:)\s*/i, '').trim() || 'Support Request',
       description: body || '',
       status: 'AWAITING_TRIAGE',
       priority: 'MEDIUM',
-      companyId: contact.companyId ?? undefined,
-      serviceTeamId: contact.company?.serviceTeamId ?? undefined,
+      companyId: contact?.companyId ?? mspCompany?.id ?? undefined,
+      serviceTeamId: contact?.company?.serviceTeamId ?? undefined,
       source: 'EMAIL',
+      ...(internalUser ? { createdById: internalUser.id } : {}),
     }
   })
 
