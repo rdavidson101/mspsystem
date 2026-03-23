@@ -138,13 +138,11 @@ function CommentBubble({ comment }: { comment: any }) {
         : 'bg-slate-50 border-slate-200'
     )}>
       <div className="flex items-center gap-2 mb-2">
-        {comment.user ? (
-          <UserAvatar user={comment.user} size="sm" />
-        ) : (
-          <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-            <Mail size={13} className="text-slate-500" />
-          </div>
-        )}
+        <UserAvatar
+          user={comment.user ?? { firstName: (comment.fromName || comment.fromEmail || 'External').split(' ')[0], lastName: (comment.fromName || '').split(' ').slice(1).join(' ') || undefined }}
+          size="sm"
+          showHoverCard={!!comment.user}
+        />
         <span className={clsx('text-sm font-medium', comment.isInternal ? 'text-orange-900' : 'text-slate-800')}>
           {authorName}
         </span>
