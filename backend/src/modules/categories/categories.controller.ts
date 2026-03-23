@@ -15,14 +15,20 @@ export async function getCategories(_req: AuthRequest, res: Response, next: Next
 
 export async function createCategory(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const category = await prisma.ticketCategory.create({ data: req.body })
+    const { name, color } = req.body
+    if (!name?.trim()) return res.status(400).json({ message: 'Name is required' })
+    const category = await prisma.ticketCategory.create({ data: { name: name.trim(), color: color || '#6366f1' } })
     res.status(201).json(category)
   } catch (e) { next(e) }
 }
 
 export async function updateCategory(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const category = await prisma.ticketCategory.update({ where: { id: req.params.id }, data: req.body })
+    const { name, color } = req.body
+    const data: any = {}
+    if (name !== undefined) data.name = String(name).trim()
+    if (color !== undefined) data.color = String(color)
+    const category = await prisma.ticketCategory.update({ where: { id: req.params.id }, data })
     res.json(category)
   } catch (e) { next(e) }
 }

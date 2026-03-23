@@ -122,8 +122,27 @@ export async function createTicket(req: AuthRequest, res: Response, next: NextFu
       if (co?.serviceTeamId) serviceTeamId = co.serviceTeamId
     }
 
+    const { title, description, categoryId, assignedToId, dueDate, tags } = req.body
+
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return res.status(400).json({ message: 'Title is required' })
+    }
+
     const ticket = await prisma.ticket.create({
-      data: { ...req.body, createdById: req.user!.id, slaResolutionDue, slaResponseDue, ...(serviceTeamId ? { serviceTeamId } : {}) },
+      data: {
+        title: title.trim(),
+        description: description?.trim() || null,
+        priority: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(priority) ? priority : 'MEDIUM',
+        categoryId: categoryId || null,
+        companyId: companyId || null,
+        assignedToId: assignedToId || null,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        tags: Array.isArray(tags) ? tags : [],
+        createdById: req.user!.id,
+        slaResolutionDue,
+        slaResponseDue,
+        ...(serviceTeamId ? { serviceTeamId } : {}),
+      },
       include: TICKET_INCLUDE,
     })
     await recordHistory(ticket.id, req.user!.id, [
@@ -156,44 +175,62 @@ export async function updateTicket(req: AuthRequest, res: Response, next: NextFu
     })
     if (!current) return res.status(404).json({ error: 'Ticket not found' })
 
+    // Whitelist allowed update fields
+    const {
+      title, description, priority, status, categoryId, companyId,
+      assignedToId, dueDate, tags, serviceTeamId, resolvedAt,
+    } = req.body
+
     const changes: { field: string; oldValue: string | null; newValue: string | null }[] = []
 
-    if (req.body.status && req.body.status !== current.status) {
-      changes.push({ field: 'status', oldValue: current.status, newValue: req.body.status })
+    if (status && status !== current.status) {
+      changes.push({ field: 'status', oldValue: current.status, newValue: status })
     }
-    if (req.body.priority && req.body.priority !== current.priority) {
-      changes.push({ field: 'priority', oldValue: current.priority, newValue: req.body.priority })
+    if (priority && priority !== current.priority) {
+      changes.push({ field: 'priority', oldValue: current.priority, newValue: priority })
     }
-    if ('assignedToId' in req.body && req.body.assignedToId !== current.assignedToId) {
+    if ('assignedToId' in req.body && assignedToId !== current.assignedToId) {
       const oldName = current.assignedTo ? `${current.assignedTo.firstName} ${current.assignedTo.lastName}` : 'Unassigned'
       // Fetch new assignee name if set
       let newName = 'Unassigned'
-      if (req.body.assignedToId) {
-        const u = await prisma.user.findUnique({ where: { id: req.body.assignedToId }, select: { firstName: true, lastName: true } })
+      if (assignedToId) {
+        const u = await prisma.user.findUnique({ where: { id: assignedToId }, select: { firstName: true, lastName: true } })
         if (u) newName = `${u.firstName} ${u.lastName}`
       }
       changes.push({ field: 'assignedTo', oldValue: oldName, newValue: newName })
     }
-    if ('categoryId' in req.body && req.body.categoryId !== current.categoryId) {
+    if ('categoryId' in req.body && categoryId !== current.categoryId) {
       const oldCat = current.category?.name || 'None'
       let newCat = 'None'
-      if (req.body.categoryId) {
-        const c = await prisma.ticketCategory.findUnique({ where: { id: req.body.categoryId }, select: { name: true } })
+      if (categoryId) {
+        const c = await prisma.ticketCategory.findUnique({ where: { id: categoryId }, select: { name: true } })
         if (c) newCat = c.name
       }
       changes.push({ field: 'category', oldValue: oldCat, newValue: newCat })
     }
-    if (req.body.title && req.body.title !== current.title) {
-      changes.push({ field: 'title', oldValue: current.title, newValue: req.body.title })
+    if (title && title !== current.title) {
+      changes.push({ field: 'title', oldValue: current.title, newValue: title })
     }
 
-    // Auto-set resolvedAt
-    const data: any = { ...req.body }
-    if (req.body.status === 'RESOLVED' && !current.resolvedAt) data.resolvedAt = new Date()
-    else if (req.body.status && req.body.status !== 'RESOLVED') data.resolvedAt = null
+    const data: any = {}
+    if (title !== undefined) data.title = String(title).trim()
+    if (description !== undefined) data.description = description?.trim() || null
+    if (priority !== undefined && ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(priority)) data.priority = priority
+    if (status !== undefined) data.status = status
+    if (categoryId !== undefined) data.categoryId = categoryId || null
+    if (companyId !== undefined) data.companyId = companyId || null
+    if (assignedToId !== undefined) data.assignedToId = assignedToId || null
+    if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null
+    if (tags !== undefined) data.tags = Array.isArray(tags) ? tags : []
+    if (serviceTeamId !== undefined) data.serviceTeamId = serviceTeamId || null
+    if (resolvedAt !== undefined) data.resolvedAt = resolvedAt ? new Date(resolvedAt) : null
 
-    if (req.body.priority && req.body.priority !== current.priority) {
-      const newSlaPolicy = await prisma.slaPolicy.findUnique({ where: { priority: req.body.priority } })
+    // Auto-set resolvedAt
+    if (status === 'RESOLVED' && !current.resolvedAt) data.resolvedAt = new Date()
+    else if (status && status !== 'RESOLVED') data.resolvedAt = null
+
+    if (priority && priority !== current.priority) {
+      const newSlaPolicy = await prisma.slaPolicy.findUnique({ where: { priority } })
       if (newSlaPolicy) {
         const createdAt = new Date(current.createdAt)
         data.slaResolutionDue = new Date(createdAt.getTime() + newSlaPolicy.resolutionTime * 60000)
@@ -208,7 +245,7 @@ export async function updateTicket(req: AuthRequest, res: Response, next: NextFu
     })
 
     await recordHistory(ticket.id, req.user!.id, changes)
-    if (ticket.assignedToId && ticket.assignedToId !== req.user!.id && 'assignedToId' in req.body && req.body.assignedToId !== current.assignedToId) {
+    if (ticket.assignedToId && ticket.assignedToId !== req.user!.id && 'assignedToId' in req.body && assignedToId !== current.assignedToId) {
       await createNotification(
         ticket.assignedToId,
         'TICKET_ASSIGNED',

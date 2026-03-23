@@ -15,15 +15,49 @@ function parseName(raw: string): string {
   return match ? match[1].trim().replace(/^"|"$/g, '') : ''
 }
 
+// Simple in-memory rate limiter for inbound email ticket creation
+const inboundEmailCounts = new Map<string, { count: number; resetAt: number }>()
+
+function checkInboundRateLimit(senderEmail: string): boolean {
+  const now = Date.now()
+  const key = senderEmail.toLowerCase()
+  const record = inboundEmailCounts.get(key)
+
+  if (!record || now > record.resetAt) {
+    inboundEmailCounts.set(key, { count: 1, resetAt: now + 60 * 60 * 1000 }) // 1 hour window
+    return true
+  }
+
+  if (record.count >= 10) return false // Max 10 new tickets per sender per hour
+  record.count++
+  return true
+}
+
 export async function handleMailgunWebhook(req: Request, res: Response) {
   try {
     const body = req.body
 
     // Verify Mailgun signature
     const settings = await getMailgunSettings()
-    const signingKey = settings.mailgunWebhookKey || process.env.MAILGUN_WEBHOOK_KEY || ''
+    const signingKey = settings.mailgunWebhookKey || process.env.MAILGUN_WEBHOOK_SECRET || ''
+
+    // In production, signature verification is mandatory
+    if (process.env.NODE_ENV === 'production' && !signingKey) {
+      console.error('Mailgun webhook rejected: MAILGUN_WEBHOOK_SECRET not configured')
+      return res.status(401).json({ error: 'Webhook authentication not configured' })
+    }
+
+    // Always verify if we have a key
     if (signingKey) {
       const { timestamp, token, signature } = body
+      if (!timestamp || !token || !signature) {
+        return res.status(401).json({ error: 'Missing webhook signature fields' })
+      }
+      // Check timestamp is within 5 minutes to prevent replay attacks
+      const ts = parseInt(String(timestamp), 10)
+      if (Math.abs(Date.now() / 1000 - ts) > 300) {
+        return res.status(401).json({ error: 'Webhook timestamp expired' })
+      }
       if (!verifyMailgunSignature(String(timestamp), String(token), String(signature), signingKey)) {
         return res.status(401).json({ error: 'Invalid signature' })
       }
@@ -40,7 +74,7 @@ export async function handleMailgunWebhook(req: Request, res: Response) {
 
     // Drop auto-replies
     if (isAutoReply(rawHeaders)) {
-      return res.status(200).json({ ok: true, skipped: 'auto-reply' })
+      return res.status(200).json({ skipped: true })
     }
 
     const recipient: string = body.recipient || body.To || ''
@@ -68,21 +102,21 @@ export async function handleMailgunWebhook(req: Request, res: Response) {
     }
   } catch (err) {
     console.error('Webhook error:', err)
-    res.status(500).json({ error: 'Internal error' })
+    res.status(200).json({ skipped: true })
   }
 }
 
 async function handleTicketReply(token: string, senderEmail: string, senderName: string, body: string, res: Response) {
   const payload = verifyEmailToken(token)
   if (!payload || !payload.startsWith('ticket:')) {
-    return res.status(200).json({ ok: true, skipped: 'invalid token' })
+    return res.status(200).json({ skipped: true })
   }
   const ticketId = payload.slice('ticket:'.length)
 
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } })
-  if (!ticket) return res.status(200).json({ ok: true, skipped: 'ticket not found' })
+  if (!ticket) return res.status(200).json({ skipped: true })
 
-  if (!body) return res.status(200).json({ ok: true, skipped: 'empty body' })
+  if (!body) return res.status(200).json({ skipped: true })
 
   // Find user by email (internal staff replying)
   const user = await prisma.user.findFirst({ where: { email: senderEmail } })
@@ -121,21 +155,21 @@ async function handleTicketReply(token: string, senderEmail: string, senderName:
 async function handleTaskUpdate(token: string, senderEmail: string, senderName: string, body: string, res: Response) {
   const payload = verifyEmailToken(token)
   if (!payload || !payload.startsWith('task:')) {
-    return res.status(200).json({ ok: true, skipped: 'invalid token' })
+    return res.status(200).json({ skipped: true })
   }
   const parts = payload.split(':')
   const taskId = parts[1]
   const userId = parts[2]
-  if (!taskId || !userId) return res.status(200).json({ ok: true, skipped: 'invalid payload' })
+  if (!taskId || !userId) return res.status(200).json({ skipped: true })
 
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     include: { project: { select: { id: true, number: true, name: true } } }
   })
   const user = await prisma.user.findUnique({ where: { id: userId } })
-  if (!task || !user) return res.status(200).json({ ok: true, skipped: 'not found' })
+  if (!task || !user) return res.status(200).json({ skipped: true })
 
-  if (!body) return res.status(200).json({ ok: true, skipped: 'empty body' })
+  if (!body) return res.status(200).json({ skipped: true })
 
   // Store the email body as JSON matching the task comment format used in createTaskComment
   const commentContent = JSON.stringify({ text: body, images: [], mentionedIds: [], references: [], source: 'email' })
@@ -178,11 +212,17 @@ async function handleNewTicket(senderEmail: string, senderName: string, subject:
   if (!contact) {
     // Unknown sender — reject silently (strict mode)
     console.log(`Rejected email from unknown sender: ${senderEmail}`)
-    return res.status(200).json({ ok: true, skipped: 'unknown sender' })
+    return res.status(200).json({ skipped: true })
   }
 
   if (contact.company && !contact.company.isActive) {
-    return res.status(200).json({ ok: true, skipped: 'company inactive' })
+    return res.status(200).json({ skipped: true })
+  }
+
+  // Rate limit new ticket creation per sender
+  if (!checkInboundRateLimit(senderEmail)) {
+    console.warn(`Inbound rate limit exceeded for ${senderEmail}`)
+    return res.status(200).json({ skipped: true })
   }
 
   const ticket = await prisma.ticket.create({

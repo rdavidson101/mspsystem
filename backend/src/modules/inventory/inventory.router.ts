@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { authenticate } from '../../middleware/auth'
+import { authenticate, requireRole } from '../../middleware/auth'
 import { getAssets, getAsset, createAsset, updateAsset, deleteAsset, requestShipment } from './assets.controller'
 import { getManufacturers, createManufacturer, updateManufacturer, deleteManufacturer } from './manufacturers.controller'
 import { getShipments, updateShipment, deleteShipment } from './shipments.controller'
@@ -12,37 +12,37 @@ inventoryRouter.use(authenticate)
 
 // Assets
 inventoryRouter.get('/assets', getAssets)
-inventoryRouter.post('/assets', createAsset)
+inventoryRouter.post('/assets', requireRole('ADMIN', 'MANAGER'), createAsset)
 inventoryRouter.get('/assets/:id', getAsset)
-inventoryRouter.patch('/assets/:id', updateAsset)
-inventoryRouter.delete('/assets/:id', deleteAsset)
-inventoryRouter.post('/assets/:id/ship', requestShipment)
+inventoryRouter.patch('/assets/:id', requireRole('ADMIN', 'MANAGER'), updateAsset)
+inventoryRouter.delete('/assets/:id', requireRole('ADMIN', 'MANAGER'), deleteAsset)
+inventoryRouter.post('/assets/:id/ship', requireRole('ADMIN', 'MANAGER'), requestShipment)
 
 // Manufacturers
 inventoryRouter.get('/manufacturers', getManufacturers)
-inventoryRouter.post('/manufacturers', createManufacturer)
-inventoryRouter.patch('/manufacturers/:id', updateManufacturer)
-inventoryRouter.delete('/manufacturers/:id', deleteManufacturer)
+inventoryRouter.post('/manufacturers', requireRole('ADMIN', 'MANAGER'), createManufacturer)
+inventoryRouter.patch('/manufacturers/:id', requireRole('ADMIN', 'MANAGER'), updateManufacturer)
+inventoryRouter.delete('/manufacturers/:id', requireRole('ADMIN', 'MANAGER'), deleteManufacturer)
 
 // Shipments
 inventoryRouter.get('/shipments', getShipments)
-inventoryRouter.patch('/shipments/:id', updateShipment)
-inventoryRouter.delete('/shipments/:id', deleteShipment)
+inventoryRouter.patch('/shipments/:id', requireRole('ADMIN', 'MANAGER'), updateShipment)
+inventoryRouter.delete('/shipments/:id', requireRole('ADMIN', 'MANAGER'), deleteShipment)
 
 // Asset types
 inventoryRouter.get('/asset-types', getAssetTypes)
-inventoryRouter.post('/asset-types', createAssetType)
-inventoryRouter.patch('/asset-types/:id', updateAssetType)
-inventoryRouter.delete('/asset-types/:id', deleteAssetType)
+inventoryRouter.post('/asset-types', requireRole('ADMIN', 'MANAGER'), createAssetType)
+inventoryRouter.patch('/asset-types/:id', requireRole('ADMIN', 'MANAGER'), updateAssetType)
+inventoryRouter.delete('/asset-types/:id', requireRole('ADMIN', 'MANAGER'), deleteAssetType)
 
 // Vendors
 inventoryRouter.get('/vendors', getVendors)
-inventoryRouter.post('/vendors', createVendor)
-inventoryRouter.patch('/vendors/:id', updateVendor)
-inventoryRouter.delete('/vendors/:id', deleteVendor)
+inventoryRouter.post('/vendors', requireRole('ADMIN', 'MANAGER'), createVendor)
+inventoryRouter.patch('/vendors/:id', requireRole('ADMIN', 'MANAGER'), updateVendor)
+inventoryRouter.delete('/vendors/:id', requireRole('ADMIN', 'MANAGER'), deleteVendor)
 
 // Licenses
 inventoryRouter.get('/licenses', getLicenses)
-inventoryRouter.post('/licenses', createLicense)
-inventoryRouter.patch('/licenses/:id', updateLicense)
-inventoryRouter.delete('/licenses/:id', deleteLicense)
+inventoryRouter.post('/licenses', requireRole('ADMIN', 'MANAGER'), createLicense)
+inventoryRouter.patch('/licenses/:id', requireRole('ADMIN', 'MANAGER'), updateLicense)
+inventoryRouter.delete('/licenses/:id', requireRole('ADMIN', 'MANAGER'), deleteLicense)

@@ -155,7 +155,11 @@
       "Bash(powershell.exe -Command \"Test-NetConnection -ComputerName localhost -Port 4000 -InformationLevel Quiet -ErrorAction SilentlyContinue\")",
       "Bash(npx tsc:*)",
       "Bash(sed -n '342,365p' \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\")",
-      "Bash(sed -n '472,490p' \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\")"
+      "Bash(sed -n '472,490p' \"C:\\\\Users\\\\Ryan\\\\Documents\\\\MSP System\\\\backend\\\\prisma\\\\schema.prisma\")",
+      "Bash(ls ~/.nvm/versions/node/*/bin/npm)",
+      "Bash(ls \"/c/Program Files \\(x86\\)/nodejs/\")",
+      "Bash(cmd /c \"npm --version\")",
+      "Bash(powershell -Command \"npm --version\")"
     ]
   }
 }

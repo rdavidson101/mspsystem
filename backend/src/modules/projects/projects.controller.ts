@@ -166,6 +166,17 @@ export async function createProject(req: AuthRequest, res: Response, next: NextF
 export async function updateProject(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { name, description, status, startDate, endDate, budget, companyId } = req.body
+    const project = await prisma.project.findUnique({ where: { id: req.params.id } })
+    if (!project) throw new AppError(404, 'Project not found')
+
+    // Only admins/managers or project members can update a project
+    if (req.user!.role !== 'ADMIN' && req.user!.role !== 'MANAGER') {
+      const member = await prisma.projectMember.findFirst({
+        where: { projectId: project.id, userId: req.user!.id }
+      })
+      if (!member) return res.status(403).json({ message: 'Not a project member' })
+    }
+
     const data: any = {}
     if (name !== undefined) data.name = name
     if (description !== undefined) data.description = description || null
@@ -174,13 +185,16 @@ export async function updateProject(req: AuthRequest, res: Response, next: NextF
     if (endDate !== undefined) data.endDate = endDate ? new Date(endDate) : null
     if (budget !== undefined) data.budget = budget ? Number(budget) : null
     if (companyId !== undefined) data.companyId = companyId || null
-    const project = await prisma.project.update({ where: { id: req.params.id }, data })
-    res.json(project)
+    const updated = await prisma.project.update({ where: { id: req.params.id }, data })
+    res.json(updated)
   } catch (e) { next(e) }
 }
 
 export async function deleteProject(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    if (req.user!.role !== 'ADMIN' && req.user!.role !== 'MANAGER') {
+      return res.status(403).json({ message: 'Only admins and managers can delete projects' })
+    }
     await prisma.project.delete({ where: { id: req.params.id } })
     res.json({ success: true })
   } catch (e) { next(e) }

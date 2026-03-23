@@ -6,6 +6,21 @@ import { ticketReplyToken, taskUserToken } from './email.utils'
 // Helper to format ticket ref
 function fmtTicket(n: number) { return `INC-${String(n).padStart(5, '0')}` }
 
+// Remove CRLF characters that could enable email header injection
+function sanitizeHeader(value: string): string {
+  return value.replace(/[\r\n\t]/g, ' ').trim().slice(0, 500)
+}
+
+// Escape user-provided content inserted into HTML email bodies to prevent XSS in email clients
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 export async function getMailgunSettings() {
   const rows = await prisma.systemSetting.findMany({
     where: { key: { in: ['mailgunApiKey', 'mailgunDomain', 'mailgunSupportEmail', 'mailgunUpdatesDomain', 'mailgunWebhookKey', 'mailgunEnabled'] } }
@@ -28,13 +43,15 @@ export async function sendTicketConfirmation(ticket: any, toEmail: string) {
   const updatesDomain = settings.mailgunUpdatesDomain || settings.mailgunDomain
   const replyTo = `ticket+${replyToken}@${updatesDomain}`
   const ref = fmtTicket(ticket.number)
+  const safeTitle = escapeHtml(ticket.title)
+  const safeRef = escapeHtml(ref)
   await client.messages.create(settings.mailgunDomain, {
-    from: `Support <${settings.mailgunSupportEmail}>`,
-    to: toEmail,
-    subject: `[${ref}] ${ticket.title} - Ticket Received`,
+    from: sanitizeHeader(`Support <${settings.mailgunSupportEmail}>`),
+    to: sanitizeHeader(toEmail),
+    subject: sanitizeHeader(`[${ref}] ${ticket.title} - Ticket Received`),
     'h:Reply-To': replyTo,
     text: `Hi,\n\nYour support ticket has been received and logged as ${ref}.\n\nSubject: ${ticket.title}\n\nWe'll be in touch shortly. To add more information, simply reply to this email.\n\nReference: ${ref}`,
-    html: `<p>Hi,</p><p>Your support ticket has been received and logged as <strong>${ref}</strong>.</p><p><strong>Subject:</strong> ${ticket.title}</p><p>We'll be in touch shortly. To add more information to this ticket, simply reply to this email.</p><p><small>Reference: ${ref}</small></p>`
+    html: `<p>Hi,</p><p>Your support ticket has been received and logged as <strong>${safeRef}</strong>.</p><p><strong>Subject:</strong> ${safeTitle}</p><p>We'll be in touch shortly. To add more information to this ticket, simply reply to this email.</p><p><small>Reference: ${safeRef}</small></p>`
   }).catch((err: any) => console.error('Mailgun send error:', err))
 }
 
@@ -46,14 +63,17 @@ export async function sendTicketUpdate(ticket: any, commentContent: string, toEm
   const updatesDomain = settings.mailgunUpdatesDomain || settings.mailgunDomain
   const replyTo = `ticket+${replyToken}@${updatesDomain}`
   const ref = fmtTicket(ticket.number)
-  const safeContent = commentContent.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')
+  const safeRef = escapeHtml(ref)
+  const safeAuthor = escapeHtml(authorName)
+  const safeTitle = escapeHtml(ticket.title)
+  const safeContent = escapeHtml(commentContent).replace(/\n/g, '<br/>')
   await client.messages.create(settings.mailgunDomain, {
-    from: `Support <${settings.mailgunSupportEmail}>`,
-    to: toEmail,
-    subject: `Re: [${ref}] ${ticket.title}`,
+    from: sanitizeHeader(`Support <${settings.mailgunSupportEmail}>`),
+    to: sanitizeHeader(toEmail),
+    subject: sanitizeHeader(`Re: [${ref}] ${ticket.title}`),
     'h:Reply-To': replyTo,
     text: `${authorName} replied to your ticket ${ref}:\n\n${commentContent}\n\n---\nReply to this email to respond to this ticket.`,
-    html: `<p><strong>${authorName}</strong> has updated your ticket <strong>${ref}</strong>:</p><hr style="border:none;border-top:1px solid #eee;margin:16px 0"/><p>${safeContent}</p><hr style="border:none;border-top:1px solid #eee;margin:16px 0"/><p><small>Reply to this email to respond. Reference: ${ref}</small></p>`
+    html: `<p><strong>${safeAuthor}</strong> has updated your ticket <strong>${safeRef}</strong>:</p><hr style="border:none;border-top:1px solid #eee;margin:16px 0"/><p>${safeContent}</p><hr style="border:none;border-top:1px solid #eee;margin:16px 0"/><p><small>Reply to this email to respond. Reference: ${safeRef}</small></p>`
   }).catch((err: any) => console.error('Mailgun send error:', err))
 }
 

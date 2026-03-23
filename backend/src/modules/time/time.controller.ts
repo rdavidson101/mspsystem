@@ -4,10 +4,13 @@ import { AuthRequest } from '../../middleware/auth'
 
 export async function getTimeEntries(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { userId, ticketId, taskId, projectId, startDate, endDate } = req.query
+    const { userId: requestedUserId, ticketId, taskId, projectId, startDate, endDate } = req.query
+    const effectiveUserId = (req.user!.role === 'ADMIN' || req.user!.role === 'MANAGER')
+      ? (requestedUserId ? String(requestedUserId) : req.user!.id)
+      : req.user!.id
     const entries = await prisma.timeEntry.findMany({
       where: {
-        ...(userId ? { userId: String(userId) } : {}),
+        userId: effectiveUserId,
         ...(ticketId ? { ticketId: String(ticketId) } : {}),
         ...(taskId ? { taskId: String(taskId) } : {}),
         ...(projectId ? { projectId: String(projectId) } : {}),
@@ -27,8 +30,20 @@ export async function getTimeEntries(req: AuthRequest, res: Response, next: Next
 
 export async function createTimeEntry(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const { hours, description, date, projectId, taskId, billable } = req.body
+    if (!hours || isNaN(Number(hours)) || Number(hours) <= 0) {
+      return res.status(400).json({ message: 'Valid hours required' })
+    }
     const entry = await prisma.timeEntry.create({
-      data: { ...req.body, userId: req.user!.id },
+      data: {
+        hours: Number(hours),
+        description: description?.trim() || null,
+        date: date ? new Date(date) : new Date(),
+        projectId: projectId || null,
+        taskId: taskId || null,
+        billable: Boolean(billable),
+        userId: req.user!.id,
+      },
       include: { user: { select: { id: true, firstName: true, lastName: true } } },
     })
     res.status(201).json(entry)
@@ -37,13 +52,29 @@ export async function createTimeEntry(req: AuthRequest, res: Response, next: Nex
 
 export async function updateTimeEntry(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const entry = await prisma.timeEntry.update({ where: { id: req.params.id }, data: req.body })
-    res.json(entry)
+    const entry = await prisma.timeEntry.findUnique({ where: { id: req.params.id } })
+    if (!entry) return res.status(404).json({ message: 'Not found' })
+    if (entry.userId !== req.user!.id && req.user!.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Forbidden' })
+    }
+    const { hours, description, date, billable } = req.body
+    const data: any = {}
+    if (hours !== undefined) data.hours = Number(hours)
+    if (description !== undefined) data.description = description?.trim() || null
+    if (date !== undefined) data.date = new Date(date)
+    if (billable !== undefined) data.billable = Boolean(billable)
+    const updated = await prisma.timeEntry.update({ where: { id: req.params.id }, data })
+    res.json(updated)
   } catch (e) { next(e) }
 }
 
 export async function deleteTimeEntry(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const entry = await prisma.timeEntry.findUnique({ where: { id: req.params.id } })
+    if (!entry) return res.status(404).json({ message: 'Not found' })
+    if (entry.userId !== req.user!.id && req.user!.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Forbidden' })
+    }
     await prisma.timeEntry.delete({ where: { id: req.params.id } })
     res.json({ success: true })
   } catch (e) { next(e) }

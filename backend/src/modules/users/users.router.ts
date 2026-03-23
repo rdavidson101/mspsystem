@@ -1,12 +1,12 @@
 import { Router } from 'express'
-import { authenticate } from '../../middleware/auth'
+import { authenticate, requireRole } from '../../middleware/auth'
 import { getUsers, getUser, createUser, updateUser, deleteUser, resetUserMfa } from './users.controller'
 
 export const usersRouter = Router()
 usersRouter.use(authenticate)
 usersRouter.get('/', getUsers)
-usersRouter.post('/', createUser)
+usersRouter.post('/', requireRole('ADMIN', 'MANAGER'), createUser)
 usersRouter.get('/:id', getUser)
-usersRouter.patch('/:id', updateUser)
-usersRouter.delete('/:id', deleteUser)
-usersRouter.post('/:id/reset-mfa', resetUserMfa)
+usersRouter.patch('/:id', requireRole('ADMIN', 'MANAGER'), updateUser)
+usersRouter.delete('/:id', requireRole('ADMIN'), deleteUser)
+usersRouter.post('/:id/reset-mfa', requireRole('ADMIN', 'MANAGER'), resetUserMfa)

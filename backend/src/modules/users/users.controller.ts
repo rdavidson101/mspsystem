@@ -63,6 +63,15 @@ export async function createUser(req: AuthRequest, res: Response, next: NextFunc
 export async function updateUser(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { password, firstName, lastName, email, phone, jobTitle, role, userType, isActive, canApproveChanges } = req.body
+
+    // Prevent privilege escalation — only ADMIN can change roles or approval permissions
+    if (req.body.role !== undefined && req.user?.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can change user roles' })
+    }
+    if (req.body.canApproveChanges !== undefined && req.user?.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only admins can modify approval permissions' })
+    }
+
     const updateData: any = {}
     if (firstName !== undefined) updateData.firstName = firstName
     if (lastName !== undefined) updateData.lastName = lastName

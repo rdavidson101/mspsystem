@@ -7,13 +7,21 @@ export class AppError extends Error {
   }
 }
 
-export function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
-  if (err.name === 'AppError') {
-    return res.status(err.statusCode).json({ error: err.message })
-  }
+export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction) {
   if (err.name === 'ZodError') {
     return res.status(400).json({ error: 'Validation error', details: err.errors })
   }
-  console.error(err)
-  res.status(500).json({ error: 'Internal server error' })
+
+  const status = err.status || err.statusCode || 500
+  const isDev = process.env.NODE_ENV !== 'production'
+
+  // Always log full error server-side
+  console.error(`[${new Date().toISOString()}] ${req.method} ${req.path} — ${err.message}`)
+  if (isDev) console.error(err.stack)
+
+  // Never send stack traces to client
+  res.status(status).json({
+    message: err.message || 'Internal server error',
+    ...(isDev && { stack: err.stack }),
+  })
 }

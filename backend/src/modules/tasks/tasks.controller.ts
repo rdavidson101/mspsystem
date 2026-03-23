@@ -95,6 +95,16 @@ export async function createTask(req: AuthRequest, res: Response, next: NextFunc
 
 export async function updateTask(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const task = await prisma.task.findUnique({ where: { id: req.params.id } })
+    if (!task) throw new AppError(404, 'Task not found')
+
+    if (req.user!.role !== 'ADMIN' && req.user!.role !== 'MANAGER') {
+      const member = await prisma.projectMember.findFirst({
+        where: { projectId: task.projectId, userId: req.user!.id }
+      })
+      if (!member) return res.status(403).json({ message: 'Not a project member' })
+    }
+
     const { title, description, status, assigneeIds, sectionId, dueDate, startDate, order, priority, estimatedHours } = req.body
     const data: any = {}
     if (title !== undefined) data.title = title
@@ -116,7 +126,7 @@ export async function updateTask(req: AuthRequest, res: Response, next: NextFunc
       }
     }
 
-    const task = await prisma.task.update({
+    const updated = await prisma.task.update({
       where: { id: req.params.id },
       data,
       include: {
@@ -124,12 +134,22 @@ export async function updateTask(req: AuthRequest, res: Response, next: NextFunc
         subTasks: { include: taskInclude },
       },
     })
-    res.json(task)
+    res.json(updated)
   } catch (e) { next(e) }
 }
 
 export async function deleteTask(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const task = await prisma.task.findUnique({ where: { id: req.params.id } })
+    if (!task) throw new AppError(404, 'Task not found')
+
+    if (req.user!.role !== 'ADMIN' && req.user!.role !== 'MANAGER') {
+      const member = await prisma.projectMember.findFirst({
+        where: { projectId: task.projectId, userId: req.user!.id }
+      })
+      if (!member) return res.status(403).json({ message: 'Not a project member' })
+    }
+
     await prisma.task.delete({ where: { id: req.params.id } })
     res.json({ success: true })
   } catch (e) { next(e) }

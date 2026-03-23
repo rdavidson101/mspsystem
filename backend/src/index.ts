@@ -2,6 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import rateLimit from 'express-rate-limit'
 import morgan from 'morgan'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
@@ -43,8 +44,42 @@ export const io = new Server(httpServer, {
   },
 })
 
-app.use(helmet())
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000', credentials: true }))
+app.use(helmet({
+  contentSecurityPolicy: false, // disabled because frontend is served separately
+  crossOriginEmbedderPolicy: false,
+}))
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again later.' },
+})
+app.use('/api/', apiLimiter)
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many authentication attempts, please try again later.' },
+})
+app.use('/api/auth/login', authLimiter)
+app.use('/api/auth/2fa/verify', authLimiter)
+app.use('/api/auth/2fa/enable', authLimiter)
+
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowed = process.env.CORS_ORIGIN || 'http://localhost:3000'
+    const allowedOrigins = allowed.split(',').map(o => o.trim())
+    // Allow no-origin requests (same-origin, mobile apps, curl in dev)
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    callback(new Error(`CORS: origin ${origin} not allowed`))
+  },
+  credentials: true,
+}))
 app.use(morgan('dev'))
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
@@ -84,7 +119,27 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => console.log('Client disconnected:', socket.id))
 })
 
+// Validate required secrets at startup
+const requiredEnvVars = ['JWT_SECRET', 'JWT_REFRESH_SECRET']
+for (const envVar of requiredEnvVars) {
+  const val = process.env[envVar]
+  if (!val || val.length < 32) {
+    console.error(`FATAL: ${envVar} must be set and at least 32 characters long`)
+    process.exit(1)
+  }
+}
+
+if (!process.env.MAILGUN_WEBHOOK_SECRET || process.env.MAILGUN_WEBHOOK_SECRET === 'dev-secret-change-me') {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: MAILGUN_WEBHOOK_SECRET must be set in production')
+    process.exit(1)
+  } else {
+    console.warn('WARNING: MAILGUN_WEBHOOK_SECRET is not set — using insecure default')
+  }
+}
+
 const PORT = process.env.PORT || 4000
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
+

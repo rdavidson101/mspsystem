@@ -29,7 +29,11 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-msp_user}:${POSTGRES_PASSWORD:-msp_password}@postgres:5432/${POSTGRES_DB:-msp_db}
+      # SECURITY: Replace with a strong random string (min 32 chars) before going to production
+      # Generate with: openssl rand -hex 32
       JWT_SECRET: ${JWT_SECRET:-supersecretjwtkey_change_in_production}
+      # SECURITY: Replace with a strong random string (min 32 chars) before going to production
+      # Generate with: openssl rand -hex 32
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-supersecreterefreshjwtkey_change_in_production}
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 4000
