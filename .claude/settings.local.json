@@ -159,7 +159,8 @@
       "Bash(ls ~/.nvm/versions/node/*/bin/npm)",
       "Bash(ls \"/c/Program Files \\(x86\\)/nodejs/\")",
       "Bash(cmd /c \"npm --version\")",
-      "Bash(powershell -Command \"npm --version\")"
+      "Bash(powershell -Command \"npm --version\")",
+      "Bash(plink ryan@10.1.0.31 -pw \"Ubercheese99!\" \"cd ~/mspsystem && sleep 5 && docker compose logs backend --tail=15 2>&1\")"
     ]
   }
 }

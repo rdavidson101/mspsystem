@@ -97,7 +97,21 @@ export async function handleMailgunWebhook(req: Request, res: Response) {
       const token = localPart.slice('task+'.length)
       await handleTaskUpdate(token, senderEmail, senderName, bodyText, res)
     } else {
-      // New ticket from support@ address
+      // Only create a new ticket if the recipient matches the configured support address
+      // This prevents random emails to other addresses on the catch-all domain creating tickets
+      const supportEmail = (settings.mailgunSupportEmail || '').toLowerCase().trim()
+      const recipientNormalised = recipient.toLowerCase().trim()
+      const supportLocalPart = supportEmail.split('@')[0] || ''
+
+      const isSupportAddress = supportEmail &&
+        (recipientNormalised === supportEmail ||
+         localPart.toLowerCase() === supportLocalPart)
+
+      if (!isSupportAddress) {
+        console.log(`Webhook: discarding email to unrecognised address: ${recipient}`)
+        return res.status(200).json({ skipped: true })
+      }
+
       await handleNewTicket(senderEmail, senderName, subject, bodyText, res)
     }
   } catch (err) {
