@@ -3,7 +3,8 @@ import crypto from 'crypto'
 const WEBHOOK_SECRET = process.env.MAILGUN_WEBHOOK_SECRET || 'dev-secret-change-me'
 
 export function generateEmailToken(payload: string): string {
-  const encoded = Buffer.from(payload).toString('base64url')
+  // Use hex encoding — all lowercase, unaffected by email address case normalisation
+  const encoded = Buffer.from(payload).toString('hex')
   const sig = crypto.createHmac('sha256', WEBHOOK_SECRET).update(encoded).digest('hex').slice(0, 10)
   return `${encoded}.${sig}`
 }
@@ -16,7 +17,7 @@ export function verifyEmailToken(token: string): string | null {
   const expected = crypto.createHmac('sha256', WEBHOOK_SECRET).update(encoded).digest('hex').slice(0, 10)
   if (sig !== expected) return null
   try {
-    return Buffer.from(encoded, 'base64url').toString('utf8')
+    return Buffer.from(encoded, 'hex').toString('utf8')
   } catch {
     return null
   }
