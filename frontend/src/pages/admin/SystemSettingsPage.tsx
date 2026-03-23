@@ -373,6 +373,21 @@ export default function SystemSettingsPage() {
             </div>
           </div>
 
+          {/* Region */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Region</label>
+            <div className="flex gap-3">
+              <select
+                className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                value={settings.mailgunRegion || 'US'}
+                onChange={e => saveMut.mutate({ mailgunRegion: e.target.value })}
+              >
+                <option value="US">US (api.mailgun.net)</option>
+                <option value="EU">EU (api.eu.mailgun.net)</option>
+              </select>
+            </div>
+          </div>
+
           {/* Sending Domain */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Sending Domain</label>

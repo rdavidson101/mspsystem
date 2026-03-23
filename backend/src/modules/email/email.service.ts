@@ -23,7 +23,7 @@ function escapeHtml(text: string): string {
 
 export async function getMailgunSettings() {
   const rows = await prisma.systemSetting.findMany({
-    where: { key: { in: ['mailgunApiKey', 'mailgunDomain', 'mailgunSupportEmail', 'mailgunUpdatesDomain', 'mailgunWebhookKey', 'mailgunEnabled'] } }
+    where: { key: { in: ['mailgunApiKey', 'mailgunDomain', 'mailgunSupportEmail', 'mailgunUpdatesDomain', 'mailgunWebhookKey', 'mailgunEnabled', 'mailgunRegion'] } }
   })
   return Object.fromEntries(rows.map(r => [r.key, r.value]))
 }
@@ -32,7 +32,8 @@ export async function getMailgunClient() {
   const settings = await getMailgunSettings()
   if (settings.mailgunEnabled !== 'true' || !settings.mailgunApiKey) return null
   const mg = new Mailgun(FormData)
-  return { client: mg.client({ username: 'api', key: settings.mailgunApiKey }), settings }
+  const url = settings.mailgunRegion === 'EU' ? 'https://api.eu.mailgun.net' : 'https://api.mailgun.net'
+  return { client: mg.client({ username: 'api', key: settings.mailgunApiKey, url }), settings }
 }
 
 export async function sendTicketConfirmation(ticket: any, toEmail: string) {
