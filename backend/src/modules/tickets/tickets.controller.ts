@@ -283,7 +283,7 @@ export async function addComment(req: AuthRequest, res: Response, next: NextFunc
   try {
     const ticket = await prisma.ticket.findUnique({
       where: { id: req.params.id },
-      select: { id: true, number: true, title: true, assignedToId: true, companyId: true, createdById: true }
+      select: { id: true, number: true, title: true, assignedToId: true, companyId: true, createdById: true, contactId: true }
     })
     const { content, isInternal, mentionedUserIds: rawMentions } = req.body
     const comment = await prisma.ticketComment.create({
@@ -315,16 +315,24 @@ export async function addComment(req: AuthRequest, res: Response, next: NextFunc
     }
 
     // Send email notification to the ticket reporter (fire and forget)
-    if (ticket && ticket.companyId && !isInternal) {
-      const reporter = ticket.createdById
-        ? await prisma.user.findUnique({
-            where: { id: ticket.createdById },
-            select: { email: true, firstName: true, lastName: true },
-          })
-        : null
-      if (reporter?.email && reporter.email !== req.user!.email) {
+    if (ticket && !isInternal) {
+      let reporterEmail: string | null = null
+      if (ticket.createdById) {
+        const reporter = await prisma.user.findUnique({
+          where: { id: ticket.createdById },
+          select: { email: true },
+        })
+        reporterEmail = reporter?.email ?? null
+      } else if (ticket.contactId) {
+        const contact = await prisma.contact.findUnique({
+          where: { id: ticket.contactId },
+          select: { email: true },
+        })
+        reporterEmail = contact?.email ?? null
+      }
+      if (reporterEmail && reporterEmail !== req.user!.email) {
         const authorName = `${(req.user as any).firstName || ''} ${(req.user as any).lastName || ''}`.trim() || 'Support Team'
-        sendTicketUpdate(ticket, content, reporter.email, authorName).catch(err => console.error('Email error:', err))
+        sendTicketUpdate(ticket, content, reporterEmail, authorName).catch(err => console.error('Email error:', err))
       }
     }
 

@@ -254,6 +254,7 @@ async function handleNewTicket(senderEmail: string, senderName: string, subject:
       status: 'AWAITING_TRIAGE',
       priority: 'MEDIUM',
       companyId: contact?.companyId ?? mspCompany?.id ?? undefined,
+      contactId: contact?.id ?? undefined,
       serviceTeamId: contact?.company?.serviceTeamId ?? undefined,
       source: 'EMAIL',
       ...(internalUser ? { createdById: internalUser.id } : {}),
