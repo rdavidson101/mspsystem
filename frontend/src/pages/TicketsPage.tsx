@@ -188,7 +188,7 @@ export default function TicketsPage() {
                   </Link>
                 </td>
                 <td className="py-3 px-4 text-sm text-slate-600 whitespace-nowrap">
-                  {ticket.createdBy ? `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}` : '—'}
+                  {(() => { const r = ticket.createdBy ?? ticket.contact; return r ? `${r.firstName ?? ''} ${r.lastName ?? ''}`.trim() || '—' : '—' })()}
                 </td>
                 <td className="py-3 px-4 text-sm text-slate-600">{ticket.company?.name || '—'}</td>
                 <td className="py-3 px-4">

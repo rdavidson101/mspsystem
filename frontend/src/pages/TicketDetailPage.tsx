@@ -64,7 +64,7 @@ const historyFieldLabels: Record<string, string> = {
 }
 
 function applyMacroVariables(content: string, ticket: any, user: any): string {
-  const requesterName = ticket.createdBy ? `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}` : 'Customer'
+  const requesterName = (() => { const r = ticket.createdBy ?? ticket.contact; return r ? `${r.firstName ?? ''} ${r.lastName ?? ''}`.trim() || 'Customer' : 'Customer' })()
   const currentUserName = user ? `${user.firstName} ${user.lastName}` : 'Support Team'
   return content
     .replace(/\{\{requester_name\}\}/g, requesterName)
