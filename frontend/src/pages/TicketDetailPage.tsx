@@ -261,6 +261,7 @@ export default function TicketDetailPage() {
   const totalHours = (ticket.timeEntries || []).reduce((s: number, e: any) => s + e.hours, 0)
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start gap-3">
@@ -788,5 +789,6 @@ export default function TicketDetailPage() {
         </div>
       </div>
     )}
+    </>
   )
 }
