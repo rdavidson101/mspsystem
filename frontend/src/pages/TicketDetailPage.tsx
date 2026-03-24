@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { ticketRef } from '@/lib/refs'
 import { format } from 'date-fns'
-import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Building2, AlertCircle, History, MessageSquare, AlertTriangle, AtSign, Mail } from 'lucide-react'
+import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Building2, AlertCircle, History, MessageSquare, AlertTriangle, AtSign, Mail, ArrowUpDown } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuthStore } from '@/store/authStore'
 import UserAvatar from '@/components/ui/UserAvatar'
@@ -173,6 +173,9 @@ export default function TicketDetailPage() {
   const [comment, setComment] = useState('')
   const [isInternal, setIsInternal] = useState(false)
   const [activeTab, setActiveTab] = useState<'updates' | 'history'>('updates')
+  const [commentSort, setCommentSort] = useState<'asc' | 'desc'>(() =>
+    (localStorage.getItem('ticketCommentSort') as 'asc' | 'desc') || 'asc'
+  )
   const [mention, setMention] = useState<{ start: number; search: string; top: number; left: number; width: number } | null>(null)
   const [mentionedIds, setMentionedIds] = useState<Set<string>>(new Set())
   const [showMacroPicker, setShowMacroPicker] = useState(false)
@@ -367,7 +370,7 @@ export default function TicketDetailPage() {
           {/* Activity / History tabs */}
           <div className="card overflow-hidden">
             <div className="border-b border-slate-100 px-4">
-              <div className="flex gap-0">
+              <div className="flex items-center gap-0">
                 <button
                   onClick={() => setActiveTab('updates')}
                   className={clsx(
@@ -392,6 +395,20 @@ export default function TicketDetailPage() {
                     {ticket.history?.length || 0}
                   </span>
                 </button>
+                {activeTab === 'updates' && (
+                  <button
+                    onClick={() => {
+                      const next = commentSort === 'asc' ? 'desc' : 'asc'
+                      setCommentSort(next)
+                      localStorage.setItem('ticketCommentSort', next)
+                    }}
+                    className="ml-auto flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-md hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200"
+                    title={commentSort === 'asc' ? 'Oldest first — click for newest first' : 'Newest first — click for oldest first'}
+                  >
+                    <ArrowUpDown size={12} />
+                    {commentSort === 'asc' ? 'Oldest first' : 'Newest first'}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -399,7 +416,11 @@ export default function TicketDetailPage() {
               {/* Updates tab: comments only */}
               {activeTab === 'updates' && (
                 <div className="space-y-3">
-                  {(ticket.comments || []).map((comment: any) => (
+                  {[...(ticket.comments || [])].sort((a: any, b: any) =>
+                    commentSort === 'asc'
+                      ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                      : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                  ).map((comment: any) => (
                     <CommentBubble key={`c-${comment.id}`} comment={comment} />
                   ))}
                   {(ticket.comments || []).length === 0 && (
