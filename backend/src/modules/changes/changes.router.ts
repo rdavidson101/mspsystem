@@ -1,9 +1,14 @@
 import { Router } from 'express'
 import { authenticate } from '../../middleware/auth'
-import { getChanges, getChange, createChange, updateChange, submitChange, approveInternal, rejectInternal, approveCustomer, rejectCustomer, completeChange, failChange, cancelChange, abandonChange, getApprovers } from './changes.controller'
+import { getChanges, getChange, createChange, updateChange, submitChange, approveInternal, rejectInternal, approveCustomer, rejectCustomer, completeChange, failChange, cancelChange, abandonChange, getApprovers, getClientApprovers, requestClientApproval, getClientApprovalChange, submitClientApproval } from './changes.controller'
 import { prisma } from '../../lib/prisma'
 
 export const changesRouter = Router()
+
+// Public routes — no auth required
+changesRouter.get('/client-approval/:token', getClientApprovalChange)
+changesRouter.post('/client-approval/:token', submitClientApproval)
+
 changesRouter.use(authenticate)
 
 changesRouter.param('id', async (req, res, next, id) => {
@@ -20,6 +25,7 @@ changesRouter.param('id', async (req, res, next, id) => {
 changesRouter.get('/', getChanges)
 changesRouter.post('/', createChange)
 changesRouter.get('/approvers', getApprovers)
+changesRouter.get('/client-approvers', getClientApprovers)
 changesRouter.get('/:id', getChange)
 changesRouter.patch('/:id', updateChange)
 changesRouter.post('/:id/submit', submitChange)
@@ -31,3 +37,4 @@ changesRouter.post('/:id/complete', completeChange)
 changesRouter.post('/:id/fail', failChange)
 changesRouter.post('/:id/cancel', cancelChange)
 changesRouter.post('/:id/abandon', abandonChange)
+changesRouter.post('/:id/request-client-approval', requestClientApproval)

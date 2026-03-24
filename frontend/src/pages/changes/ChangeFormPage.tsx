@@ -38,6 +38,7 @@ const empty = {
   validationSteps: '',
   rollbackSteps: '',
   internalApproverId: '',
+  clientApproverId: '',
   customerApproverName: '',
   customerApproverEmail: '',
 }
@@ -51,6 +52,11 @@ export default function ChangeFormPage() {
   const { data: existing } = useQuery({ queryKey: ['change', id], queryFn: () => api.get(`/changes/${id}`).then(r => r.data), enabled: isEdit })
   const { data: approvers = [] } = useQuery({ queryKey: ['change-approvers'], queryFn: () => api.get('/changes/approvers').then(r => r.data) })
   const { data: companies = [] } = useQuery({ queryKey: ['companies'], queryFn: () => api.get('/companies').then(r => r.data) })
+  const { data: clientApprovers = [] } = useQuery({
+    queryKey: ['client-approvers', form.companyId],
+    queryFn: () => api.get('/changes/client-approvers', { params: { companyId: form.companyId } }).then(r => r.data),
+    enabled: !!form.companyId,
+  })
 
   useEffect(() => {
     if (existing) {
@@ -59,6 +65,7 @@ export default function ChangeFormPage() {
         scheduledStart: existing.scheduledStart ? new Date(existing.scheduledStart).toISOString().slice(0, 16) : '',
         companyId: existing.companyId || '',
         internalApproverId: existing.internalApproverId || '',
+        clientApproverId: existing.clientApproverId || '',
       })
     }
   }, [existing])
@@ -160,14 +167,19 @@ export default function ChangeFormPage() {
               <p className="text-xs text-amber-600 mt-1">No approvers configured. Set change approval rights in Administration → User Management.</p>
             )}
           </Field>
-          <div className="space-y-3">
-            <Field label="Customer Approver Name">
-              <input className="input" value={form.customerApproverName || ''} onChange={f('customerApproverName')} placeholder="Customer contact name" />
-            </Field>
-            <Field label="Customer Approver Email">
-              <input className="input" type="email" value={form.customerApproverEmail || ''} onChange={f('customerApproverEmail')} placeholder="customer@example.com" />
-            </Field>
-          </div>
+          <Field label="Client Change Approver">
+            <SearchableSelect
+              value={form.clientApproverId}
+              onChange={val => setForm((prev: any) => ({ ...prev, clientApproverId: val }))}
+              options={(clientApprovers as any[]).map((c: any) => ({ value: c.id, label: `${c.firstName} ${c.lastName} (${c.email})` }))}
+              placeholder={form.companyId ? 'Select client approver' : 'Select a customer first'}
+              emptyLabel="None"
+              disabled={!form.companyId}
+            />
+            {form.companyId && (clientApprovers as any[]).length === 0 && (
+              <p className="text-xs text-amber-600 mt-1">No contacts with change approval rights for this customer. Set rights in the contact record.</p>
+            )}
+          </Field>
         </div>
       </Section>
 

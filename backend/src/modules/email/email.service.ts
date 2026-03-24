@@ -108,3 +108,53 @@ export async function getTaskCcAddress(taskId: string, userId: string): Promise<
   const token = taskUserToken(taskId, userId)
   return `task+${token}@${updatesDomain}`
 }
+
+export async function sendChangeApprovalEmail(
+  change: any,
+  contact: { firstName: string; lastName: string; email: string },
+  approveUrl: string,
+  rejectUrl: string
+) {
+  const result = await getMailgunClient()
+  if (!result) return
+  const { client, settings } = result
+  const ref = `RFC-${String(change.number).padStart(5, '0')}`
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:640px;margin:0 auto;color:#1e293b">
+      <div style="background:#4f46e5;padding:24px 32px;border-radius:8px 8px 0 0">
+        <h1 style="color:#fff;margin:0;font-size:20px">Change Request Awaiting Your Approval</h1>
+        <p style="color:#c7d2fe;margin:6px 0 0">${ref} — ${change.title}</p>
+      </div>
+      <div style="background:#f8fafc;padding:32px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px">
+        <p>Hi ${contact.firstName},</p>
+        <p>A change request has been submitted that requires your approval. Please review the details below and approve or reject.</p>
+
+        <table style="width:100%;border-collapse:collapse;margin:20px 0">
+          <tr><td style="padding:8px 12px;background:#f1f5f9;font-weight:600;width:40%">Reference</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${ref}</td></tr>
+          <tr><td style="padding:8px 12px;background:#f1f5f9;font-weight:600">Title</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${change.title}</td></tr>
+          <tr><td style="padding:8px 12px;background:#f1f5f9;font-weight:600">Risk Level</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${change.risk}</td></tr>
+          ${change.scheduledStart ? `<tr><td style="padding:8px 12px;background:#f1f5f9;font-weight:600">Scheduled</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${new Date(change.scheduledStart).toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })}${change.durationMinutes ? ` (~${change.durationMinutes} min)` : ''}</td></tr>` : ''}
+          ${change.scope ? `<tr><td style="padding:8px 12px;background:#f1f5f9;font-weight:600">Scope</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${change.scope}</td></tr>` : ''}
+          ${change.reason ? `<tr><td style="padding:8px 12px;background:#f1f5f9;font-weight:600">Reason</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${change.reason}</td></tr>` : ''}
+          ${change.implementationPlan ? `<tr><td style="padding:8px 12px;background:#f1f5f9;font-weight:600">Implementation Plan</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;white-space:pre-wrap">${change.implementationPlan}</td></tr>` : ''}
+          ${change.rollbackSteps ? `<tr><td style="padding:8px 12px;background:#f1f5f9;font-weight:600">Rollback Plan</td><td style="padding:8px 12px">${change.rollbackSteps}</td></tr>` : ''}
+        </table>
+
+        <div style="margin:32px 0;text-align:center">
+          <a href="${approveUrl}" style="display:inline-block;background:#16a34a;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;margin-right:16px">&#10003; Approve</a>
+          <a href="${rejectUrl}" style="display:inline-block;background:#dc2626;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px">&#10007; Reject</a>
+        </div>
+
+        <p style="font-size:13px;color:#64748b">You can also add a comment after clicking either button. This approval link is unique to you — please do not forward it.</p>
+      </div>
+    </div>
+  `
+
+  await client.messages.create(settings.mailgunDomain, {
+    from: `${settings.mailgunFromName || 'Support'} <${settings.mailgunFromEmail || `support@${settings.mailgunDomain}`}>`,
+    to: contact.email,
+    subject: `[${ref}] Change Request Awaiting Your Approval: ${change.title}`,
+    html,
+  })
+}

@@ -37,6 +37,7 @@ import SystemSettingsPage from '@/pages/admin/SystemSettingsPage'
 import ChangesPage from '@/pages/changes/ChangesPage'
 import ChangeFormPage from '@/pages/changes/ChangeFormPage'
 import ChangeDetailPage from '@/pages/changes/ChangeDetailPage'
+import ChangeApprovalPage from '@/pages/changes/ChangeApprovalPage'
 import MyApprovalsPage from '@/pages/changes/MyApprovalsPage'
 import MyChangesPage from '@/pages/changes/MyChangesPage'
 import TicketSearchPage from '@/pages/TicketSearchPage'
@@ -53,6 +54,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/change-approval/:token" element={<ChangeApprovalPage />} />
         <Route
           path="/"
           element={

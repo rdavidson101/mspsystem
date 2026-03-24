@@ -55,6 +55,11 @@ export default function ChangeDetailPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['change', id] }); qc.invalidateQueries({ queryKey: ['changes'] }); setShowApprovalInput(null); setApprovalNotes('') },
   })
 
+  const requestClientApprovalMutation = useMutation({
+    mutationFn: () => api.post(`/changes/${id}/request-client-approval`).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['change', id] }); qc.invalidateQueries({ queryKey: ['changes'] }) },
+  })
+
   if (isLoading || !change) return <div className="p-8 text-slate-400">Loading…</div>
 
   const isInternalApprover = change.internalApproverId === user?.id
@@ -262,14 +267,53 @@ export default function ChangeDetailPage() {
             {change.internalRejectedAt && <p className="text-xs text-red-600 mt-0.5">✗ Rejected {format(new Date(change.internalRejectedAt), 'MMM d, HH:mm')}</p>}
             {change.internalNotes && <p className="text-xs text-slate-500 italic mt-1">"{change.internalNotes}"</p>}
           </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 mb-1">Customer Approver</p>
-            <p className="text-sm text-slate-700">{change.customerApproverName || '—'}</p>
-            {change.customerApproverEmail && <p className="text-xs text-slate-400">{change.customerApproverEmail}</p>}
-            {change.customerApprovedAt && <p className="text-xs text-green-600 mt-0.5">✓ Approved {format(new Date(change.customerApprovedAt), 'MMM d, HH:mm')}</p>}
-            {change.customerRejectedAt && <p className="text-xs text-red-600 mt-0.5">✗ Rejected {format(new Date(change.customerRejectedAt), 'MMM d, HH:mm')}</p>}
-            {change.customerNotes && <p className="text-xs text-slate-500 italic mt-1">"{change.customerNotes}"</p>}
-          </div>
+          {/* Client Approver */}
+          {change.clientApprover ? (
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Client Approver</p>
+              <p className="text-sm text-slate-700">{change.clientApprover.firstName} {change.clientApprover.lastName}</p>
+              <p className="text-xs text-slate-500">{change.clientApprover.email}</p>
+              {change.status === 'CUSTOMER_REVIEW' && (
+                <div className="mt-2">
+                  {change.clientApprovalSentAt ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-400">Approval email sent {format(new Date(change.clientApprovalSentAt), 'MMM d, h:mm a')}</p>
+                      <button
+                        onClick={() => requestClientApprovalMutation.mutate()}
+                        disabled={requestClientApprovalMutation.isPending}
+                        className="text-xs text-primary-600 hover:underline"
+                      >
+                        Resend email
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => requestClientApprovalMutation.mutate()}
+                      disabled={requestClientApprovalMutation.isPending}
+                      className="btn btn-primary text-xs py-1 px-3"
+                    >
+                      {requestClientApprovalMutation.isPending ? 'Sending…' : 'Send for Client Approval'}
+                    </button>
+                  )}
+                </div>
+              )}
+              {change.status === 'APPROVED' && change.customerApprovedAt && (
+                <p className="text-xs text-green-600 mt-1">✓ Approved {format(new Date(change.customerApprovedAt), 'MMM d, yyyy')}{change.customerNotes ? ` — "${change.customerNotes}"` : ''}</p>
+              )}
+              {change.status === 'REJECTED' && change.customerRejectedAt && (
+                <p className="text-xs text-red-600 mt-1">✗ Rejected {format(new Date(change.customerRejectedAt), 'MMM d, yyyy')}{change.customerNotes ? ` — "${change.customerNotes}"` : ''}</p>
+              )}
+            </div>
+          ) : (
+            <div>
+              <p className="text-xs font-semibold text-slate-500 mb-1">Customer Approver</p>
+              <p className="text-sm text-slate-700">{change.customerApproverName || '—'}</p>
+              {change.customerApproverEmail && <p className="text-xs text-slate-400">{change.customerApproverEmail}</p>}
+              {change.customerApprovedAt && <p className="text-xs text-green-600 mt-0.5">✓ Approved {format(new Date(change.customerApprovedAt), 'MMM d, HH:mm')}</p>}
+              {change.customerRejectedAt && <p className="text-xs text-red-600 mt-0.5">✗ Rejected {format(new Date(change.customerRejectedAt), 'MMM d, HH:mm')}</p>}
+              {change.customerNotes && <p className="text-xs text-slate-500 italic mt-1">"{change.customerNotes}"</p>}
+            </div>
+          )}
         </div>
       </div>
 

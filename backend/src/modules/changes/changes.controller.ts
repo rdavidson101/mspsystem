@@ -8,6 +8,7 @@ function changeRef(n: number) { return `RFC-${String(n).padStart(5, '0')}` }
 const include = {
   createdBy: { select: { id: true, firstName: true, lastName: true } },
   internalApprover: { select: { id: true, firstName: true, lastName: true } },
+  clientApprover: { select: { id: true, firstName: true, lastName: true, email: true } },
   companyRef: true,
 }
 
@@ -28,6 +29,7 @@ function sanitizeChangeData(body: any) {
   if (body.validationSteps !== undefined) d.validationSteps = str(body.validationSteps)
   if (body.rollbackSteps !== undefined) d.rollbackSteps = str(body.rollbackSteps)
   if (body.internalApproverId !== undefined) d.internalApproverId = body.internalApproverId || null
+  if (body.clientApproverId !== undefined) d.clientApproverId = body.clientApproverId || null
   if (body.customerApproverName !== undefined) d.customerApproverName = str(body.customerApproverName)
   if (body.customerApproverEmail !== undefined) d.customerApproverEmail = str(body.customerApproverEmail)
   return d
@@ -243,5 +245,113 @@ export async function getApprovers(req: AuthRequest, res: Response, next: NextFu
       select: { id: true, firstName: true, lastName: true, email: true },
     })
     res.json(approvers)
+  } catch (e) { next(e) }
+}
+
+export async function getClientApprovers(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { companyId } = req.query
+    if (!companyId) return res.json([])
+    const contacts = await prisma.contact.findMany({
+      where: { companyId: companyId as string, canApproveChanges: true },
+      select: { id: true, firstName: true, lastName: true, email: true },
+    })
+    res.json(contacts)
+  } catch (e) { next(e) }
+}
+
+export async function requestClientApproval(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const change = await prisma.change.findUnique({ where: { id: req.params.id }, include })
+    if (!change) throw new AppError(404, 'Change not found')
+    if (change.status !== 'CUSTOMER_REVIEW') throw new AppError(400, 'Change must be in CUSTOMER_REVIEW status')
+    if (!change.clientApproverId) throw new AppError(400, 'No client approver assigned to this change')
+
+    // Generate a secure random token
+    const crypto = await import('crypto')
+    const token = crypto.randomBytes(32).toString('hex')
+
+    const updated = await prisma.change.update({
+      where: { id: req.params.id },
+      data: { clientApprovalToken: token, clientApprovalSentAt: new Date() },
+      include,
+    })
+
+    // Send approval email
+    const appUrl = process.env.APP_URL || process.env.CORS_ORIGIN?.split(',')[0] || 'http://localhost:5000'
+    const approveUrl = `${appUrl}/change-approval/${token}?action=approve`
+    const rejectUrl = `${appUrl}/change-approval/${token}?action=reject`
+
+    const { sendChangeApprovalEmail } = await import('../email/email.service')
+    sendChangeApprovalEmail(updated, change.clientApprover as any, approveUrl, rejectUrl).catch(console.error)
+
+    res.json({ ...updated, ref: changeRef(updated.number) })
+  } catch (e) { next(e) }
+}
+
+export async function getClientApprovalChange(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const change = await prisma.change.findFirst({
+      where: { clientApprovalToken: req.params.token },
+      include,
+    })
+    if (!change) return res.status(404).json({ error: 'Invalid or expired approval link' })
+    if (!['CUSTOMER_REVIEW', 'APPROVED', 'REJECTED'].includes(change.status)) {
+      return res.status(400).json({ error: 'This change is no longer awaiting approval' })
+    }
+    res.json({ ...change, ref: changeRef(change.number) })
+  } catch (e) { next(e) }
+}
+
+export async function submitClientApproval(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { action, comment } = req.body
+    if (!['approve', 'reject'].includes(action)) throw new AppError(400, 'Invalid action')
+
+    const change = await prisma.change.findFirst({
+      where: { clientApprovalToken: req.params.token },
+      include,
+    })
+    if (!change) return res.status(404).json({ error: 'Invalid or expired approval link' })
+    if (change.status !== 'CUSTOMER_REVIEW') {
+      return res.status(400).json({ error: 'This change has already been reviewed' })
+    }
+
+    const isApprove = action === 'approve'
+    const updated = await prisma.change.update({
+      where: { id: change.id },
+      data: {
+        status: isApprove ? 'APPROVED' : 'REJECTED',
+        customerApprovedAt: isApprove ? new Date() : null,
+        customerRejectedAt: !isApprove ? new Date() : null,
+        customerNotes: comment?.trim() || null,
+        customerApproverName: change.clientApprover ? `${(change.clientApprover as any).firstName} ${(change.clientApprover as any).lastName}` : change.customerApproverName,
+      },
+      include,
+    })
+
+    // Notify the requester
+    const statusLabel = isApprove ? 'approved' : 'rejected'
+    const approverName = change.clientApprover ? `${(change.clientApprover as any).firstName} ${(change.clientApprover as any).lastName}` : 'Client'
+    await createNotification(
+      change.createdById,
+      isApprove ? 'CHANGE_APPROVED' : 'CHANGE_REJECTED',
+      `RFC ${statusLabel} by client`,
+      `${changeRef(change.number)} – ${change.title} was ${statusLabel} by ${approverName}${comment ? `: "${comment}"` : ''}`,
+      `/changes/${changeRef(change.number)}`
+    )
+
+    // Also notify internal approver if different
+    if (change.internalApproverId && change.internalApproverId !== change.createdById) {
+      await createNotification(
+        change.internalApproverId,
+        isApprove ? 'CHANGE_APPROVED' : 'CHANGE_REJECTED',
+        `RFC ${statusLabel} by client`,
+        `${changeRef(change.number)} – ${change.title} was ${statusLabel} by ${approverName}`,
+        `/changes/${changeRef(change.number)}`
+      )
+    }
+
+    res.json({ success: true, status: updated.status })
   } catch (e) { next(e) }
 }

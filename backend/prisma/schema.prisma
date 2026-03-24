@@ -265,22 +265,24 @@ model Company {
 }
 
 model Contact {
-  id          String   @id @default(uuid())
-  firstName   String
-  lastName    String
-  email       String?
-  phone       String?
-  title       String?
-  isPrimary   Boolean  @default(false)
-  notes       String?
-  companyId   String?
-  company     Company? @relation(fields: [companyId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(uuid())
+  firstName         String
+  lastName          String
+  email             String?
+  phone             String?
+  title             String?
+  isPrimary         Boolean  @default(false)
+  notes             String?
+  canApproveChanges Boolean  @default(false)
+  companyId         String?
+  company           Company? @relation(fields: [companyId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  tickets        Ticket[]
-  leads          Lead[]
-  assignedAssets Asset[]
+  tickets               Ticket[]
+  leads                 Lead[]
+  assignedAssets        Asset[]
+  clientApprovalChanges Change[] @relation("ClientChangeApprover")
 
   @@map("contacts")
 }
@@ -789,6 +791,11 @@ model Change {
   customerApprovedAt    DateTime?
   customerRejectedAt    DateTime?
   customerNotes         String?
+
+  clientApproverId      String?
+  clientApprover        Contact? @relation("ClientChangeApprover", fields: [clientApproverId], references: [id])
+  clientApprovalToken   String?  @unique
+  clientApprovalSentAt  DateTime?
 
   createdById  String
   createdBy    User     @relation("ChangeCreator", fields: [createdById], references: [id])
