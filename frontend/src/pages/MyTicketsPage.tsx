@@ -103,9 +103,11 @@ export default function MyTicketsPage() {
             )}
           >
             {s.label}
-            <span className={clsx('text-xs px-1.5 py-0.5 rounded-full', statusFilter === s.key ? 'bg-white/20' : 'bg-slate-100')}>
-              {s.count}
-            </span>
+            {statusFilter === s.key && (
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-white/20">
+                {s.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
