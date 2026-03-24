@@ -285,6 +285,20 @@ export async function updateTicket(req: AuthRequest, res: Response, next: NextFu
       if (reporterEmail) {
         sendTicketClosure(ticket, note, reporterEmail, techName).catch(() => {})
       }
+
+      // Auto-add internal closure comment
+      const statusLabel = status === 'RESOLVED' ? 'Resolved' : 'Closed'
+      const closureCommentContent = `Ticket ${statusLabel}\n\nReason: ${note}`
+      const closureComment = await prisma.ticketComment.create({
+        data: {
+          ticketId: ticket.id,
+          userId: req.user!.id,
+          content: closureCommentContent,
+          isInternal: true,
+        },
+        include: { user: { select: { id: true, firstName: true, lastName: true, jobTitle: true } } },
+      })
+      io.emit('ticket:comment', closureComment)
     }
 
     io.emit('ticket:updated', ticket)
