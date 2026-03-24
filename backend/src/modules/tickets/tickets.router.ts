@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { authenticate } from '../../middleware/auth'
+import { authenticate, requireRole } from '../../middleware/auth'
 import { getTickets, getTicket, createTicket, updateTicket, deleteTicket, addComment, getComments, getHistory } from './tickets.controller'
 import { prisma } from '../../lib/prisma'
 
@@ -21,7 +21,7 @@ ticketsRouter.get('/', getTickets)
 ticketsRouter.get('/:id', getTicket)
 ticketsRouter.post('/', createTicket)
 ticketsRouter.put('/:id', updateTicket)
-ticketsRouter.delete('/:id', deleteTicket)
+ticketsRouter.delete('/:id', requireRole('ADMIN'), deleteTicket)
 ticketsRouter.get('/:id/comments', getComments)
 ticketsRouter.post('/:id/comments', addComment)
 ticketsRouter.get('/:id/history', getHistory)

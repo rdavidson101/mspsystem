@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { ticketRef } from '@/lib/refs'
 import { format } from 'date-fns'
-import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Building2, AlertCircle, History, MessageSquare, AlertTriangle, AtSign, Mail, ArrowUpDown } from 'lucide-react'
+import { ArrowLeft, Send, Lock, Unlock, Clock, ChevronDown, Zap, User, Tag, Building2, AlertCircle, History, MessageSquare, AlertTriangle, AtSign, Mail, ArrowUpDown, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuthStore } from '@/store/authStore'
 import UserAvatar from '@/components/ui/UserAvatar'
@@ -206,6 +206,10 @@ export default function TicketDetailPage() {
     mutationFn: (data: any) => api.post(`/tickets/${id}/comments`, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['ticket', id] }); setComment(''); setMentionedIds(new Set()) },
   })
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/tickets/${id}`),
+    onSuccess: () => navigate('/tickets'),
+  })
 
   function insertMacro(macro: any) {
     const resolved = applyMacroVariables(macro.content, ticket, user)
@@ -292,6 +296,16 @@ export default function TicketDetailPage() {
             {' · '}{format(new Date(ticket.createdAt), 'MMM d, yyyy h:mm a')}
           </p>
         </div>
+        {user?.role === 'ADMIN' && (
+          <button
+            onClick={() => { if (window.confirm(`Permanently delete ${ticketRef(ticket.number)}? This cannot be undone.`)) deleteMutation.mutate() }}
+            disabled={deleteMutation.isPending}
+            className="p-2 hover:bg-red-50 rounded-lg text-slate-300 hover:text-red-500 transition-colors flex-shrink-0"
+            title="Delete ticket"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
       </div>
 
       {ticket.status === 'AWAITING_TRIAGE' && (
