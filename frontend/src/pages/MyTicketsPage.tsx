@@ -53,7 +53,7 @@ const slaBadgeStyles: Record<string, string> = {
 export default function MyTicketsPage() {
   const { user } = useAuthStore()
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('active')
   const [priorityFilter, setPriorityFilter] = useState('')
 
   const { data: tickets = [] } = useQuery({
@@ -61,7 +61,7 @@ export default function MyTicketsPage() {
     queryFn: () => api.get('/tickets', {
       params: {
         assignedToId: user?.id,
-        status: statusFilter || undefined,
+        ...(statusFilter === 'active' ? { active: 'true' } : statusFilter ? { status: statusFilter } : {}),
         search: search || undefined,
       },
     }).then(r => r.data),
@@ -87,11 +87,12 @@ export default function MyTicketsPage() {
       {/* Status filter pills */}
       <div className="flex gap-2 flex-wrap">
         {[
-          { key: '', label: 'All', count: tickets.length },
+          { key: 'active', label: 'Active', count: tickets.length },
           { key: 'OPEN', label: 'Open', count: statusCounts['OPEN'] || 0 },
           { key: 'IN_PROGRESS', label: 'In Progress', count: statusCounts['IN_PROGRESS'] || 0 },
           { key: 'WAITING_CLIENT', label: 'Waiting Client', count: statusCounts['WAITING_CLIENT'] || 0 },
           { key: 'RESOLVED', label: 'Resolved', count: statusCounts['RESOLVED'] || 0 },
+          { key: 'CLOSED', label: 'Closed', count: statusCounts['CLOSED'] || 0 },
         ].map(s => (
           <button
             key={s.key}

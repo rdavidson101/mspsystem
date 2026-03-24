@@ -43,7 +43,7 @@ export async function getTickets(req: AuthRequest, res: Response, next: NextFunc
     const { status, priority, assignedToId, categoryId, search, companyId, createdById, createdAtFrom, createdAtTo, resolvedAtFrom, resolvedAtTo, serviceTeamId, active } = req.query
 
     const where: any = {}
-    if (active === 'true') where.status = { not: 'CLOSED' }
+    if (active === 'true') where.status = { notIn: ['CLOSED', 'RESOLVED'] }
     else if (status) where.status = status as any
     if (priority) where.priority = priority as any
     if (assignedToId) where.assignedToId = String(assignedToId)
