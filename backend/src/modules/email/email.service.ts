@@ -78,6 +78,28 @@ export async function sendTicketUpdate(ticket: any, commentContent: string, toEm
   }).catch((err: any) => console.error('Mailgun send error:', err))
 }
 
+export async function sendTicketClosure(ticket: any, closureNote: string, toEmail: string, techName: string) {
+  const result = await getMailgunClient()
+  if (!result) return
+  const { client, settings } = result
+  const replyToken = ticketReplyToken(ticket.id)
+  const updatesDomain = settings.mailgunUpdatesDomain || settings.mailgunDomain
+  const replyTo = `ticket+${replyToken}@${updatesDomain}`
+  const ref = fmtTicket(ticket.number)
+  const safeRef = escapeHtml(ref)
+  const safeTitle = escapeHtml(ticket.title)
+  const safeTech = escapeHtml(techName)
+  const safeNote = escapeHtml(closureNote).replace(/\n/g, '<br/>')
+  await client.messages.create(settings.mailgunDomain, {
+    from: sanitizeHeader(`Support <${settings.mailgunSupportEmail}>`),
+    to: sanitizeHeader(toEmail),
+    subject: sanitizeHeader(`[${ref}] ${ticket.title} - Ticket Closed`),
+    'h:Reply-To': replyTo,
+    text: `Hi,\n\nYour ticket ${ref} has been closed by ${techName}.\n\nClosure note:\n${closureNote}\n\nIf you believe your issue is not resolved, simply reply to this email and your ticket will be automatically reopened.\n\nReference: ${ref}`,
+    html: `<p>Hi,</p><p>Your ticket <strong>${safeRef}</strong> has been closed by <strong>${safeTech}</strong>.</p><hr style="border:none;border-top:1px solid #eee;margin:16px 0"/><p><strong>Closure note:</strong></p><p>${safeNote}</p><hr style="border:none;border-top:1px solid #eee;margin:16px 0"/><p><small>If your issue is not resolved, simply reply to this email and your ticket will be automatically reopened. Reference: ${safeRef}</small></p>`
+  }).catch((err: any) => console.error('Mailgun send error:', err))
+}
+
 export async function getTaskCcAddress(taskId: string, userId: string): Promise<string | null> {
   const settings = await getMailgunSettings()
   if (settings.mailgunEnabled !== 'true') return null

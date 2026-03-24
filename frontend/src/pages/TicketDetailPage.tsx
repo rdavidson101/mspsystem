@@ -176,6 +176,8 @@ export default function TicketDetailPage() {
   const [commentSort, setCommentSort] = useState<'asc' | 'desc'>(() =>
     (localStorage.getItem('ticketCommentSort') as 'asc' | 'desc') || 'asc'
   )
+  const [closureModal, setClosureModal] = useState<{ targetStatus: string } | null>(null)
+  const [closureNote, setClosureNote] = useState('')
   const [mention, setMention] = useState<{ start: number; search: string; top: number; left: number; width: number } | null>(null)
   const [mentionedIds, setMentionedIds] = useState<Set<string>>(new Set())
   const [showMacroPicker, setShowMacroPicker] = useState(false)
@@ -601,7 +603,15 @@ export default function TicketDetailPage() {
               <label className="text-xs font-medium text-slate-500 mb-1.5 block">Status</label>
               <select
                 value={ticket.status}
-                onChange={e => updateMutation.mutate({ status: e.target.value })}
+                onChange={e => {
+                  const newStatus = e.target.value
+                  if ((newStatus === 'RESOLVED' || newStatus === 'CLOSED') && ticket.status !== newStatus) {
+                    setClosureNote('')
+                    setClosureModal({ targetStatus: newStatus })
+                  } else {
+                    updateMutation.mutate({ status: newStatus })
+                  }
+                }}
                 className="input text-sm"
               >
                 {['AWAITING_TRIAGE', 'OPEN', 'IN_PROGRESS', 'WAITING_CLIENT', 'RESOLVED', 'CLOSED'].map(s => (
@@ -721,5 +731,62 @@ export default function TicketDetailPage() {
         </div>
       </div>
     </div>
+
+    {/* Closure confirmation modal */}
+    {closureModal && (
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+          <div className="p-6 border-b border-slate-100">
+            <h2 className="text-base font-semibold text-slate-800">
+              {closureModal.targetStatus === 'RESOLVED' ? 'Resolve Ticket' : 'Close Ticket'}
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Please confirm the issue has been resolved before closing.
+            </p>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+              <strong>Reminder:</strong> Only close this ticket once you have confirmed the issue is fully resolved with the end user.
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Closure note <span className="text-slate-400">(sent to the end user)</span>
+              </label>
+              <textarea
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
+                rows={4}
+                placeholder="Describe the resolution, e.g. 'Replaced faulty network cable. Issue confirmed resolved with user.'"
+                value={closureNote}
+                onChange={e => setClosureNote(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <p className="text-xs text-slate-400">
+              The end user will receive an email confirming closure. If they reply, the ticket will be automatically reopened.
+            </p>
+          </div>
+          <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setClosureModal(null)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              disabled={updateMutation.isPending}
+              onClick={() => {
+                updateMutation.mutate(
+                  { status: closureModal.targetStatus, closureNote: closureNote.trim() || 'Your ticket has been resolved. Thank you for contacting us.' },
+                  { onSuccess: () => setClosureModal(null) }
+                )
+              }}
+            >
+              {closureModal.targetStatus === 'RESOLVED' ? 'Resolve & Notify' : 'Close & Notify'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   )
 }

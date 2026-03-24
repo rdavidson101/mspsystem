@@ -132,6 +132,16 @@ async function handleTicketReply(token: string, senderEmail: string, senderName:
 
   if (!body) return res.status(200).json({ skipped: true })
 
+  // Auto-reopen ticket if it was closed/resolved and the customer replies
+  const wasClosed = ticket.status === 'RESOLVED' || ticket.status === 'CLOSED'
+  if (wasClosed) {
+    await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { status: 'OPEN', resolvedAt: null },
+    })
+    console.log(`Ticket ${ticketId} reopened due to email reply from ${senderEmail}`)
+  }
+
   // Find user by email (internal staff replying)
   const user = await prisma.user.findFirst({ where: { email: senderEmail } })
   // Find contact by email (customer replying)
@@ -152,11 +162,14 @@ async function handleTicketReply(token: string, senderEmail: string, senderName:
 
   // Notify assignee if reply came from customer
   if (!user && ticket.assignedToId) {
+    const notifTitle = wasClosed
+      ? `Ticket reopened by email reply: INC-${String(ticket.number).padStart(5,'0')}`
+      : `Email reply on INC-${String(ticket.number).padStart(5,'0')}`
     await prisma.notification.create({
       data: {
         userId: ticket.assignedToId,
         type: 'TICKET_REPLY',
-        title: `Email reply on ${ticket.number ? `INC-${String(ticket.number).padStart(5,'0')}` : 'ticket'}`,
+        title: notifTitle,
         body: `${senderName} replied via email: "${body.slice(0, 80)}${body.length > 80 ? '…' : ''}"`,
         link: `/tickets/INC-${String(ticket.number).padStart(5,'0')}`,
       }

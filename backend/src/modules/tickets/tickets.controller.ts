@@ -178,7 +178,7 @@ export async function updateTicket(req: AuthRequest, res: Response, next: NextFu
     // Whitelist allowed update fields
     const {
       title, description, priority, status, categoryId, companyId,
-      assignedToId, dueDate, tags, serviceTeamId, resolvedAt,
+      assignedToId, dueDate, tags, serviceTeamId, resolvedAt, closureNote,
     } = req.body
 
     const changes: { field: string; oldValue: string | null; newValue: string | null }[] = []
@@ -235,6 +235,8 @@ export async function updateTicket(req: AuthRequest, res: Response, next: NextFu
     if (serviceTeamId !== undefined) data.serviceTeamId = serviceTeamId || null
     if (resolvedAt !== undefined) data.resolvedAt = resolvedAt ? new Date(resolvedAt) : null
 
+    if (closureNote !== undefined) data.closureNote = closureNote?.trim() || null
+
     // Auto-set resolvedAt
     if (status === 'RESOLVED' && !current.resolvedAt) data.resolvedAt = new Date()
     else if (status && status !== 'RESOLVED') data.resolvedAt = null
@@ -265,6 +267,26 @@ export async function updateTicket(req: AuthRequest, res: Response, next: NextFu
         '/tickets/' + ticketRef(ticket.number)
       )
     }
+    // Send closure email when ticket is closed or resolved
+    const isClosingNow = status && ['RESOLVED', 'CLOSED'].includes(status) && !['RESOLVED', 'CLOSED'].includes(current.status)
+    if (isClosingNow) {
+      const { sendTicketClosure } = await import('../email/email.service')
+      const techName = req.user ? `${(req.user as any).firstName || ''} ${(req.user as any).lastName || ''}`.trim() || 'Support' : 'Support'
+      const note = closureNote?.trim() || 'Your ticket has been resolved. Thank you for contacting us.'
+      // Resolve reporter email
+      let reporterEmail: string | null = null
+      if (ticket.contactId) {
+        const contact = await prisma.contact.findUnique({ where: { id: ticket.contactId }, select: { email: true } })
+        reporterEmail = contact?.email ?? null
+      } else if (ticket.createdById) {
+        const reporter = await prisma.user.findUnique({ where: { id: ticket.createdById }, select: { email: true } })
+        reporterEmail = reporter?.email ?? null
+      }
+      if (reporterEmail) {
+        sendTicketClosure(ticket, note, reporterEmail, techName).catch(() => {})
+      }
+    }
+
     io.emit('ticket:updated', ticket)
     res.json(ticket)
   } catch (e) { next(e) }
