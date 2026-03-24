@@ -35,8 +35,9 @@ export default function ContactsPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: (data: any) => api.put(`/contacts/${editContact.id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: any }) => api.put(`/contacts/${id}`, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['contacts'] }); closeModal() },
+    onError: (err: any) => alert(err?.response?.data?.message || 'Failed to save contact'),
   })
 
   const openAdd = () => {
@@ -68,7 +69,7 @@ export default function ContactsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const payload = { ...form, companyId: form.companyId || undefined }
-    if (editContact) updateMutation.mutate(payload)
+    if (editContact) updateMutation.mutate({ id: editContact.id, data: payload })
     else createMutation.mutate(payload)
   }
 

@@ -5,6 +5,7 @@ import { api } from '@/lib/api'
 import { changeRef } from '@/lib/refs'
 import { ArrowLeft, Save, Send } from 'lucide-react'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { useAuthStore } from '@/store/authStore'
 
 // Defined OUTSIDE the component so they are stable references across renders
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -48,6 +49,7 @@ export default function ChangeFormPage() {
   const { id } = useParams()
   const isEdit = !!id && id !== 'new'
   const [form, setForm] = useState<any>(empty)
+  const { user } = useAuthStore()
 
   const { data: existing } = useQuery({ queryKey: ['change', id], queryFn: () => api.get(`/changes/${id}`).then(r => r.data), enabled: isEdit })
   const { data: approvers = [] } = useQuery({ queryKey: ['change-approvers'], queryFn: () => api.get('/changes/approvers').then(r => r.data) })
@@ -159,7 +161,7 @@ export default function ChangeFormPage() {
             <SearchableSelect
               value={form.internalApproverId}
               onChange={val => setForm((prev: any) => ({ ...prev, internalApproverId: val }))}
-              options={approvers.map((u: any) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
+              options={approvers.filter((u: any) => u.id !== user?.id).map((u: any) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
               placeholder="Select approver"
               emptyLabel="None"
             />

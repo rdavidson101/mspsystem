@@ -70,8 +70,12 @@ export async function createChange(req: AuthRequest, res: Response, next: NextFu
       const co = await prisma.company.findUnique({ where: { id: companyId } })
       if (co && !co.isActive) throw new AppError(400, 'This customer is disabled and cannot have new items created.')
     }
+    const data = sanitizeChangeData(req.body)
+    if (data.internalApproverId && data.internalApproverId === req.user!.id) {
+      throw new AppError(400, 'You cannot assign yourself as the internal approver')
+    }
     const change = await prisma.change.create({
-      data: { ...sanitizeChangeData(req.body), createdById: req.user!.id },
+      data: { ...data, createdById: req.user!.id },
       include,
     })
     res.status(201).json({ ...change, ref: changeRef(change.number) })
@@ -80,9 +84,15 @@ export async function createChange(req: AuthRequest, res: Response, next: NextFu
 
 export async function updateChange(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const current = await prisma.change.findUnique({ where: { id: req.params.id } })
+    if (!current) throw new AppError(404, 'Change not found')
+    const data = sanitizeChangeData(req.body)
+    if (data.internalApproverId && data.internalApproverId === (current.createdById)) {
+      throw new AppError(400, 'The RFC creator cannot be the internal approver')
+    }
     const change = await prisma.change.update({
       where: { id: req.params.id },
-      data: sanitizeChangeData(req.body),
+      data,
       include,
     })
     res.json({ ...change, ref: changeRef(change.number) })
@@ -115,15 +125,45 @@ export async function submitChange(req: AuthRequest, res: Response, next: NextFu
 export async function approveInternal(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { notes } = req.body
-    const change = await prisma.change.findUnique({ where: { id: req.params.id } })
+    const change = await prisma.change.findUnique({ where: { id: req.params.id }, include })
     if (!change) throw new AppError(404, 'Not found')
     if (change.internalApproverId !== req.user!.id) throw new AppError(403, 'You are not the internal approver for this change')
     if (change.status !== 'SUBMITTED') throw new AppError(400, 'Change is not pending internal approval')
+
+    // Generate client approval token if a client approver is assigned
+    let tokenData: any = {}
+    if (change.clientApproverId) {
+      const crypto = await import('crypto')
+      const token = crypto.randomBytes(32).toString('hex')
+      tokenData = { clientApprovalToken: token, clientApprovalSentAt: new Date() }
+    }
+
     const updated = await prisma.change.update({
       where: { id: req.params.id },
-      data: { status: 'CUSTOMER_REVIEW', internalApprovedAt: new Date(), internalNotes: notes },
+      data: { status: 'CUSTOMER_REVIEW', internalApprovedAt: new Date(), internalNotes: notes, ...tokenData },
       include,
     })
+
+    // Auto-send client approval email
+    if (updated.clientApproverId && tokenData.clientApprovalToken) {
+      const appUrl = process.env.APP_URL || process.env.CORS_ORIGIN?.split(',')[0] || 'http://localhost:5000'
+      const approveUrl = `${appUrl}/change-approval/${tokenData.clientApprovalToken}?action=approve`
+      const rejectUrl = `${appUrl}/change-approval/${tokenData.clientApprovalToken}?action=reject`
+      const { sendChangeApprovalEmail } = await import('../email/email.service')
+      sendChangeApprovalEmail(updated, (updated as any).clientApprover, approveUrl, rejectUrl).catch(console.error)
+    }
+
+    // Notify the RFC creator that internal approval passed
+    if (updated.createdById && updated.createdById !== req.user!.id) {
+      await createNotification(
+        updated.createdById,
+        'CHANGE_APPROVED',
+        'RFC internally approved',
+        `${changeRef(updated.number)} – ${updated.title} passed internal review${updated.clientApproverId ? ' and has been sent to the client for approval' : ''}`,
+        `/changes/${changeRef(updated.number)}`
+      )
+    }
+
     res.json({ ...updated, ref: changeRef(updated.number) })
   } catch (e) { next(e) }
 }

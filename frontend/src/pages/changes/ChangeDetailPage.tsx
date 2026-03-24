@@ -64,7 +64,7 @@ export default function ChangeDetailPage() {
 
   const isInternalApprover = change.internalApproverId === user?.id
   const canApproveInternal = isInternalApprover && change.status === 'SUBMITTED'
-  const canApproveCustomer = change.status === 'CUSTOMER_REVIEW' // any internal user can record customer approval
+  const canApproveCustomer = false // customer approves via email link only
   const canEdit = change.status === 'DRAFT'
   const isRequester = change.createdById === user?.id
   const canPostApprovalAction = ['APPROVED', 'IN_PROGRESS'].includes(change.status) && (user?.role === 'ADMIN' || user?.role === 'MANAGER' || isRequester)
@@ -287,13 +287,7 @@ export default function ChangeDetailPage() {
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => requestClientApprovalMutation.mutate()}
-                      disabled={requestClientApprovalMutation.isPending}
-                      className="btn btn-primary text-xs py-1 px-3"
-                    >
-                      {requestClientApprovalMutation.isPending ? 'Sending…' : 'Send for Client Approval'}
-                    </button>
+                    <p className="text-xs text-amber-600">Awaiting approval email to be sent…</p>
                   )}
                 </div>
               )}
