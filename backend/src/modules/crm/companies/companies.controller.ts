@@ -25,12 +25,15 @@ export async function getCompany(req: AuthRequest, res: Response, next: NextFunc
     const company = await prisma.company.findUnique({
       where: { id: req.params.id },
       include: {
-        contacts: true,
+        contacts: { orderBy: { firstName: 'asc' } },
         tickets: { take: 10, orderBy: { createdAt: 'desc' } },
         projects: true,
-        contracts: true,
-        leads: true,
+        contracts: { orderBy: { startDate: 'desc' } },
+        leads: { orderBy: { createdAt: 'desc' } },
+        invoices: { orderBy: { issueDate: 'desc' } },
         accountManager: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } },
+        serviceTeam: { select: { id: true, name: true } },
+        keyContact: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, title: true } },
         _count: { select: { contacts: true, tickets: true, projects: true, users: true } },
       },
     })
@@ -52,7 +55,7 @@ export async function createCompany(req: AuthRequest, res: Response, next: NextF
 
 export async function updateCompany(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { name, domain, industry, phone, email, address, city, state, zip, country, website, notes, isActive, accountManagerId, serviceTeamId } = req.body
+    const { name, domain, industry, phone, email, address, city, state, zip, country, website, notes, isActive, accountManagerId, serviceTeamId, keyContactId } = req.body
     const data: any = {}
     if (name !== undefined) data.name = name
     if (domain !== undefined) data.domain = domain || null
@@ -69,11 +72,14 @@ export async function updateCompany(req: AuthRequest, res: Response, next: NextF
     if (isActive !== undefined) data.isActive = isActive
     if (accountManagerId !== undefined) data.accountManagerId = accountManagerId || null
     if (serviceTeamId !== undefined) data.serviceTeamId = serviceTeamId || null
+    if (keyContactId !== undefined) data.keyContactId = keyContactId || null
     const company = await prisma.company.update({
       where: { id: req.params.id },
       data,
       include: {
         accountManager: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } },
+        keyContact: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, title: true } },
+        serviceTeam: { select: { id: true, name: true } },
         _count: { select: { contacts: true, tickets: true, projects: true, users: true } },
       },
     })

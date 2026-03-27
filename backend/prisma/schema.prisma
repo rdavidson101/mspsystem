@@ -247,6 +247,8 @@ model Company {
   serviceTeam   ServiceTeam? @relation(fields: [serviceTeamId], references: [id])
   accountManagerId String?
   accountManager   User?    @relation("AccountManager", fields: [accountManagerId], references: [id])
+  keyContactId  String?
+  keyContact    Contact? @relation("KeyContact", fields: [keyContactId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -283,6 +285,7 @@ model Contact {
   leads                 Lead[]
   assignedAssets        Asset[]
   clientApprovalChanges Change[] @relation("ClientChangeApprover")
+  keyContactForCompanies Company[] @relation("KeyContact")
 
   @@map("contacts")
 }
