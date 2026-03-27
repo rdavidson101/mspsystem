@@ -4,6 +4,7 @@ import Layout from '@/components/layout/Layout'
 import LoginPage from '@/pages/LoginPage'
 import DashboardPage from '@/pages/DashboardPage'
 import CustomersPage from '@/pages/CustomersPage'
+import CustomerDetailPage from '@/pages/CustomerDetailPage'
 import ContactsPage from '@/pages/ContactsPage'
 import LeadsPage from '@/pages/LeadsPage'
 import TicketsPage from '@/pages/TicketsPage'
@@ -66,6 +67,7 @@ export default function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="customers" element={<CustomersPage />} />
+          <Route path="customers/:id" element={<CustomerDetailPage />} />
           <Route path="contacts" element={<ContactsPage />} />
           <Route path="leads" element={<LeadsPage />} />
           <Route path="tickets" element={<TicketsPage />} />

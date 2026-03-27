@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
 import {
   Plus, Search, Building2, Phone, Mail, Globe, MapPin,
-  Pencil, Trash2, X, Users, Ticket, FolderKanban, Star,
-  PowerOff, Power, ChevronLeft, ChevronRight
+  X, Users, Ticket, FolderKanban, Star,
+  ChevronLeft, ChevronRight
 } from 'lucide-react'
 import clsx from 'clsx'
 import UserAvatar from '@/components/ui/UserAvatar'
@@ -117,9 +118,9 @@ type StatusFilter = 'all' | 'active' | 'disabled'
 
 export default function CustomersPage() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
-  const [editing, setEditing] = useState<any>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
   const [page, setPage] = useState(0)
 
@@ -140,18 +141,6 @@ export default function CustomersPage() {
   const createMut = useMutation({
     mutationFn: (data: any) => api.post('/companies', data).then(r => r.data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['companies'] }); setShowCreate(false) },
-  })
-  const updateMut = useMutation({
-    mutationFn: (data: any) => api.patch(`/companies/${data.id}`, data).then(r => r.data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['companies'] }); setEditing(null) },
-  })
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => api.delete(`/companies/${id}`).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
-  })
-  const toggleMut = useMutation({
-    mutationFn: (company: any) => api.patch(`/companies/${company.id}`, { isActive: !company.isActive }).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
   })
 
   const filtered = companies
@@ -236,8 +225,9 @@ export default function CustomersPage() {
             return (
               <div
                 key={company.id}
+                onClick={() => navigate(`/customers/${company.id}`)}
                 className={clsx(
-                  'rounded-2xl border shadow-sm hover:shadow-md transition-all p-5 flex flex-col gap-4',
+                  'rounded-2xl border shadow-sm hover:shadow-md transition-all p-5 flex flex-col gap-4 cursor-pointer',
                   isDisabled
                     ? 'bg-slate-50 border-slate-200 opacity-60'
                     : company.isInternal
@@ -268,42 +258,6 @@ export default function CustomersPage() {
                       )}
                     </div>
                     {company.industry && <p className="text-xs text-slate-500 mt-0.5">{company.industry}</p>}
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      onClick={() => setEditing({ ...company, accountManagerId: company.accountManagerId || '' })}
-                      className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                      title="Edit"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    {!company.isInternal && (
-                      <>
-                        <button
-                          onClick={() => toggleMut.mutate(company)}
-                          className={clsx(
-                            'p-1.5 rounded-lg transition-colors',
-                            isDisabled
-                              ? 'text-slate-400 hover:text-green-600 hover:bg-green-50'
-                              : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'
-                          )}
-                          title={isDisabled ? 'Enable customer' : 'Disable customer'}
-                        >
-                          {isDisabled ? <Power size={14} /> : <PowerOff size={14} />}
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm(`Delete ${company.name}? This will permanently remove all associated tickets, projects, contacts and more.`)) {
-                              deleteMut.mutate(company.id)
-                            }
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </>
-                    )}
                   </div>
                 </div>
 
@@ -434,17 +388,6 @@ export default function CustomersPage() {
         />
       )}
 
-      {/* Edit modal */}
-      {editing && (
-        <CustomerModal
-          title="Edit Customer"
-          initial={{ ...editing, accountManagerId: editing.accountManagerId || '', serviceTeamId: editing.serviceTeamId || '' }}
-          onClose={() => setEditing(null)}
-          onSave={data => updateMut.mutate({ ...data, id: editing.id })}
-          users={internalUsers}
-          teams={teams}
-        />
-      )}
     </div>
   )
 }
