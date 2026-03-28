@@ -9,7 +9,7 @@ import {
   ArrowLeft, Plus, ChevronDown, ChevronRight, GripVertical,
   Play, Pause, LayoutList, Trash2, UserPlus, X, Check,
   FolderKanban, Clock, Timer, Search, AtSign, Settings,
-  CheckCircle2, Calendar, DollarSign, AlertTriangle, Mail, Copy
+  CheckCircle2, Calendar, DollarSign, AlertTriangle, Mail, Copy, Smile
 } from 'lucide-react'
 import clsx from 'clsx'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -22,6 +22,11 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+
+const REACTIONS = ['👍', '👎', '❤️', '😄', '🎉', '🚀']
+function groupReactions(reactions: any[]): Record<string, any[]> {
+  return reactions.reduce((acc, r) => ({ ...acc, [r.emoji]: [...(acc[r.emoji] || []), r] }), {} as Record<string, any[]>)
+}
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
@@ -636,6 +641,7 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   const [mentionedIds, setMentionedIds] = useState<Set<string>>(new Set())
   const [references, setReferences] = useState<Array<{type: string; id: string; label: string; link: string}>>([])
   const [showRefPicker, setShowRefPicker] = useState(false)
+  const [reactionPicker, setReactionPicker] = useState<string | null>(null)
   const [refTab, setRefTab] = useState<'ticket'|'change'|'asset'>('ticket')
   const [refSearch, setRefSearch] = useState('')
   const [showLogTime, setShowLogTime] = useState(false)
@@ -692,6 +698,11 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
   })
   const deleteCommentMut = useMutation({
     mutationFn: (id: string) => api.delete(`/tasks/${initialTask.id}/comments/${id}`).then(r => r.data),
+    onSuccess: () => refetchComments(),
+  })
+  const toggleReactionMut = useMutation({
+    mutationFn: ({ commentId, emoji }: { commentId: string; emoji: string }) =>
+      api.post(`/tasks/${initialTask.id}/comments/${commentId}/reactions`, { emoji }).then(r => r.data),
     onSuccess: () => refetchComments(),
   })
 
@@ -1234,6 +1245,49 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                           ))}
                         </div>
                       )}
+                    </div>
+                    {/* Reaction bar */}
+                    <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                      {Object.entries(groupReactions(c.reactions || [])).map(([emoji, rxns]) => (
+                        <button
+                          key={emoji}
+                          onClick={() => toggleReactionMut.mutate({ commentId: c.id, emoji })}
+                          title={(rxns as any[]).map((r: any) => `${r.user?.firstName} ${r.user?.lastName}`).join(', ')}
+                          className={clsx(
+                            'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors select-none',
+                            (rxns as any[]).some((r: any) => r.userId === user?.id)
+                              ? 'bg-primary-50 border-primary-200 text-primary-700 font-medium'
+                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                          )}
+                        >
+                          <span>{emoji}</span>
+                          <span>{(rxns as any[]).length}</span>
+                        </button>
+                      ))}
+                      {/* Add reaction */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setReactionPicker(prev => prev === c.id ? null : c.id)}
+                          className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors"
+                          title="Add reaction"
+                        >
+                          <Smile size={12} />
+                        </button>
+                        {reactionPicker === c.id && (
+                          <div className="absolute bottom-8 left-0 z-50 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 flex gap-0.5">
+                            {REACTIONS.map(emoji => (
+                              <button
+                                key={emoji}
+                                onClick={() => { toggleReactionMut.mutate({ commentId: c.id, emoji }); setReactionPicker(null) }}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-base"
+                                title={emoji}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { authenticate } from '../../middleware/auth'
 import {
   getTasks, getTask, createTask, updateTask, deleteTask, reorderTasks,
-  getTaskComments, createTaskComment, deleteTaskComment,
+  getTaskComments, createTaskComment, deleteTaskComment, toggleReaction,
   startTimer, stopTimer, getTimer, getTaskTimeByUser,
   getTaskAttachments, createTaskAttachment, deleteTaskAttachment,
   getTaskTimeEntries, createManualTimeEntry, deleteTimeEntry,
@@ -21,6 +21,7 @@ tasksRouter.delete('/:id', deleteTask)
 tasksRouter.get('/:id/comments', getTaskComments)
 tasksRouter.post('/:id/comments', createTaskComment)
 tasksRouter.delete('/:id/comments/:commentId', deleteTaskComment)
+tasksRouter.post('/:id/comments/:commentId/reactions', toggleReaction)
 
 tasksRouter.get('/:id/timer', getTimer)
 tasksRouter.post('/:id/timer/start', startTimer)

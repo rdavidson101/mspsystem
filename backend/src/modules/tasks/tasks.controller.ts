@@ -165,11 +165,16 @@ export async function reorderTasks(req: AuthRequest, res: Response, next: NextFu
   } catch (e) { next(e) }
 }
 
+const COMMENT_INCLUDE = {
+  user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } },
+  reactions: { include: { user: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { createdAt: 'asc' as const } },
+}
+
 export async function getTaskComments(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const comments = await prisma.taskComment.findMany({
       where: { taskId: req.params.id },
-      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } },
+      include: COMMENT_INCLUDE,
       orderBy: { createdAt: 'asc' },
     })
     res.json(comments)
@@ -181,7 +186,7 @@ export async function createTaskComment(req: AuthRequest, res: Response, next: N
     const { content } = req.body
     const comment = await prisma.taskComment.create({
       data: { taskId: req.params.id, userId: req.user!.id, content },
-      include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, jobTitle: true } } },
+      include: COMMENT_INCLUDE,
     })
 
     // Read mentionedIds array from the JSON payload
@@ -227,6 +232,29 @@ export async function deleteTaskComment(req: AuthRequest, res: Response, next: N
     if (comment.userId !== req.user!.id && req.user!.role !== 'ADMIN') throw new AppError(403, 'Not authorized')
     await prisma.taskComment.delete({ where: { id: req.params.commentId } })
     res.json({ success: true })
+  } catch (e) { next(e) }
+}
+
+export async function toggleReaction(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { emoji } = req.body
+    if (!emoji) throw new AppError(400, 'Emoji is required')
+    const where = { commentId_userId_emoji: { commentId: req.params.commentId, userId: req.user!.id, emoji } }
+    const existing = await prisma.taskCommentReaction.findUnique({ where })
+    if (existing) {
+      await prisma.taskCommentReaction.delete({ where })
+    } else {
+      await prisma.taskCommentReaction.create({
+        data: { commentId: req.params.commentId, userId: req.user!.id, emoji },
+      })
+    }
+    // Return the updated full reaction list for this comment
+    const reactions = await prisma.taskCommentReaction.findMany({
+      where: { commentId: req.params.commentId },
+      include: { user: { select: { id: true, firstName: true, lastName: true } } },
+      orderBy: { createdAt: 'asc' },
+    })
+    res.json(reactions)
   } catch (e) { next(e) }
 }
 
