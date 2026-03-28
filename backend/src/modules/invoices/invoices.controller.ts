@@ -33,6 +33,7 @@ export async function createInvoice(req: AuthRequest, res: Response, next: NextF
       if (co && !co.isActive) throw new AppError(400, 'This customer is disabled and cannot have new items created.')
     }
     const number = `INV-${Date.now()}`
+    if (data.dueDate) data.dueDate = new Date(data.dueDate).toISOString()
     const invoice = await prisma.invoice.create({
       data: { ...data, number, items: { create: items || [] } },
       include: { company: { select: { id: true, name: true } }, items: true },
@@ -44,6 +45,7 @@ export async function createInvoice(req: AuthRequest, res: Response, next: NextF
 export async function updateInvoice(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { items, ...data } = req.body
+    if (data.dueDate) data.dueDate = new Date(data.dueDate).toISOString()
     const invoice = await prisma.$transaction(async (tx) => {
       if (items !== undefined) {
         await tx.invoiceItem.deleteMany({ where: { invoiceId: req.params.id } })
