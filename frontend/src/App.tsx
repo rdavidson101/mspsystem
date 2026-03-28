@@ -16,6 +16,7 @@ import TemplatesPage from '@/pages/projects/TemplatesPage'
 import TasksPage from '@/pages/TasksPage'
 import ContractsPage from '@/pages/ContractsPage'
 import InvoicesPage from '@/pages/InvoicesPage'
+import InvoiceDetailPage from '@/pages/InvoiceDetailPage'
 import ExpensesPage from '@/pages/ExpensesPage'
 import TimeTrackingPage from '@/pages/TimeTrackingPage'
 import SettingsPage from '@/pages/SettingsPage'
@@ -83,6 +84,7 @@ export default function App() {
           <Route path="products" element={<ProductsPage />} />
           <Route path="contracts" element={<ContractsPage />} />
           <Route path="invoices" element={<InvoicesPage />} />
+          <Route path="invoices/:id" element={<InvoiceDetailPage />} />
           <Route path="expenses" element={<ExpensesPage />} />
           <Route path="time-tracking" element={<TimeTrackingPage />} />
           <Route path="my-tickets" element={<MyTicketsPage />} />

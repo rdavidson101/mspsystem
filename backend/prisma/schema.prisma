@@ -564,13 +564,15 @@ model Invoice {
 }
 
 model InvoiceItem {
-  id          String  @id @default(uuid())
+  id          String   @id @default(uuid())
   description String
   quantity    Float
   unitPrice   Float
   total       Float
   invoiceId   String
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
 
   @@map("invoice_items")
 }
@@ -894,17 +896,19 @@ model ServiceTeamMember {
 }
 
 model Product {
-  id          String   @id @default(uuid())
-  sku         String   @unique
-  name        String
-  description String?
-  category    String?
-  price       Float?
-  cost        Float?
-  unit        String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String        @id @default(uuid())
+  sku          String        @unique
+  name         String
+  description  String?
+  category     String?
+  price        Float?
+  cost         Float?
+  unit         String?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  invoiceItems InvoiceItem[]
 
   @@map("products")
 }

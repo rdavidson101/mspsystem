@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { Plus, Receipt, Search } from 'lucide-react'
 import clsx from 'clsx'
@@ -17,29 +18,39 @@ const statusColors: Record<string, string> = {
 
 export default function InvoicesPage() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('')
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
-  const [form, setForm] = useState({ companyId: '', dueDate: '', notes: '', tax: '0', items: [{ description: '', quantity: '1', unitPrice: '' }] })
+  const [form, setForm] = useState({ companyId: '', dueDate: '', notes: '', tax: '0', items: [{ description: '', quantity: '1', unitPrice: '', productId: '' }] })
 
   const { data: invoices = [] } = useQuery({
     queryKey: ['invoices', statusFilter],
     queryFn: () => api.get('/invoices', { params: { status: statusFilter || undefined } }).then(r => r.data),
   })
   const { data: companies = [] } = useQuery({ queryKey: ['companies'], queryFn: () => api.get('/companies').then(r => r.data) })
+  const { data: products = [] } = useQuery({ queryKey: ['products', 'active'], queryFn: () => api.get('/products', { params: { active: true } }).then(r => r.data) })
 
   const createMutation = useMutation({
     mutationFn: (data: any) => api.post('/invoices', data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['invoices'] }); setShowModal(false) },
-  })
-  const updateMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => api.put(`/invoices/${id}`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['invoices'] }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['invoices'] })
+      setShowModal(false)
+      navigate(`/invoices/${res.data.id}`)
+    },
   })
 
-  function addItem() { setForm(f => ({ ...f, items: [...f.items, { description: '', quantity: '1', unitPrice: '' }] })) }
+  function addItem() { setForm(f => ({ ...f, items: [...f.items, { description: '', quantity: '1', unitPrice: '', productId: '' }] })) }
   function updateItem(i: number, field: string, val: string) {
     setForm(f => { const items = [...f.items]; items[i] = { ...items[i], [field]: val }; return { ...f, items } })
+  }
+  function pickProduct(i: number, productId: string) {
+    const p = products.find((p: any) => p.id === productId)
+    setForm(f => {
+      const items = [...f.items]
+      items[i] = { ...items[i], productId, description: p ? p.name : items[i].description, unitPrice: p?.price != null ? String(p.price) : items[i].unitPrice }
+      return { ...f, items }
+    })
   }
 
   const subtotal = form.items.reduce((s, item) => s + (Number(item.quantity) * Number(item.unitPrice) || 0), 0)
@@ -100,20 +111,18 @@ export default function InvoicesPage() {
           </thead>
           <tbody>
             {filteredInvoices.map((invoice: any) => (
-              <tr key={invoice.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+              <tr
+                key={invoice.id}
+                onClick={() => navigate(`/invoices/${invoice.id}`)}
+                className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer"
+              >
                 <td className="py-3 px-4 text-sm font-mono font-medium text-primary-600">{invoice.number}</td>
                 <td className="py-3 px-4 text-sm text-slate-700">{invoice.company?.name}</td>
                 <td className="py-3 px-4 text-xs text-slate-500">{format(new Date(invoice.issueDate), 'MMM d, yyyy')}</td>
                 <td className="py-3 px-4 text-xs text-slate-500">{format(new Date(invoice.dueDate), 'MMM d, yyyy')}</td>
-                <td className="py-3 px-4 text-sm font-semibold text-slate-900">${invoice.total.toLocaleString()}</td>
+                <td className="py-3 px-4 text-sm font-semibold text-slate-900">£{invoice.total.toLocaleString()}</td>
                 <td className="py-3 px-4">
-                  <select value={invoice.status} onChange={e => updateMutation.mutate({ id: invoice.id, status: e.target.value })} className={clsx('badge text-xs border-0 cursor-pointer', statusColors[invoice.status])}>
-                    <option value="DRAFT">Draft</option>
-                    <option value="SENT">Sent</option>
-                    <option value="PAID">Paid</option>
-                    <option value="OVERDUE">Overdue</option>
-                    <option value="CANCELLED">Cancelled</option>
-                  </select>
+                  <span className={clsx('badge text-xs', statusColors[invoice.status])}>{invoice.status}</span>
                 </td>
               </tr>
             ))}
@@ -123,7 +132,7 @@ export default function InvoicesPage() {
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="New Invoice" size="lg">
-        <form onSubmit={e => { e.preventDefault(); createMutation.mutate({ companyId: form.companyId, dueDate: form.dueDate, notes: form.notes, subtotal, tax: subtotal * tax / 100, total, items: form.items.map(i => ({ description: i.description, quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), total: Number(i.quantity) * Number(i.unitPrice) })) }) }} className="space-y-4">
+        <form onSubmit={e => { e.preventDefault(); createMutation.mutate({ companyId: form.companyId, dueDate: form.dueDate, notes: form.notes || null, subtotal, tax: subtotal * tax / 100, total, items: form.items.map(i => ({ description: i.description, quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), total: Number(i.quantity) * Number(i.unitPrice), productId: i.productId || null })) }) }} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Company</label>
@@ -139,19 +148,26 @@ export default function InvoicesPage() {
           </div>
           <div>
             <label className="label">Line Items</label>
-            <div className="space-y-2">
-              <div className="grid grid-cols-12 gap-2 text-xs font-medium text-slate-500 px-1">
-                <span className="col-span-6">Description</span>
-                <span className="col-span-2">Qty</span>
-                <span className="col-span-3">Unit Price</span>
-                <span className="col-span-1"></span>
-              </div>
+            <div className="space-y-3">
               {form.items.map((item, i) => (
-                <div key={i} className="grid grid-cols-12 gap-2">
-                  <input className="input col-span-6" placeholder="Description" value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} />
-                  <input type="number" className="input col-span-2" placeholder="1" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} />
-                  <input type="number" className="input col-span-3" placeholder="0.00" value={item.unitPrice} onChange={e => updateItem(i, 'unitPrice', e.target.value)} />
-                  <button type="button" onClick={() => setForm(f => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }))} className="col-span-1 text-red-400 hover:text-red-600 text-lg font-bold">×</button>
+                <div key={i} className="space-y-1.5 p-3 bg-slate-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <SearchableSelect
+                        value={item.productId}
+                        onChange={val => pickProduct(i, val)}
+                        options={[{ value: '', label: '— Manual entry —' }, ...products.map((p: any) => ({ value: p.id, label: `${p.name}${p.sku ? ` · ${p.sku}` : ''}${p.price != null ? ` · £${p.price}` : ''}` }))]}
+                        placeholder="Pick from catalog…"
+                        emptyLabel=""
+                      />
+                    </div>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }))} className="text-red-400 hover:text-red-600 font-bold p-1">×</button>
+                  </div>
+                  <div className="grid grid-cols-12 gap-2">
+                    <input className="input col-span-6 text-sm" placeholder="Description" value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} />
+                    <input type="number" className="input col-span-2 text-sm" placeholder="Qty" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} />
+                    <input type="number" className="input col-span-4 text-sm" placeholder="Unit price" value={item.unitPrice} onChange={e => updateItem(i, 'unitPrice', e.target.value)} />
+                  </div>
                 </div>
               ))}
               <button type="button" onClick={addItem} className="text-xs text-primary-600 hover:text-primary-700 font-medium">+ Add line item</button>
