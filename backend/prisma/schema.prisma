@@ -523,22 +523,39 @@ model TimeEntry {
 }
 
 model Contract {
-  id           String         @id @default(uuid())
-  name         String
-  description  String?
-  status       ContractStatus @default(DRAFT)
-  startDate    DateTime
-  endDate      DateTime
-  value        Float
-  billingCycle String?
-  companyId    String
-  company      Company        @relation(fields: [companyId], references: [id])
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id              String         @id @default(uuid())
+  name            String
+  description     String?
+  status          ContractStatus @default(DRAFT)
+  startDate       DateTime
+  endDate         DateTime
+  value           Float
+  billingCycle    String?
+  signedAt        DateTime?
+  nextInvoiceDate DateTime?
+  companyId       String
+  company         Company        @relation(fields: [companyId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
-  invoices     Invoice[]
+  items    ContractItem[]
+  invoices Invoice[]
 
   @@map("contracts")
+}
+
+model ContractItem {
+  id          String   @id @default(uuid())
+  description String
+  quantity    Float
+  unitPrice   Float
+  total       Float
+  contractId  String
+  contract    Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product?  @relation(fields: [productId], references: [id])
+
+  @@map("contract_items")
 }
 
 model Invoice {
@@ -908,7 +925,8 @@ model Product {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  invoiceItems InvoiceItem[]
+  invoiceItems  InvoiceItem[]
+  contractItems ContractItem[]
 
   @@map("products")
 }
