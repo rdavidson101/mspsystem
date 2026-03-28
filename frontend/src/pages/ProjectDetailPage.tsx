@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import { ticketRef, changeRef } from '@/lib/refs'
 import { useAuthStore } from '@/store/authStore'
 import {
@@ -1600,7 +1601,7 @@ function ProjectSettingsModal({ project, onClose, onRefresh, onDelete }: {
               <DollarSign size={10} /> Budget
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">£</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{symbol}</span>
               <input
                 type="number"
                 min="0"
@@ -1767,6 +1768,7 @@ function MemberPanel({ project, onClose, onRefresh }: { project: any; onClose: (
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const { symbol } = useCurrency()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))

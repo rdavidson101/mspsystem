@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import { Plus, Receipt } from 'lucide-react'
 import clsx from 'clsx'
 import { format } from 'date-fns'
@@ -18,6 +19,7 @@ const categoryColors: Record<string, string> = {
 
 export default function ExpensesPage() {
   const qc = useQueryClient()
+  const { fmt } = useCurrency()
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ title: '', amount: '', category: 'OTHER', description: '', date: new Date().toISOString().split('T')[0] })
 
@@ -47,9 +49,9 @@ export default function ExpensesPage() {
       </div>
 
       <div className="grid grid-cols-4 gap-4">
-        <div className="card p-4 col-span-1"><p className="text-xs text-slate-500 mb-1">Total Expenses</p><p className="text-2xl font-bold text-slate-900">${total.toLocaleString()}</p></div>
+        <div className="card p-4 col-span-1"><p className="text-xs text-slate-500 mb-1">Total Expenses</p><p className="text-2xl font-bold text-slate-900">{fmt(total)}</p></div>
         {Object.entries(byCategory).filter(([, v]) => v > 0).slice(0, 3).map(([cat, val]) => (
-          <div key={cat} className="card p-4"><p className="text-xs text-slate-500 mb-1">{cat}</p><p className="text-2xl font-bold text-slate-900">${(val as number).toLocaleString()}</p></div>
+          <div key={cat} className="card p-4"><p className="text-xs text-slate-500 mb-1">{cat}</p><p className="text-2xl font-bold text-slate-900">{fmt(val as number)}</p></div>
         ))}
       </div>
 
@@ -69,7 +71,7 @@ export default function ExpensesPage() {
               <tr key={expense.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                 <td className="py-3 px-4 text-sm font-medium text-slate-800">{expense.title}</td>
                 <td className="py-3 px-4"><span className={clsx('badge text-xs', categoryColors[expense.category])}>{expense.category}</span></td>
-                <td className="py-3 px-4 text-sm font-semibold text-slate-900">${expense.amount.toLocaleString()}</td>
+                <td className="py-3 px-4 text-sm font-semibold text-slate-900">{fmt(expense.amount)}</td>
                 <td className="py-3 px-4 text-xs text-slate-500">{format(new Date(expense.date), 'MMM d, yyyy')}</td>
                 <td className="py-3 px-4 text-sm text-slate-500">{expense.description || '—'}</td>
               </tr>

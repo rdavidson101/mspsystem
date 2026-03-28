@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import { projectRef } from '@/lib/refs'
 import { Link } from 'react-router-dom'
 import { Plus, FolderKanban, Users, Calendar, CheckSquare, Trash2, LayoutTemplate } from 'lucide-react'
@@ -31,6 +32,7 @@ function Avatar({ name, avatar, size = 6 }: { name: string; avatar?: string; siz
 export default function ProjectsPage() {
   const qc = useQueryClient()
   const { user } = useAuthStore()
+  const { symbol, fmt } = useCurrency()
   const [view, setView] = useState<'projects' | 'templates'>('projects')
   const [showModal, setShowModal] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
@@ -265,7 +267,7 @@ export default function ProjectsPage() {
             </div>
           </div>
           <div>
-            <label className="label">Budget (£)</label>
+            <label className="label">Budget ({symbol})</label>
             <input type="number" className="input" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))} placeholder="0" />
           </div>
           <div className="flex justify-end gap-2 pt-2">
@@ -321,7 +323,7 @@ function ProjectCard({ project }: { project: any }) {
 
         <div className="flex items-center gap-3 text-xs text-slate-400">
           <span className="flex items-center gap-1"><CheckSquare size={11} /> {taskCount}</span>
-          {project.budget && <span className="font-medium text-slate-600">£{Number(project.budget).toLocaleString()}</span>}
+          {project.budget && <span className="font-medium text-slate-600">{fmt(Number(project.budget))}</span>}
         </div>
       </div>
     </Link>

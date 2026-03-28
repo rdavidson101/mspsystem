@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import { Plus, Search, Edit2, Trash2, Package, ToggleLeft, ToggleRight } from 'lucide-react'
 
 const CATEGORIES = ['Hardware', 'Software', 'Licence', 'Service', 'Support', 'Other']
@@ -12,6 +13,7 @@ const EMPTY_FORM = {
 
 export default function ProductsPage() {
   const qc = useQueryClient()
+  const { symbol, fmtFixed } = useCurrency()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -125,8 +127,8 @@ export default function ProductsPage() {
                     {p.category && <span className="badge text-xs bg-slate-100 text-slate-600">{p.category}</span>}
                   </td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{p.unit || '—'}</td>
-                  <td className="px-4 py-3 text-right text-slate-600">{p.cost != null ? `£${Number(p.cost).toFixed(2)}` : '—'}</td>
-                  <td className="px-4 py-3 text-right font-medium text-slate-900">{p.price != null ? `£${Number(p.price).toFixed(2)}` : '—'}</td>
+                  <td className="px-4 py-3 text-right text-slate-600">{p.cost != null ? fmtFixed(Number(p.cost)) : '—'}</td>
+                  <td className="px-4 py-3 text-right font-medium text-slate-900">{p.price != null ? fmtFixed(Number(p.price)) : '—'}</td>
                   <td className="px-4 py-3 text-right">
                     {m != null && (
                       <span className={`text-xs font-medium ${Number(m) >= 30 ? 'text-green-600' : Number(m) >= 10 ? 'text-orange-500' : 'text-red-500'}`}>
@@ -209,11 +211,11 @@ export default function ProductsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Cost price (£)</label>
+                  <label className="label">Cost price ({symbol})</label>
                   <input type="number" step="0.01" min="0" className="input" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: e.target.value }))} placeholder="0.00" />
                 </div>
                 <div>
-                  <label className="label">Sell price (£)</label>
+                  <label className="label">Sell price ({symbol})</label>
                   <input type="number" step="0.01" min="0" className="input" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
                 </div>
               </div>

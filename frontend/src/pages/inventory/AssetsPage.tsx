@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import { Plus, Edit2, Trash2, Send, Package } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import clsx from 'clsx'
@@ -56,6 +57,7 @@ function assigneeLabel(a: any): string {
 
 export default function AssetsPage() {
   const qc = useQueryClient()
+  const { symbol } = useCurrency()
   const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(0)
   const [showAssetModal, setShowAssetModal] = useState(false)
@@ -327,7 +329,7 @@ export default function AssetsPage() {
             <input className="input" type="date" value={assetForm.purchaseDate} onChange={setField('purchaseDate')} />
           </div>
           <div>
-            <label className="label">Purchase Price (£)</label>
+            <label className="label">Purchase Price ({symbol})</label>
             <input className="input" type="number" step="0.01" value={assetForm.purchasePrice} onChange={setField('purchasePrice')} />
           </div>
           <div>

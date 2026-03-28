@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import { Plus, Edit2, Trash2, Key, Search } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 
@@ -61,6 +62,7 @@ function SeatBar({ used, total }: { used: number; total: number }) {
 
 export default function LicensesPage() {
   const qc = useQueryClient()
+  const { symbol, fmtFixed } = useCurrency()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState<any>(emptyForm)
@@ -220,7 +222,7 @@ export default function LicensesPage() {
                   <ExpiryBadge expiresAt={l.expiresAt} />
                 </td>
                 <td className="py-3 px-4 text-sm text-slate-600">
-                  {l.cost != null ? `£${Number(l.cost).toLocaleString('en-GB', { minimumFractionDigits: 2 })}` : '—'}
+                  {l.cost != null ? fmtFixed(Number(l.cost)) : '—'}
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-1 justify-end">
@@ -278,7 +280,7 @@ export default function LicensesPage() {
               <input className="input" type="date" value={form.expiresAt} onChange={set('expiresAt')} />
             </div>
             <div>
-              <label className="label">Cost (£)</label>
+              <label className="label">Cost ({symbol})</label>
               <input className="input" type="number" step="0.01" min="0" value={form.cost} onChange={set('cost')} />
             </div>
           </div>

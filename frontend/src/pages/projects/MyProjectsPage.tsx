@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import { projectRef } from '@/lib/refs'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, FolderKanban, ChevronLeft, ChevronRight, Search } from 'lucide-react'
@@ -23,6 +24,7 @@ const PAGE_SIZE = 10
 export default function MyProjectsPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
+  const { symbol } = useCurrency()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -261,7 +263,7 @@ export default function MyProjectsPage() {
             </div>
           </div>
           <div>
-            <label className="label">Budget (£)</label>
+            <label className="label">Budget ({symbol})</label>
             <input type="number" className="input" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))} placeholder="0" />
           </div>
           <div className="flex justify-end gap-2 pt-2">

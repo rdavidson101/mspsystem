@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import { projectRef } from '@/lib/refs'
 import { Link } from 'react-router-dom'
 import { Plus, FolderKanban, ChevronLeft, ChevronRight, ChevronDown, MessageSquare, Clock, X, Trash2, Check, Search } from 'lucide-react'
@@ -179,6 +180,7 @@ function StatusDropdown({ project, onUpdate }: { project: any; onUpdate: () => v
 
 export default function PortfolioManagerPage() {
   const qc = useQueryClient()
+  const { symbol } = useCurrency()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -410,7 +412,7 @@ export default function PortfolioManagerPage() {
             </div>
           </div>
           <div>
-            <label className="label">Budget (£)</label>
+            <label className="label">Budget ({symbol})</label>
             <input type="number" className="input" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))} placeholder="0" />
           </div>
           <div className="flex justify-end gap-2 pt-2">
