@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -26,6 +27,74 @@ import { CSS } from '@dnd-kit/utilities'
 const REACTIONS = ['👍', '👎', '❤️', '😄', '🎉', '🚀']
 function groupReactions(reactions: any[]): Record<string, any[]> {
   return reactions.reduce((acc, r) => ({ ...acc, [r.emoji]: [...(acc[r.emoji] || []), r] }), {} as Record<string, any[]>)
+}
+
+function ReactionChip({ emoji, reactions, currentUserId, onToggle }: {
+  emoji: string; reactions: any[]; currentUserId?: string; onToggle: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const ref = useRef<HTMLButtonElement>(null)
+  const isOwn = reactions.some(r => r.userId === currentUserId)
+
+  function handleMouseEnter() {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      setPos({ top: rect.top + window.scrollY, left: rect.left + window.scrollX + rect.width / 2 })
+    }
+    setHovered(true)
+  }
+
+  const names = reactions.map(r => ({ name: `${r.user?.firstName || ''} ${r.user?.lastName || ''}`.trim(), isYou: r.userId === currentUserId }))
+
+  return (
+    <>
+      <button
+        ref={ref}
+        onClick={onToggle}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={() => setHovered(false)}
+        className={clsx(
+          'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-all select-none',
+          isOwn
+            ? 'bg-primary-50 border-primary-200 text-primary-700 font-medium'
+            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+        )}
+      >
+        <span>{emoji}</span>
+        <span>{reactions.length}</span>
+      </button>
+
+      {hovered && createPortal(
+        <div
+          className="fixed z-[9999] pointer-events-none"
+          style={{ top: pos.top - 8, left: pos.left, transform: 'translateX(-50%) translateY(-100%)' }}
+        >
+          {/* Arrow */}
+          <div className="relative">
+            <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-3 min-w-[130px] max-w-[220px]">
+              <div className="flex items-center gap-2 pb-2 mb-2 border-b border-slate-100">
+                <span className="text-2xl leading-none">{emoji}</span>
+                <span className="text-xs font-semibold text-slate-500">
+                  {reactions.length} {reactions.length === 1 ? 'reaction' : 'reactions'}
+                </span>
+              </div>
+              <div className="space-y-1">
+                {names.map((n, i) => (
+                  <p key={i} className="text-xs text-slate-700 whitespace-nowrap">
+                    {n.isYou ? <span className="font-semibold text-primary-600">{n.name} <span className="font-normal text-slate-400">(you)</span></span> : n.name}
+                  </p>
+                ))}
+              </div>
+            </div>
+            {/* Caret */}
+            <div className="absolute left-1/2 -translate-x-1/2 -bottom-[7px] w-3 h-3 bg-white border-r border-b border-slate-200 rotate-45" />
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  )
 }
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -1249,20 +1318,13 @@ function TaskDetailModal({ task: initialTask, projectMembers, onClose, onRefresh
                     {/* Reaction bar */}
                     <div className="flex items-center gap-1 mt-1.5 flex-wrap">
                       {Object.entries(groupReactions(c.reactions || [])).map(([emoji, rxns]) => (
-                        <button
+                        <ReactionChip
                           key={emoji}
-                          onClick={() => toggleReactionMut.mutate({ commentId: c.id, emoji })}
-                          title={(rxns as any[]).map((r: any) => `${r.user?.firstName} ${r.user?.lastName}`).join(', ')}
-                          className={clsx(
-                            'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors select-none',
-                            (rxns as any[]).some((r: any) => r.userId === user?.id)
-                              ? 'bg-primary-50 border-primary-200 text-primary-700 font-medium'
-                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                          )}
-                        >
-                          <span>{emoji}</span>
-                          <span>{(rxns as any[]).length}</span>
-                        </button>
+                          emoji={emoji}
+                          reactions={rxns}
+                          currentUserId={user?.id}
+                          onToggle={() => toggleReactionMut.mutate({ commentId: c.id, emoji })}
+                        />
                       ))}
                       {/* Add reaction */}
                       <div className="relative">
