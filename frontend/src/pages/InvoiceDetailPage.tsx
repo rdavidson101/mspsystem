@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import { format } from 'date-fns'
 import { ArrowLeft, Edit2, Save, Trash2, CheckCircle, Plus, X } from 'lucide-react'
 import clsx from 'clsx'
@@ -27,6 +28,7 @@ export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const { symbol, fmt, fmtFixed } = useCurrency()
   const [editing, setEditing] = useState(false)
   const [items, setItems] = useState<LineItem[]>([])
   const [form, setForm] = useState({ dueDate: '', notes: '', taxRate: '0', status: '' })
@@ -178,15 +180,15 @@ export default function InvoiceDetailPage() {
       <div className="grid grid-cols-4 gap-4">
         <div className="card p-4">
           <p className="text-xs text-slate-500 mb-1">Subtotal</p>
-          <p className="text-xl font-bold text-slate-900">£{(editing ? subtotal : invoice.subtotal).toFixed(2)}</p>
+          <p className="text-xl font-bold text-slate-900">{fmtFixed(editing ? subtotal : invoice.subtotal)}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-slate-500 mb-1">Tax</p>
-          <p className="text-xl font-bold text-slate-900">£{(editing ? taxAmount : invoice.tax).toFixed(2)}</p>
+          <p className="text-xl font-bold text-slate-900">{fmtFixed(editing ? taxAmount : invoice.tax)}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-slate-500 mb-1">Total</p>
-          <p className="text-xl font-bold text-primary-600">£{(editing ? total : invoice.total).toFixed(2)}</p>
+          <p className="text-xl font-bold text-primary-600">{fmtFixed(editing ? total : invoice.total)}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-slate-500 mb-1">Line Items</p>
@@ -287,7 +289,7 @@ export default function InvoiceDetailPage() {
                             onChange={val => pickProduct(idx, val)}
                             options={[
                               { value: '', label: '— Manual entry —' },
-                              ...products.map((p: any) => ({ value: p.id, label: `${p.name}${p.sku ? ` · ${p.sku}` : ''}${p.price != null ? ` · £${p.price}` : ''}` })),
+                              ...products.map((p: any) => ({ value: p.id, label: `${p.name}${p.sku ? ` · ${p.sku}` : ''}${p.price != null ? ` · ${symbol}${p.price}` : ''}` })),
                             ]}
                             placeholder="Pick from catalog…"
                             emptyLabel=""
@@ -327,12 +329,12 @@ export default function InvoiceDetailPage() {
                           onChange={e => updateItem(idx, 'unitPrice', e.target.value)}
                         />
                       ) : (
-                        <span className="text-sm text-slate-700">£{Number(item.unitPrice).toFixed(2)}</span>
+                        <span className="text-sm text-slate-700">{fmtFixed(Number(item.unitPrice))}</span>
                       )}
                     </td>
                     <td className="py-2 px-3 text-right align-top">
                       <span className="text-sm font-medium text-slate-900">
-                        £{(Number(item.quantity) * Number(item.unitPrice)).toFixed(2)}
+                        {fmtFixed(Number(item.quantity) * Number(item.unitPrice))}
                       </span>
                     </td>
                     {editing && (
@@ -356,7 +358,7 @@ export default function InvoiceDetailPage() {
                 <tr>
                   <td colSpan={editing ? 3 : 3} className="py-2 px-3 text-right text-xs text-slate-500">Subtotal</td>
                   <td className="py-2 px-3 text-right text-sm font-medium text-slate-800">
-                    £{(editing ? subtotal : invoice.subtotal).toFixed(2)}
+                    {fmtFixed(editing ? subtotal : invoice.subtotal)}
                   </td>
                   {editing && <td />}
                 </tr>
@@ -365,14 +367,14 @@ export default function InvoiceDetailPage() {
                     Tax{editing ? ` (${form.taxRate}%)` : ''}
                   </td>
                   <td className="py-2 px-3 text-right text-sm font-medium text-slate-800">
-                    £{(editing ? taxAmount : invoice.tax).toFixed(2)}
+                    {fmtFixed(editing ? taxAmount : invoice.tax)}
                   </td>
                   {editing && <td />}
                 </tr>
                 <tr className="border-t border-slate-200">
                   <td colSpan={3} className="py-3 px-3 text-right text-sm font-bold text-slate-900">Total</td>
                   <td className="py-3 px-3 text-right text-base font-bold text-primary-600">
-                    £{(editing ? total : invoice.total).toFixed(2)}
+                    {fmtFixed(editing ? total : invoice.total)}
                   </td>
                   {editing && <td />}
                 </tr>

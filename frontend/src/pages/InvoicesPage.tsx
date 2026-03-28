@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import { Plus, Receipt, Search } from 'lucide-react'
 import clsx from 'clsx'
 import { format } from 'date-fns'
@@ -19,6 +20,7 @@ const statusColors: Record<string, string> = {
 export default function InvoicesPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
+  const { symbol, fmt, fmtFixed } = useCurrency()
   const [statusFilter, setStatusFilter] = useState('')
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -79,8 +81,8 @@ export default function InvoicesPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Total Paid</p><p className="text-2xl font-bold text-green-600">${totalPaid.toLocaleString()}</p></div>
-        <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Pending</p><p className="text-2xl font-bold text-orange-500">${totalPending.toLocaleString()}</p></div>
+        <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Total Paid</p><p className="text-2xl font-bold text-green-600">{fmt(totalPaid)}</p></div>
+        <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Pending</p><p className="text-2xl font-bold text-orange-500">{fmt(totalPending)}</p></div>
         <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Overdue</p><p className="text-2xl font-bold text-red-500">{invoices.filter((i: any) => i.status === 'OVERDUE').length}</p></div>
       </div>
 
@@ -122,7 +124,7 @@ export default function InvoicesPage() {
                 <td className="py-3 px-4 text-sm text-slate-700">{invoice.company?.name}</td>
                 <td className="py-3 px-4 text-xs text-slate-500">{format(new Date(invoice.issueDate), 'MMM d, yyyy')}</td>
                 <td className="py-3 px-4 text-xs text-slate-500">{format(new Date(invoice.dueDate), 'MMM d, yyyy')}</td>
-                <td className="py-3 px-4 text-sm font-semibold text-slate-900">£{invoice.total.toLocaleString()}</td>
+                <td className="py-3 px-4 text-sm font-semibold text-slate-900">{fmt(invoice.total)}</td>
                 <td className="py-3 px-4">
                   <span className={clsx('badge text-xs', statusColors[invoice.status])}>{invoice.status}</span>
                 </td>
@@ -177,7 +179,7 @@ export default function InvoicesPage() {
                       <SearchableSelect
                         value={item.productId}
                         onChange={val => pickProduct(i, val)}
-                        options={[{ value: '', label: '— Manual entry —' }, ...products.map((p: any) => ({ value: p.id, label: `${p.name}${p.sku ? ` · ${p.sku}` : ''}${p.price != null ? ` · £${p.price}` : ''}` }))]}
+                        options={[{ value: '', label: '— Manual entry —' }, ...products.map((p: any) => ({ value: p.id, label: `${p.name}${p.sku ? ` · ${p.sku}` : ''}${p.price != null ? ` · ${symbol}${p.price}` : ''}` }))]}
                         placeholder="Pick from catalog…"
                         emptyLabel=""
                       />
@@ -196,12 +198,12 @@ export default function InvoicesPage() {
           </div>
           <div className="flex justify-end gap-4">
             <div className="text-right space-y-1">
-              <p className="text-xs text-slate-500">Subtotal: <span className="font-semibold text-slate-800">${subtotal.toFixed(2)}</span></p>
+              <p className="text-xs text-slate-500">Subtotal: <span className="font-semibold text-slate-800">{fmtFixed(subtotal)}</span></p>
               <div className="flex items-center gap-2 justify-end">
                 <span className="text-xs text-slate-500">Tax %:</span>
                 <input type="number" className="input w-16 text-xs py-1" value={form.tax} onChange={e => setForm(f => ({ ...f, tax: e.target.value }))} />
               </div>
-              <p className="text-sm font-bold text-slate-900">Total: ${total.toFixed(2)}</p>
+              <p className="text-sm font-bold text-slate-900">Total: {fmtFixed(total)}</p>
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">

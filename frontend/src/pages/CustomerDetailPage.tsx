@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import {
   ArrowLeft, Building2, Phone, Mail, Globe, MapPin, Pencil, Save, X,
   Users, Ticket, FileText, TrendingUp, Star, Power, PowerOff, Trash2, ShieldCheck
@@ -47,6 +48,7 @@ export default function CustomerDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const { symbol, fmt } = useCurrency()
   const [tab, setTab] = useState<Tab>('contacts')
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<any>(null)
@@ -235,8 +237,8 @@ export default function CustomerDetailPage() {
 
       {/* Stat row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard label="Total Revenue" value={`£${totalRevenue.toLocaleString()}`} sub="all time paid invoices" />
-        <StatCard label="Outstanding" value={`£${outstanding.toLocaleString()}`} sub="sent & overdue invoices" />
+        <StatCard label="Total Revenue" value={fmt(totalRevenue)} sub="all time paid invoices" />
+        <StatCard label="Outstanding" value={fmt(outstanding)} sub="sent & overdue invoices" />
         <StatCard label="Open Tickets" value={allTickets.filter((t: any) => !['RESOLVED','CLOSED'].includes(t.status)).length} sub="active tickets" />
         <StatCard
           label="SLA Adherence"
@@ -254,8 +256,8 @@ export default function CustomerDetailPage() {
             <BarChart data={revenueData} barSize={18}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `£${v.toLocaleString()}`} />
-              <ReTooltip formatter={(v: any) => `£${Number(v).toLocaleString()}`} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }} />
+              <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v)} />
+              <ReTooltip formatter={(v: any) => fmt(Number(v))} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="Paid" fill="#22c55e" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Outstanding" fill="#f59e0b" radius={[4, 4, 0, 0]} />
@@ -510,7 +512,7 @@ export default function CustomerDetailPage() {
                       <tr key={l.id} className="border-b border-slate-50 hover:bg-slate-50/50">
                         <td className="py-3 px-4 text-sm font-medium text-slate-800">{l.title}</td>
                         <td className="py-3 px-4"><span className={clsx('badge text-xs', statusColors[l.status] || 'bg-slate-100 text-slate-600')}>{l.status}</span></td>
-                        <td className="py-3 px-4 text-sm text-slate-600">{l.value != null ? `£${l.value.toLocaleString()}` : '—'}</td>
+                        <td className="py-3 px-4 text-sm text-slate-600">{l.value != null ? fmt(l.value) : '—'}</td>
                         <td className="py-3 px-4 text-sm text-slate-500">{l.source || '—'}</td>
                       </tr>
                     ))}
@@ -539,7 +541,7 @@ export default function CustomerDetailPage() {
                         <td className="py-3 px-4"><span className={clsx('badge text-xs', statusColors[c.status] || 'bg-slate-100 text-slate-600')}>{c.status}</span></td>
                         <td className="py-3 px-4 text-sm text-slate-500">{c.startDate ? format(new Date(c.startDate), 'MMM d, yyyy') : '—'}</td>
                         <td className="py-3 px-4 text-sm text-slate-500">{c.endDate ? format(new Date(c.endDate), 'MMM d, yyyy') : '—'}</td>
-                        <td className="py-3 px-4 text-sm font-medium text-slate-700">{c.value != null ? `£${c.value.toLocaleString()}` : '—'}</td>
+                        <td className="py-3 px-4 text-sm font-medium text-slate-700">{c.value != null ? fmt(c.value) : '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -567,7 +569,7 @@ export default function CustomerDetailPage() {
                         <td className="py-3 px-4"><span className={clsx('badge text-xs', statusColors[inv.status] || 'bg-slate-100 text-slate-600')}>{inv.status}</span></td>
                         <td className="py-3 px-4 text-sm text-slate-500">{format(new Date(inv.issueDate), 'MMM d, yyyy')}</td>
                         <td className="py-3 px-4 text-sm text-slate-500">{format(new Date(inv.dueDate), 'MMM d, yyyy')}</td>
-                        <td className="py-3 px-4 text-sm font-semibold text-slate-700">£{inv.total.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-sm font-semibold text-slate-700">{fmt(inv.total)}</td>
                       </tr>
                     ))}
                   </tbody>

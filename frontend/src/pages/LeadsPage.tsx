@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import { Plus, TrendingUp, DollarSign, Search } from 'lucide-react'
 import clsx from 'clsx'
 import Modal from '@/components/ui/Modal'
@@ -19,6 +20,7 @@ const stageColors: Record<string, string> = {
 
 export default function LeadsPage() {
   const qc = useQueryClient()
+  const { symbol, fmt } = useCurrency()
   const [stageFilter, setStageFilter] = useState('')
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -61,11 +63,11 @@ export default function LeadsPage() {
       <div className="grid grid-cols-3 gap-4">
         <div className="card p-4">
           <p className="text-xs text-slate-500 mb-1">Total Pipeline Value</p>
-          <p className="text-2xl font-bold text-slate-900">${pipelineValue.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-slate-900">{fmt(pipelineValue)}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-slate-500 mb-1">Won Value</p>
-          <p className="text-2xl font-bold text-green-600">${totalValue.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-green-600">{fmt(totalValue)}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-slate-500 mb-1">Active Leads</p>
@@ -103,7 +105,7 @@ export default function LeadsPage() {
               <tr key={lead.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                 <td className="py-3 px-4 text-sm font-medium text-slate-800">{lead.title}</td>
                 <td className="py-3 px-4 text-sm text-slate-600">{lead.company?.name || '—'}</td>
-                <td className="py-3 px-4 text-sm font-medium text-slate-800">{lead.value ? `$${lead.value.toLocaleString()}` : '—'}</td>
+                <td className="py-3 px-4 text-sm font-medium text-slate-800">{lead.value ? fmt(lead.value) : '—'}</td>
                 <td className="py-3 px-4 text-sm text-slate-600">{lead.source || '—'}</td>
                 <td className="py-3 px-4">
                   <select value={lead.status} onChange={e => updateMutation.mutate({ id: lead.id, status: e.target.value })} className={clsx('badge text-xs border-0 cursor-pointer', stageColors[lead.status])}>
@@ -121,7 +123,7 @@ export default function LeadsPage() {
         <form onSubmit={e => { e.preventDefault(); createMutation.mutate({ ...form, value: form.value ? Number(form.value) : undefined, companyId: form.companyId || undefined }) }} className="space-y-4">
           <div><label className="label">Title</label><input className="input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="label">Value ($)</label><input type="number" className="input" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} /></div>
+            <div><label className="label">Value ({symbol})</label><input type="number" className="input" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} /></div>
             <div><label className="label">Stage</label><select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>{stages.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">

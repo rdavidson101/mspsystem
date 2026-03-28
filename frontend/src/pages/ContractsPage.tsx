@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/useCurrency'
 import { Plus, FileText, Search } from 'lucide-react'
 import clsx from 'clsx'
 import { format } from 'date-fns'
@@ -16,6 +17,7 @@ const statusColors: Record<string, string> = {
 
 export default function ContractsPage() {
   const qc = useQueryClient()
+  const { symbol, fmt } = useCurrency()
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ name: '', description: '', status: 'DRAFT', companyId: '', value: '', startDate: '', endDate: '', billingCycle: 'Monthly' })
   const [search, setSearch] = useState('')
@@ -56,7 +58,7 @@ export default function ContractsPage() {
 
       <div className="grid grid-cols-3 gap-4">
         <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Active Contracts</p><p className="text-2xl font-bold text-green-600">{contracts.filter((c: any) => c.status === 'ACTIVE').length}</p></div>
-        <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Total Active Value</p><p className="text-2xl font-bold text-slate-900">${totalValue.toLocaleString()}</p></div>
+        <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Total Active Value</p><p className="text-2xl font-bold text-slate-900">{fmt(totalValue)}</p></div>
         <div className="card p-4"><p className="text-xs text-slate-500 mb-1">Expiring Soon</p><p className="text-2xl font-bold text-orange-500">{contracts.filter((c: any) => c.status === 'ACTIVE' && new Date(c.endDate) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).length}</p></div>
       </div>
 
@@ -99,7 +101,7 @@ export default function ContractsPage() {
               <tr key={contract.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                 <td className="py-3 px-4"><p className="text-sm font-medium text-slate-800">{contract.name}</p><p className="text-xs text-slate-400">{contract.description}</p></td>
                 <td className="py-3 px-4 text-sm text-slate-600">{contract.company?.name}</td>
-                <td className="py-3 px-4 text-sm font-medium text-slate-800">${contract.value.toLocaleString()}</td>
+                <td className="py-3 px-4 text-sm font-medium text-slate-800">{fmt(contract.value)}</td>
                 <td className="py-3 px-4 text-sm text-slate-600">{contract.billingCycle || '—'}</td>
                 <td className="py-3 px-4 text-xs text-slate-500">{format(new Date(contract.startDate), 'MMM d, yyyy')}</td>
                 <td className="py-3 px-4 text-xs text-slate-500">{format(new Date(contract.endDate), 'MMM d, yyyy')}</td>
@@ -133,7 +135,7 @@ export default function ContractsPage() {
                 emptyLabel="None"
               />
             </div>
-            <div><label className="label">Value ($)</label><input type="number" className="input" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} required /></div>
+            <div><label className="label">Value ({symbol})</label><input type="number" className="input" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} required /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">Start Date</label><input type="date" className="input" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} required /></div>
