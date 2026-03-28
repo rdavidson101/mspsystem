@@ -36,8 +36,10 @@ export default function InvoicesPage() {
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['invoices'] })
       setShowModal(false)
+      setForm({ companyId: '', dueDate: '', notes: '', tax: '0', items: [{ description: '', quantity: '1', unitPrice: '', productId: '' }] })
       navigate(`/invoices/${res.data.id}`)
     },
+    onError: (err: any) => alert(err?.response?.data?.message || 'Failed to create invoice'),
   })
 
   function addItem() { setForm(f => ({ ...f, items: [...f.items, { description: '', quantity: '1', unitPrice: '', productId: '' }] })) }
@@ -132,7 +134,26 @@ export default function InvoicesPage() {
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="New Invoice" size="lg">
-        <form onSubmit={e => { e.preventDefault(); createMutation.mutate({ companyId: form.companyId, dueDate: form.dueDate, notes: form.notes || null, subtotal, tax: subtotal * tax / 100, total, items: form.items.map(i => ({ description: i.description, quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), total: Number(i.quantity) * Number(i.unitPrice), productId: i.productId || null })) }) }} className="space-y-4">
+        <form onSubmit={e => {
+          e.preventDefault()
+          if (!form.companyId) { alert('Please select a company'); return }
+          if (!form.dueDate) { alert('Please set a due date'); return }
+          createMutation.mutate({
+            companyId: form.companyId,
+            dueDate: form.dueDate,
+            notes: form.notes || null,
+            subtotal,
+            tax: subtotal * tax / 100,
+            total,
+            items: form.items.map(i => ({
+              description: i.description,
+              quantity: Number(i.quantity),
+              unitPrice: Number(i.unitPrice),
+              total: Number(i.quantity) * Number(i.unitPrice),
+              productId: i.productId || null,
+            })),
+          })
+        }} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Company</label>
