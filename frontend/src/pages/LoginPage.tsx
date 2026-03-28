@@ -49,7 +49,7 @@ export default function LoginPage() {
         setQrData(setupRes.data)
         setMfaSetupStage('qr')
       } else {
-        setAuth(data.user, data.token)
+        setAuth(data.user, data.token, data.refreshToken)
         navigate('/dashboard')
       }
     } catch (err: any) {
@@ -63,7 +63,7 @@ export default function LoginPage() {
     e.preventDefault()
     try {
       const res = await api.post('/auth/2fa/verify', { userId: userId2FA, token: twoFAToken })
-      setAuth(res.data.user, res.data.token)
+      setAuth(res.data.user, res.data.token, res.data.refreshToken)
       navigate('/dashboard')
     } catch (e: any) {
       setTwoFAError(e.response?.data?.message || 'Invalid code')
@@ -78,7 +78,7 @@ export default function LoginPage() {
         headers: { Authorization: `Bearer ${setupToken}` },
       })
       // enable2FA now returns full tokens
-      setAuth(res.data.user, res.data.token)
+      setAuth(res.data.user, res.data.token, res.data.refreshToken)
       navigate('/dashboard')
     } catch (err: any) {
       setSetupError(err.response?.data?.message || 'Invalid code. Try again.')

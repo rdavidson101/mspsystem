@@ -7,9 +7,9 @@ import { AuthRequest } from '../../middleware/auth'
 import { authenticator } from 'otplib'
 import QRCode from 'qrcode'
 
-function signTokens(user: { id: string; email: string; role: string }) {
+function signTokens(user: { id: string; email: string; role: string }, sessionDays: number = 7) {
   const access = jwt.sign(user, process.env.JWT_SECRET!, { expiresIn: '15m' })
-  const refresh = jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET!, { expiresIn: '7d' })
+  const refresh = jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET!, { expiresIn: `${sessionDays}d` })
   return { access, refresh }
 }
 
@@ -57,7 +57,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     }
 
     const sessionDays = await getSessionDays()
-    const { access, refresh } = signTokens({ id: user.id, email: user.email, role: user.role })
+    const { access, refresh } = signTokens({ id: user.id, email: user.email, role: user.role }, sessionDays)
     const expiresAt = new Date(Date.now() + sessionDays * 24 * 60 * 60 * 1000)
     await prisma.refreshToken.create({ data: { token: refresh, userId: user.id, expiresAt } })
     res.json({
@@ -84,9 +84,9 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
     if (!stored || stored.expiresAt < new Date()) throw new AppError(401, 'Invalid refresh token')
     const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET!) as any
     const user = stored.user
-    const { access: newAccess, refresh: newRefresh } = signTokens({ id: user.id, email: user.email, role: user.role })
     await prisma.refreshToken.delete({ where: { id: stored.id } })
     const sessionDays = await getSessionDays()
+    const { access: newAccess, refresh: newRefresh } = signTokens({ id: user.id, email: user.email, role: user.role }, sessionDays)
     const expiresAt = new Date(Date.now() + sessionDays * 24 * 60 * 60 * 1000)
     await prisma.refreshToken.create({ data: { token: newRefresh, userId: user.id, expiresAt } })
     res.json({ token: newAccess, refreshToken: newRefresh })
@@ -124,8 +124,8 @@ export async function enable2FA(req: AuthRequest, res: Response, next: NextFunct
     await prisma.user.update({ where: { id: user.id }, data: { twoFactorEnabled: true } })
 
     // Issue full auth tokens so MFA-setup flow can complete login
-    const { access, refresh } = signTokens({ id: user.id, email: user.email, role: user.role })
     const sessionDays = await getSessionDays()
+    const { access, refresh } = signTokens({ id: user.id, email: user.email, role: user.role }, sessionDays)
     const expiresAt = new Date(Date.now() + sessionDays * 24 * 60 * 60 * 1000)
     await prisma.refreshToken.create({ data: { token: refresh, userId: user.id, expiresAt } })
     res.json({
@@ -161,8 +161,8 @@ export async function verify2FA(req: Request, res: Response, next: NextFunction)
     if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) throw new AppError(400, 'Invalid request')
     const valid = authenticator.verify({ token, secret: user.twoFactorSecret })
     if (!valid) throw new AppError(400, 'Invalid verification code')
-    const { access, refresh } = signTokens({ id: user.id, email: user.email, role: user.role })
     const sessionDays = await getSessionDays()
+    const { access, refresh } = signTokens({ id: user.id, email: user.email, role: user.role }, sessionDays)
     const expiresAt = new Date(Date.now() + sessionDays * 24 * 60 * 60 * 1000)
     await prisma.refreshToken.create({ data: { token: refresh, userId: user.id, expiresAt } })
     res.json({
