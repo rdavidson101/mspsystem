@@ -39,6 +39,7 @@ const TIMEZONES = [
 
 const SESSION_OPTIONS = [
   { value: '1', label: '1 day' },
+  { value: '2', label: '2 days' },
   { value: '7', label: '7 days (default)' },
   { value: '14', label: '14 days' },
   { value: '30', label: '30 days' },
