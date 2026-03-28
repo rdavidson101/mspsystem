@@ -40,7 +40,7 @@ function ReactionChip({ emoji, reactions, currentUserId, onToggle }: {
   function handleMouseEnter() {
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect()
-      setPos({ top: rect.top + window.scrollY, left: rect.left + window.scrollX + rect.width / 2 })
+      setPos({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX + rect.width / 2 })
     }
     setHovered(true)
   }
@@ -68,7 +68,7 @@ function ReactionChip({ emoji, reactions, currentUserId, onToggle }: {
       {hovered && createPortal(
         <div
           className="fixed z-[9999] pointer-events-none"
-          style={{ top: pos.top - 8, left: pos.left, transform: 'translateX(-50%) translateY(-100%)' }}
+          style={{ top: pos.top, left: pos.left, transform: 'translateX(-50%)' }}
         >
           {/* Arrow */}
           <div className="relative">
@@ -88,7 +88,7 @@ function ReactionChip({ emoji, reactions, currentUserId, onToggle }: {
               </div>
             </div>
             {/* Caret */}
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-[7px] w-3 h-3 bg-white border-r border-b border-slate-200 rotate-45" />
+            <div className="absolute left-1/2 -translate-x-1/2 -top-[7px] w-3 h-3 bg-white border-l border-t border-slate-200 rotate-45" />
           </div>
         </div>,
         document.body
